@@ -1,0 +1,34 @@
+[package]
+name = "webgl2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+web-sys = { version = "0.3.77", features = [
+    'console',
+    'CanvasRenderingContext2d',
+    'Document',
+    'Element',
+    'HtmlCanvasElement',
+    'HtmlElement',
+    'KeyboardEvent',
+    'Location',
+    'Navigator',
+    'Node',
+    'Performance',
+    'Screen',
+    'WebGl2RenderingContext',
+    'WebGlBuffer',
+    'WebGlProgram',
+    'WebGlRenderingContext',
+    'WebGlShader',
+    'WebGlTexture',
+    'WebGlUniformLocation',
+    'WebGlVertexArrayObject',
+    'Window',
+] }
+compact_str = "0.9.0"
+console_error_panic_hook = "0.1.7"
+web-time = "1.1.0"
+thiserror = "2.0.12"
+indoc = "2.0.6"
