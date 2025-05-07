@@ -1,9 +1,10 @@
-use indoc::indoc;
 use web_sys::wasm_bindgen::JsCast;
 use crate::error::Error;
+use crate::shaders::{BASIC_FRAGMENT_SHADER, BASIC_VERTEX_SHADER};
 
 mod gl;
 mod error;
+mod shaders;
 
 fn main() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -18,7 +19,7 @@ fn run() -> Result<(), Box<Error>> {
     let canvas = canvas_by_selector(&document, "canvas")?;
     let gl = get_webgl2_rendering_context(&canvas)?;
     
-    let shader = gl::ShaderProgram::create(&gl, VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE)?;
+    let shader = gl::ShaderProgram::create(&gl, BASIC_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)?;
     shader.use_program(&gl);
 
     gl.clear_color(0.0, 0.0, 0.0, 1.0); // Black background
@@ -56,25 +57,3 @@ fn canvas_by_selector(
 
     Ok(canvas)
 }
-
-const VERTEX_SHADER_SOURCE: &str = indoc! { r#"
-    #version 300 es
-
-    layout(location = 0) in vec2 a_pos;
-
-    void main() {
-        gl_Position = vec4(a_pos, 0.0, 1.0);
-        gl_PointSize = 100.0;
-    }
-"#};
-
-const FRAGMENT_SHADER_SOURCE: &str = indoc! {r#"
-    #version 300 es
-
-    precision mediump float;
-    out vec4 FragColor;
-
-    void main() {
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color
-    }
-"#};

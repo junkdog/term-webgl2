@@ -1,3 +1,3 @@
 mod shader_program;
 
-pub use shader_program::*;
+pub(crate) use shader_program::*;
