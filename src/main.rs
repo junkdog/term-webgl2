@@ -1,5 +1,6 @@
 use web_sys::wasm_bindgen::JsCast;
 use crate::error::Error;
+use crate::gl::VertexArray;
 use crate::shaders::{BASIC_FRAGMENT_SHADER, BASIC_VERTEX_SHADER};
 
 mod gl;
@@ -22,14 +23,31 @@ fn run() -> Result<(), Box<Error>> {
     let shader = gl::ShaderProgram::create(&gl, BASIC_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)?;
     shader.use_program(&gl);
 
+    // encodes the vertex data as x,y coordinates
+    let vertices: [f32; 6] = [
+        -0.5, -0.5,  // bottom left
+         0.5, -0.5,  // bottom right
+         0.0,  0.5,  // top
+    ];
+    // position attribute is at location 0
+    let vertex_array = VertexArray::builder()
+        .gl(&gl)
+        .vertices(&vertices)
+        .attribute_location(0)
+        .components_per_vertex(2)
+        .build()?;
+
     gl.clear_color(0.0, 0.0, 0.0, 1.0); // Black background
     gl.clear(web_sys::WebGl2RenderingContext::COLOR_BUFFER_BIT);
 
-    // Set the viewport to match canvas size
+    // set the viewport to match canvas size
     gl.viewport(0, 0, canvas.width() as i32, canvas.height() as i32);
 
-    // Draw a point
-    gl.draw_arrays(web_sys::WebGl2RenderingContext::POINTS, 0, 1);
+    vertex_array.bind(&gl);
+    vertex_array.draw(&gl);
+    
+    // draw a point
+    // gl.draw_arrays(web_sys::WebGl2RenderingContext::POINTS, 0, 1);
 
     Ok(())
 }
