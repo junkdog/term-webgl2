@@ -24,10 +24,14 @@ fn run() -> Result<(), Box<Error>> {
     shader.use_program(&gl);
 
     // encodes the vertex data as x,y coordinates
-    let vertices: [f32; 6] = [
-        -0.5, -0.5,  // bottom left
-         0.5, -0.5,  // bottom right
-         0.0,  0.5,  // top
+    let vertices: [f32; 12] = [
+        // x     y
+         0.5,  0.5,  // ne
+        -0.5, -0.5,  // sw
+         0.5, -0.5,  // nw
+         0.5,  0.5,  // ne
+        -0.5,  0.5,  // se
+        -0.5, -0.5,  // sw
     ];
     // position attribute is at location 0
     let vertex_array = VertexArray::builder()

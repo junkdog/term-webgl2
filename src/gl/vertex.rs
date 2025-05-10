@@ -63,6 +63,6 @@ impl VertexArray {
     }
 
     pub fn draw(&self, gl: &WebGl2RenderingContext) {
-        gl.draw_arrays(WebGl2RenderingContext::POINTS, 0, self.count);
+        gl.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, self.count);
     }
 }
