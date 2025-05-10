@@ -37,8 +37,8 @@ pub enum Error {
     #[error("WebGL error: {0}")]
     WebGlError(String),
     
-    #[error("Failed to create buffer")]
-    BufferCreationError,
+    #[error("Failed to create buffer: {0}")]
+    BufferCreationError(&'static str),
     
     #[error("Failed to create vertex array object")]
     VertexArrayCreationError,

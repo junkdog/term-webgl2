@@ -1,6 +1,6 @@
 use web_sys::wasm_bindgen::JsCast;
 use crate::error::Error;
-use crate::gl::VertexArray;
+use crate::gl::{IndexedVertexArray, VertexArray};
 use crate::shaders::{BASIC_FRAGMENT_SHADER, BASIC_VERTEX_SHADER};
 
 mod gl;
@@ -26,17 +26,31 @@ fn run() -> Result<(), Box<Error>> {
     // encodes the vertex data as x,y coordinates
     let vertices: [f32; 12] = [
         // x     y
-         0.5,  0.5,  // ne
-        -0.5, -0.5,  // sw
-         0.5, -0.5,  // nw
-         0.5,  0.5,  // ne
-        -0.5,  0.5,  // se
-        -0.5, -0.5,  // sw
+         0.5,  0.5,  // ne 0
+        -0.5, -0.5,  // sw 1
+         0.5, -0.5,  // se 2
+         0.5,  0.5,  // ne 0
+        -0.5, -0.5,  // sw 1
+        -0.5,  0.5,  // nw 3
     ];
+    let vertices: [f32; 8] = [
+        // x     y
+         0.5,  0.5,  // ne 0
+        -0.5, -0.5,  // sw 1
+         0.5, -0.5,  // se 2
+        -0.5,  0.5,  // nw 3
+    ];
+    
+    let indices = [
+        0, 1, 2, // first triangle
+        0, 1, 3, // second triangle
+    ];
+    
     // position attribute is at location 0
-    let vertex_array = VertexArray::builder()
+    let vertex_array = IndexedVertexArray::builder()
         .gl(&gl)
         .vertices(&vertices)
+        .indices(&indices)
         .attribute_location(0)
         .components_per_vertex(2)
         .build()?;
@@ -49,7 +63,7 @@ fn run() -> Result<(), Box<Error>> {
 
     vertex_array.bind(&gl);
     vertex_array.draw(&gl);
-    
+
     // draw a point
     // gl.draw_arrays(web_sys::WebGl2RenderingContext::POINTS, 0, 1);
 
