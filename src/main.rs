@@ -19,11 +19,11 @@ fn run() -> Result<(), Error> {
     let shader = renderer.create_shader_program(CellArray::VERTEX_GLSL, CellArray::FRAGMENT_GLSL)?;
 
     let vertices: [f32; 16] = [
-        // x     y     u     v
-         0.5,  0.5,  1.0,  1.0,  // ne 0
-        -0.5, -0.5,  0.0,  0.0,  // sw 1
-         0.5, -0.5,  1.0,  0.0,  // se 2
-        -0.5,  0.5,  0.0,  1.0,  // nw 3
+        //  x      y      u    v
+         0.75,  0.75,  0.25, 1.0,  // ne 0
+        -0.75, -0.75,  0.0,  0.0,  // sw 1
+         0.75, -0.75,  0.25, 0.0,  // se 2
+        -0.75,  0.75,  0.0,  1.0,  // nw 3
     ];
 
     let indices = [
@@ -39,6 +39,8 @@ fn run() -> Result<(), Error> {
         .build()?;
     
     renderer.clear(0.2, 0.2, 0.2);
+    renderer.state()
+        .blend_func(gl::GL::SRC_ALPHA, gl::GL::ONE_MINUS_SRC_ALPHA);
     renderer.draw(&shader, &vertex_array);
 
     Ok(())

@@ -173,3 +173,75 @@ impl GlState {
         }
     }
 }
+
+
+pub struct BoundGlState<'a> {
+    gl: &'a web_sys::WebGl2RenderingContext,
+    state: &'a mut GlState,
+}
+
+impl<'a> BoundGlState<'a> {
+    pub(crate) fn new(
+        gl: &'a web_sys::WebGl2RenderingContext,
+        state: &'a mut GlState
+    ) -> Self {
+        Self { gl, state }
+    }
+    
+    /// Enable or disable blending
+    pub fn enable_blend(&mut self, enable: bool) -> &mut Self {
+        self.state.enable_blend(self.gl, enable);
+        self
+    }
+
+    /// Set blend function
+    pub fn blend_func(&mut self, sfactor: u32, dfactor: u32) -> &mut Self {
+        self.state.blend_func(self.gl, sfactor, dfactor);
+        self
+    }
+
+    /// Enable or disable depth testing
+    pub fn enable_depth_test(&mut self, enable: bool) -> &mut Self {
+        self.state.enable_depth_test(self.gl, enable);
+        self
+    }
+
+    /// Enable or disable face culling
+    pub fn enable_cull_face(&mut self, enable: bool) -> &mut Self {
+        self.state.enable_cull_face(self.gl, enable);
+        self
+    }
+
+    /// Set viewport dimensions
+    pub fn viewport(&mut self, x: i32, y: i32, width: i32, height: i32) -> &mut Self {
+        self.state.viewport(self.gl, x, y, width, height);
+        self
+    }
+
+    /// Set clear color
+    pub fn clear_color(&mut self, r: f32, g: f32, b: f32, a: f32) -> &mut Self {
+        self.state.clear_color(self.gl, r, g, b, a);
+        self
+    }
+
+    /// Set active texture unit
+    pub fn active_texture(&mut self, texture_unit: u32) -> &mut Self {
+        self.state.active_texture(self.gl, texture_unit);
+        self
+    }
+
+    /// Enable or disable a vertex attribute array
+    pub fn vertex_attrib_array(&mut self, index: u32, enable: bool) -> &mut Self {
+        self.state.vertex_attrib_array(self.gl, index, enable);
+        self
+    }
+
+    /// Reset all tracked state to WebGL defaults
+    pub fn reset(&mut self) {
+        self.state.reset(self.gl);
+    }
+
+    fn capability(&self, capability: u32, enable: bool) {
+        self.state.capability(self.gl, capability, enable);
+    }
+}

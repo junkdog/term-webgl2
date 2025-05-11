@@ -1,4 +1,5 @@
-use image::GenericImageView;
+use image::{GenericImageView, ImageFormat};
+use image::metadata::Orientation;
 use web_sys::console;
 use crate::error::Error;
 use crate::gl::GL;
@@ -16,11 +17,13 @@ impl Texture {
         image_data: &[u8],
     ) -> Result<Self, Error> {
         // load the image
-        let img = image::load_from_memory(image_data)
+        let mut img = image::load_from_memory_with_format(image_data, ImageFormat::Png)
             .map_err(|e| {
                 console::error_1(&format!("Failed to load image: {:?}", e).into());
                 Error::ImageLoadError("failed to load image data")
             })?;
+        
+        img.apply_orientation(Orientation::FlipVertical);
 
         // convert the image to RGBA format
         let (width, height) = img.dimensions();
@@ -60,8 +63,6 @@ impl Texture {
             console::warn_1(&format!("Data length mismatch: got {}, expected {}", data.len(), expected_length).into());
         }
         
-        
-        
         let gl_texture = gl.create_texture()
             .ok_or(Error::TextureCreationError)?;
         gl.bind_texture(GL::TEXTURE_2D, Some(&gl_texture));
@@ -86,8 +87,8 @@ impl Texture {
         }
 
         gl.generate_mipmap(GL::TEXTURE_2D);
-        gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::NEAREST as i32);
-        gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::NEAREST as i32);
+        gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
+        gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
         gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
         gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
 

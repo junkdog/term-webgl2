@@ -109,8 +109,8 @@ impl BitmapFont {
                 metrics.height,
                 &mut texture_data,
                 texture_width,
-                pixel_x.saturating_add(metrics.xmin.abs() as usize),
-                pixel_y.saturating_sub(metrics.ymin.abs() as usize),
+                pixel_x, //.saturating_add(metrics.xmin.abs() as usize),
+                pixel_y, //.saturating_sub(metrics.ymin.abs() as usize),
             );
         }
 

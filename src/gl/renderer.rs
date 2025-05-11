@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::gl::gl_state::GlState;
+use crate::gl::gl_state::{BoundGlState, GlState};
 use crate::gl::{ShaderProgram, GL};
 use js_sys::wasm_bindgen::JsCast;
 
@@ -63,9 +63,9 @@ impl Renderer {
     pub fn gl(&self) -> &GL {
         &self.gl
     }
-
-    pub fn state(&mut self) -> &mut GlState {
-        &mut self.state
+    
+    pub fn state(&mut self) -> BoundGlState {
+        BoundGlState::new(&self.gl, &mut self.state)
     }
 
     pub fn canvas_width(&self) -> i32 {

@@ -66,41 +66,11 @@ impl CellArray {
             .ok_or(Error::UnableToRetrieveUniformLocation("u_sampler"))?;
 
         // create texture
-        const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font.png");
+        const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font_2.png");
         debug_png(PIXELS)?;
         // let texture = Texture::new(gl, GL::RGB, Self::PIXELS, 4, 6)?;
         let texture = Texture::from_image_data(gl, GL::RGBA, PIXELS)?;
 
-        // let texture = gl.create_texture()
-        //     .ok_or(Error::TextureCreationError)?;
-        //
-        // // upload texture data
-        // gl.bind_texture(GL::TEXTURE_2D, Some(&texture));
-        // unsafe {
-        //     let view = js_sys::Uint8Array::view(Self::PIXELS);
-        //     gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_array_buffer_view_and_src_offset(
-        //         GL::TEXTURE_2D,
-        //         0,
-        //         GL::RGB as i32,
-        //         4,
-        //         6,
-        //         0,
-        //         GL::RGB,
-        //         GL::UNSIGNED_BYTE,
-        //         &view,
-        //         0,
-        //     ).map_err(|v| {
-        //         console::error_2(&"Failed to upload texture data".into(), &v);
-        //         Error::TextureCreationError
-        //     })?;
-        // }
-        //
-        // // setup and generate mipmap
-        // gl.generate_mipmap(GL::TEXTURE_2D);
-        // gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::NEAREST as i32);
-        // gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::NEAREST as i32);
-        // gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
-        // gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
 
         Ok(Self {
             vbo,
