@@ -1,5 +1,6 @@
 use crate::error::Error;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
+use crate::mat4::Mat4;
 
 pub(crate) struct ShaderProgram {
     pub(crate) program: WebGlProgram
@@ -31,6 +32,25 @@ impl ShaderProgram {
         Ok(ShaderProgram {
             program
         })
+    }
+
+    pub fn set_uniform_mat4(
+        &self,
+        gl: &WebGl2RenderingContext,
+        name: &'static str,
+        matrix: &Mat4
+    ) -> Result<(), Error> {
+        self.use_program(gl);
+        let location = gl.get_uniform_location(&self.program, name)
+            .ok_or(Error::UnableToRetrieveUniformLocation(name))?;
+
+        gl.uniform_matrix4fv_with_f32_array(
+            Some(&location),
+            false,  // don't transpose
+            matrix.as_slice()
+        );
+
+        Ok(())
     }
 
     /// Use the shader program.

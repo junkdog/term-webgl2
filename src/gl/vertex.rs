@@ -1,15 +1,15 @@
 use crate::error::Error;
 use crate::gl::texture::Texture;
-use crate::gl::{Drawable, GL};
+use crate::gl::{Drawable, ShaderProgram, GL};
 use bon::bon;
 use web_sys::WebGl2RenderingContext;
 
 pub struct CellArray {
     vbo: web_sys::WebGlBuffer,
     index_buf: web_sys::WebGlBuffer,
-    // texture: web_sys::WebGlTexture,
     texture: Texture,
     sampler_loc: web_sys::WebGlUniformLocation,
+    projection_loc: web_sys::WebGlUniformLocation,
     count: i32,
 }
 
@@ -36,7 +36,7 @@ impl CellArray {
         gl: &WebGl2RenderingContext,
         vertices: &[f32],
         indices: &[u8],
-        program: &web_sys::WebGlProgram,
+        shader: &ShaderProgram,
     ) -> Result<Self, Error> {
 
         // create and bind VBO
@@ -61,20 +61,23 @@ impl CellArray {
         }
 
         // get Sampler uniform location
-        let sampler_loc = gl.get_uniform_location(program, "u_sampler")
+        let sampler_loc = gl.get_uniform_location(&shader.program, "u_sampler")
             .ok_or(Error::UnableToRetrieveUniformLocation("u_sampler"))?;
 
+        // get projection uniform location
+        let projection_loc = gl.get_uniform_location(&shader.program, "u_projection")
+            .ok_or(Error::UnableToRetrieveUniformLocation("u_projection"))?;
+        
         // create texture
         const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font_2.png");
-        // let texture = Texture::new(gl, GL::RGB, Self::PIXELS, 4, 6)?;
         let texture = Texture::from_image_data(gl, GL::RGBA, PIXELS)?;
-
-
+        
         Ok(Self {
             vbo,
             index_buf,
             texture,
             sampler_loc,
+            projection_loc,
             count: indices.len() as i32,
         })
     }
