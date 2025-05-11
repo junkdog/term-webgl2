@@ -42,4 +42,10 @@ pub enum Error {
     
     #[error("Failed to create vertex array object")]
     VertexArrayCreationError,
+    
+    #[error("Failed to create textue")]
+    TextureCreationError,
+    
+    #[error("Failed to create uniform location: {0}")]
+    UnableToRetrieveUniformLocation(&'static str),
 }
