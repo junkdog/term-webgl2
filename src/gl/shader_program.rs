@@ -6,7 +6,7 @@ pub(crate) struct ShaderProgram {
 }
 
 impl ShaderProgram {
-    pub(crate) fn create(
+    pub(super) fn create(
         gl: &WebGl2RenderingContext,
         vertex_source: &str,
         fragment_source: &str,
