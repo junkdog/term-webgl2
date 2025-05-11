@@ -105,32 +105,3 @@ impl Texture {
         gl.delete_texture(Some(&self.gl_texture));
     }
 }
-
-pub fn debug_png(png_data: &[u8]) -> Result<(), Error> {
-    // Try to load the PNG
-    let img = match image::load_from_memory(png_data) {
-        Ok(img) => img,
-        Err(e) => {
-            console::error_1(&format!("Failed to load PNG: {:?}", e).into());
-            return Err(Error::ImageLoadError("Invalid PNG data"));
-        }
-    };
-
-    // Get image info
-    let (width, height) = img.dimensions();
-    let color_type = img.color();
-
-    console::log_1(&format!("PNG info: {}x{}, color type: {:?}", width, height, color_type).into());
-
-    // Check first few pixels
-    let rgba = img.to_rgba8();
-    console::log_1(&"First few pixels:".into());
-    for y in 0..std::cmp::min(height, 4) {
-        for x in 0..std::cmp::min(width, 4) {
-            let pixel = rgba.get_pixel(x, y);
-            console::log_1(&format!("Pixel ({},{}): RGBA{:?}", x, y, pixel).into());
-        }
-    }
-
-    Ok(())
-}

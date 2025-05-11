@@ -47,7 +47,7 @@ pub struct BitmapFont {
     /// Height of each character cell
     pub cell_height: usize,
     /// Mapping from characters to UV coordinates (u1, v1, u2, v2)
-    pub char_to_uv: std::collections::HashMap<char, (f32, f32, f32, f32)>,
+    pub char_to_uv: HashMap<char, (f32, f32, f32, f32)>,
     /// Number of columns in the character grid
     pub grid_cols: usize,
     /// Number of rows in the character grid
@@ -157,12 +157,12 @@ impl BitmapFont {
     /// Save font metadata to a JSON file
     pub fn save_metadata(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let font_info = serde_json::json!({
-            "textureWidth": self.texture_width,
-            "textureHeight": self.texture_height,
-            "cellWidth": self.cell_width,
-            "cellHeight": self.cell_height,
-            "gridCols": self.grid_cols,
-            "gridRows": self.grid_rows,
+            "texture_width": self.texture_width,
+            "texture_height": self.texture_height,
+            "cell_width": self.cell_width,
+            "cell_height": self.cell_height,
+            "grid_cols": self.grid_cols,
+            "grid_rows": self.grid_rows,
             "characters": self.char_to_uv
         });
 

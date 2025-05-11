@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-use bon::{bon, builder};
-use web_sys::{console, WebGl2RenderingContext};
 use crate::error::Error;
+use crate::gl::texture::Texture;
 use crate::gl::{Drawable, GL};
-use crate::gl::texture::{debug_png, Texture};
+use bon::bon;
+use web_sys::WebGl2RenderingContext;
 
 pub struct CellArray {
     vbo: web_sys::WebGlBuffer,
@@ -67,7 +66,6 @@ impl CellArray {
 
         // create texture
         const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font_2.png");
-        debug_png(PIXELS)?;
         // let texture = Texture::new(gl, GL::RGB, Self::PIXELS, 4, 6)?;
         let texture = Texture::from_image_data(gl, GL::RGBA, PIXELS)?;
 
@@ -88,8 +86,6 @@ impl Drawable for CellArray {
         gl.bind_buffer(GL::ELEMENT_ARRAY_BUFFER, Some(&self.index_buf));
 
         self.texture.bind(gl, 0);
-        // gl.active_texture(GL::TEXTURE0 + 0);
-        // gl.bind_texture(GL::TEXTURE_2D, Some(&self.texture));
     }
 
     fn draw(&self, gl: &WebGl2RenderingContext) {

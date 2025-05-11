@@ -1,5 +1,3 @@
-use fontdue::{Font, FontSettings};
-use web_sys::wasm_bindgen::JsCast;
 use crate::error::Error;
 use crate::gl::{CellArray, Renderer};
 
