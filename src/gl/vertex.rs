@@ -27,12 +27,12 @@ impl CellArray {
     const UV_ATTRIB: u32 = 1;
 
     const PIXELS: &'static [u8] = &[
-        0x10,0,0,0xff,    0x20,0,0,0xff,    0x30,0,0,0xff,    0x40,0,0,0xff,
-        0x50,0,0,0xff,    0x60,0,0,0xff,    0x70,0,0,0xff,    0x80,0,0,0xff,
-        0x90,0,0,0xff,    0xA0,0,0,0xff,    0xB0,0,0,0xff,    0xC0,0,0,0xff,
-        0xD0,0,0,0xff,    0xE0,0,0,0xff,    0xF0,0,0,0xff,    0,0,0x10,0xff,
-        0,0,0x10,0xff,    0,0,0x20,0xff,    0,0,0x30,0xff,    0,0,0x40,0xff,
-        0,0,0x50,0xff,    0,0,0x60,0xff,    0,0,0x70,0xff,    0,0,0x80,0xff,
+        0x10,0,0,    0x20,0,0,    0x30,0,0,    0x40,0,0,
+        0x50,0,0,    0x60,0,0,    0x70,0,0,    0x80,0,0,
+        0x90,0,0,    0xA0,0,0,    0xB0,0,0,    0xC0,0,0,
+        0xD0,0,0,    0xE0,0,0,    0xF0,0,0,    0,0,0x10,
+        0,0,0x10,    0,0,0x20,    0,0,0x30,    0,0,0x40,
+        0,0,0x50,    0,0,0x60,    0,0,0x70,    0,0,0x80,
     ];
 
     #[builder]
@@ -64,27 +64,27 @@ impl CellArray {
             gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
         }
 
-        // set up vertex attribute pointer
-        gl.vertex_attrib_pointer_with_i32(
-            Self::POS_ATTRIB,
-            2,
-            GL::FLOAT,
-            false,
-            (2 + 2) * 4,
-            0,
-        );
-        gl.enable_vertex_attrib_array(Self::POS_ATTRIB);
-
-        // setup UV attribute pointer
-        gl.vertex_attrib_pointer_with_i32(
-            Self::UV_ATTRIB,
-            2,
-            GL::FLOAT,
-            false,
-            (2 + 2) * 4,
-            2 * 4,
-        );
-        gl.enable_vertex_attrib_array(Self::UV_ATTRIB);
+        // // set up vertex attribute pointer
+        // gl.vertex_attrib_pointer_with_i32(
+        //     Self::POS_ATTRIB,
+        //     2,
+        //     GL::FLOAT,
+        //     false,
+        //     (2 + 2) * 4,
+        //     0,
+        // );
+        // gl.enable_vertex_attrib_array(Self::POS_ATTRIB);
+        // 
+        // // setup UV attribute pointer
+        // gl.vertex_attrib_pointer_with_i32(
+        //     Self::UV_ATTRIB,
+        //     2,
+        //     GL::FLOAT,
+        //     false,
+        //     (2 + 2) * 4,
+        //     2 * 4,
+        // );
+        // gl.enable_vertex_attrib_array(Self::UV_ATTRIB);
 
         let texture = gl.create_texture()
             .ok_or(Error::TextureCreationError)?;
@@ -98,11 +98,11 @@ impl CellArray {
             gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_array_buffer_view_and_src_offset(
                 GL::TEXTURE_2D,
                 0,
-                GL::RGBA as i32,
+                GL::RGB as i32,
                 4,
                 6,
                 0,
-                GL::RGBA,
+                GL::RGB,
                 GL::UNSIGNED_BYTE,
                 &view,
                 0,
@@ -132,6 +132,28 @@ impl CellArray {
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.vbo));
         gl.bind_buffer(GL::ELEMENT_ARRAY_BUFFER, Some(&self.index_buf));
 
+        // set up vertex attribute pointer
+        gl.vertex_attrib_pointer_with_i32(
+            Self::POS_ATTRIB,
+            2,
+            GL::FLOAT,
+            false,
+            (2 + 2) * 4,
+            0,
+        );
+        gl.enable_vertex_attrib_array(Self::POS_ATTRIB);
+
+        // setup UV attribute pointer
+        gl.vertex_attrib_pointer_with_i32(
+            Self::UV_ATTRIB,
+            2,
+            GL::FLOAT,
+            false,
+            (2 + 2) * 4,
+            2 * 4,
+        );
+        gl.enable_vertex_attrib_array(Self::UV_ATTRIB);
+        
         // bind texture and set uniform
         gl.active_texture(GL::TEXTURE0 + 1);
         gl.bind_texture(GL::TEXTURE_2D, Some(&self.texture));
