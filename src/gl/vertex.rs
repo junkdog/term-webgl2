@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use bon::{bon, builder};
 use web_sys::{console, WebGl2RenderingContext};
 use crate::error::Error;
@@ -15,7 +16,7 @@ pub struct CellArray {
 impl CellArray {
     pub const FRAGMENT_GLSL: &'static str = include_str!("../shaders/cell.frag");
     pub const VERTEX_GLSL: &'static str = include_str!("../shaders/cell.vert");
-
+    
     // locations set in vertex shader
     const POS_ATTRIB: u32 = 0;
     const UV_ATTRIB: u32 = 1;
