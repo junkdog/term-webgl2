@@ -48,4 +48,7 @@ pub enum Error {
     
     #[error("Failed to create uniform location: {0}")]
     UnableToRetrieveUniformLocation(&'static str),
+    
+    #[error("Failed to load image from path: {0}")]
+    ImageLoadError(&'static str),
 }
