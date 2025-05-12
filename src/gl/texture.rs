@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use image::{GenericImageView, ImageFormat};
 use image::metadata::Orientation;
 use web_sys::console;
@@ -34,17 +35,6 @@ impl Texture {
 
         // create the texture
         Self::new(gl, format, raw_data, width as i32, height as i32)
-    }
-    pub fn from_image(
-        gl: &web_sys::WebGl2RenderingContext,
-        format: u32,
-        path: &'static str
-    ) -> Result<Self, Error> {
-        // load the image
-        let img = image::open(path)
-            .map_err(|_| Error::ImageLoadError(path))?;
-
-        Self::from_image_data(gl, format, &img.to_rgba8().into_raw())
     }
 
     pub fn new(
@@ -103,5 +93,132 @@ impl Texture {
 
     pub fn delete(&self, gl: &web_sys::WebGl2RenderingContext) {
         gl.delete_texture(Some(&self.gl_texture));
+    }
+
+    pub fn gl_texture(&self) -> &web_sys::WebGlTexture {
+        &self.gl_texture
+    }
+}
+
+/// Represents a region within a texture atlas
+#[derive(Debug, Clone, Copy)]
+pub struct AtlasRegion {
+    /// UV coordinates (u1, v1, u2, v2)
+    pub uvs: (f32, f32, f32, f32),
+    /// Pixel coordinates (x, y)
+    pub pos: (i32, i32),
+    /// Width of the sprite in pixels
+    pub width: i32,
+    /// Height of the sprite in pixels
+    pub height: i32,
+}
+
+
+/// A texture atlas that contains multiple sprites packed into a single texture
+pub struct TextureAtlas {
+    /// The underlying texture
+    texture: Texture,
+    /// Map of sprite names to their regions
+    regions: HashMap<u16, AtlasRegion>,
+}
+
+
+impl TextureAtlas {
+    /// Creates a new empty texture atlas with the specified dimensions
+    pub fn new(
+        texture: Texture,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            texture,
+            regions: HashMap::new(),
+        })
+    }
+
+    /// Gets a region by name
+    pub fn get_region(&self, key: u16) -> Option<&AtlasRegion> {
+        self.regions.get(&key)
+    }
+
+    /// Binds the atlas texture to the specified texture unit
+    pub fn bind(&self, gl: &web_sys::WebGl2RenderingContext, texture_unit: u32) {
+        self.texture.bind(gl, texture_unit);
+    }
+
+    /// Create vertices for rendering a sprite from this atlas
+    pub fn create_sprite_vertices(
+        &self,
+        region: u16,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32
+    ) -> Option<[f32; 16]> {
+        let region = self.get_region(region)?;
+        let (u1, v1, u2, v2) = region.uvs;
+
+        // Create a quad with position and texture coordinates
+        let vertices = [
+            // x, y, u, v
+            x + width, y,          u2, v1,  // top-right
+            x,         y + height, u1, v2,  // bottom-left
+            x + width, y + height, u2, v2,  // bottom-right
+            x,         y,          u1, v1,  // top-left
+        ];
+
+        Some(vertices)
+    }
+
+    /// Creates a TextureAtlas from a grid of equal-sized cells
+    pub fn from_grid(
+        texture: Texture,
+    ) -> Result<Self, Error> {
+        // 
+        let cols: i32 = 50;
+        let rows: i32 = 6;
+        let cell_width: i32 = 18;
+        let cell_height: i32 = 28;
+        let padding: i32 = 1;
+        
+        let img_width = texture.width;
+        let img_height = texture.height;
+
+        console::log_1(&format!("Creating atlas grid: {}x{} cells", cols, rows).into());
+
+        let mut regions = HashMap::new();
+
+        // Create regions for each cell
+        let mut idx = 0;
+        for row in 0..rows {
+            for col in 0..cols {
+                let x = col * (cell_width + padding);
+                let y = row * (cell_height + padding);
+
+                // skip if this would go outside the image bounds
+                if x + cell_width > img_width || y + cell_height > img_height {
+                    continue;
+                }
+
+                // calculate UV coordinates
+                let u1 = x as f32 / img_width as f32;
+                let v1 = y as f32 / img_height as f32;
+                let u2 = (x + cell_width) as f32 / img_width as f32;
+                let v2 = (y + cell_height) as f32 / img_height as f32;
+
+                // store the region with a generated name
+                let region = AtlasRegion {
+                    uvs: (u1, v1, u2, v2),
+                    pos: (x, y),
+                    width: cell_width,
+                    height: cell_height,
+                };
+                regions.insert(idx, region);
+                idx += 1;
+            }
+        }
+
+        Ok(Self {
+            texture,
+            regions,
+        })
     }
 }

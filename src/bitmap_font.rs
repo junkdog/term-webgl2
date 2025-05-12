@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use fontdue::{Font, FontSettings};
-
+use serde::{Deserialize, Serialize};
 
 const GLYPHS: &str = "\
 !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop
