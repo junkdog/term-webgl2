@@ -1,0 +1,14 @@
+[package]
+name = "bitmap-font"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cosmic-text = "0.11.0" 
+image = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[[bin]]
+name = "bitmap-font"
+path = "src/main.rs"

@@ -1,53 +1,11 @@
-[package]
-name = "webgl2"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = [
+    "web",
+    "bitmap-font",
+]
 
-[dependencies]
-bon = "3.6.3"
-compact_str = "0.9.0"
-console_error_panic_hook = "0.1.7"
+# Shared dependencies can be defined here to ensure version consistency
+[workspace.dependencies]
 thiserror = "2.0.12"
-web-sys = { version = "0.3.77", features = [
-    'console',
-    'CanvasRenderingContext2d',
-    'Document',
-    'Element',
-    'HtmlCanvasElement',
-    'HtmlElement',
-    'KeyboardEvent',
-    'Location',
-    'Navigator',
-    'Node',
-    'Performance',
-    'Screen',
-    'WebGl2RenderingContext',
-    'WebGlBuffer',
-    'WebGlProgram',
-    'WebGlRenderingContext',
-    'WebGlShader',
-    'WebGlTexture',
-    'WebGlUniformLocation',
-    'WebGlVertexArrayObject',
-    'Window',
-] }
-web-time = "1.1.0"
-js-sys = "0.3.77"
-fontdue = "0.9.3"
 image = "0.25.6"
 serde_json = "1.0.140"
-serde = { version = "1.0.219", features = ["derive"] }
-cosmic-text = { version = "0.14.2", optional = true }
-
-[[bin]]
-name = "webgl2"
-path = "src/main.rs"
-
-[[bin]]
-name = "bitmap-font"
-path = "src/bitmap_font.rs"
-
-[features]
-cosmic-text = ["dep:cosmic-text"]
-
-
