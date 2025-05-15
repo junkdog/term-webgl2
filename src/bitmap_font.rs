@@ -54,6 +54,7 @@ pub struct BitmapFont {
     pub grid_rows: usize,
 }
 
+// todo: use https://pop-os.github.io/cosmic-text/cosmic_text/struct.Placement.html
 impl BitmapFont {
     /// Generate a bitmap font from the provided font, characters, and settings
     pub fn generate(
@@ -65,6 +66,10 @@ impl BitmapFont {
     ) -> Self {
         // calculate cell dimensions based on the largest glyph
         let (cell_width, cell_height) = calculate_cell_dimensions(font, chars, font_size);
+        println!("Cell width: {}", cell_width);
+        println!("Cell height: {}", cell_height);
+        let cell_width = 15;
+        let cell_height = 24;
 
         // calculate the raw texture dimensions based on the grid
         let raw_width = grid_cols * cell_width;
@@ -78,7 +83,7 @@ impl BitmapFont {
         let mut texture_data = vec![0; texture_width * texture_height * 4];
 
         // create a mapping of characters to UV coordinates
-        let mut char_to_uv = std::collections::HashMap::new();
+        let mut char_to_uv = HashMap::new();
 
         // rasterize each character and place it in the grid
         for (i, c) in chars.chars().enumerate() {
@@ -103,14 +108,19 @@ impl BitmapFont {
             char_to_uv.insert(c, (u1, v1, u2, v2));
 
             // place the glyph in the texture
+            
+            let pixel_x = pixel_x as i32;
+            let pixel_y = pixel_y as i32;
             place_glyph_in_texture(
                 &bitmap,
-                metrics.width,
-                metrics.height,
+                metrics.width as i32,
+                metrics.height as i32,
                 &mut texture_data,
                 texture_width,
-                pixel_x, //.saturating_add(metrics.xmin.abs() as usize),
-                pixel_y, //.saturating_sub(metrics.ymin.abs() as usize),
+                // pixel_x, //.saturating_add(metrics.xmin.abs() as usize),
+                // pixel_y, //.saturating_sub(metrics.ymin.abs() as usize),
+                pixel_x + metrics.xmin,
+                pixel_y - metrics.ymin / 2,
             );
         }
 
@@ -176,17 +186,19 @@ impl BitmapFont {
 /// Places a single glyph bitmap into the texture at the specified position
 fn place_glyph_in_texture(
     bitmap: &[u8],          // The rasterized glyph bitmap (grayscale)
-    glyph_width: usize,     // Width of the glyph
-    glyph_height: usize,    // Height of the glyph
+    glyph_width: i32,     // Width of the glyph
+    glyph_height: i32,    // Height of the glyph
     texture: &mut [u8],     // The texture data (RGBA)
     texture_width: usize,   // Width of the texture
-    x_offset: usize,        // X position in the texture
-    y_offset: usize,        // Y position in the texture
+    x_offset: i32,        // X position in the texture
+    y_offset: i32,        // Y position in the texture
 ) {
     // add padding to center the glyph in its cell
-    let padding = 1;
+    let padding = 0;
     let x_offset = x_offset + padding;
     let y_offset = y_offset + padding;
+    
+    let texture_width = texture_width as i32;
 
     // copy each pixel of the glyph to the texture
     for y in 0..glyph_height {
@@ -194,12 +206,12 @@ fn place_glyph_in_texture(
             let glyph_idx = y * glyph_width + x;
 
             // skip if out of bounds (safety check)
-            if glyph_idx >= bitmap.len() {
+            if glyph_idx >= bitmap.len() as i32 {
                 continue;
             }
 
             // the glyph bitmap is grayscale (1 byte per pixel)
-            let alpha = bitmap[glyph_idx];
+            let alpha = bitmap[glyph_idx as usize];
 
             // calculate the position in the texture (RGBA, 4 bytes per pixel)
             let texture_x = x_offset + x;
@@ -207,11 +219,16 @@ fn place_glyph_in_texture(
             let texture_idx = (texture_y * texture_width + texture_x) * 4;
 
             // skip if out of bounds of the texture
-            if texture_idx + 3 >= texture.len() {
+            if texture_idx + 3 >= texture.len() as i32 {
                 continue;
             }
 
             // set RGBA values - white with varying alpha
+            let texture_idx = if texture_idx < 0 {
+                0
+            } else {
+                texture_idx
+            } as usize;
             texture[texture_idx] = 255;       // R
             texture[texture_idx + 1] = 255;   // G
             texture[texture_idx + 2] = 255;   // B
@@ -228,17 +245,20 @@ fn calculate_cell_dimensions(font: &fontdue::Font, chars: &str, size: f32) -> (u
     let mut max_height = 0;
 
     // iterate through all characters in the set
-    for c in chars.chars() {
+    for (i, c) in chars.chars().enumerate() {
         // get the metrics for this character
         let (metrics, _) = font.rasterize(c, size);
+        if metrics.width > 15 || metrics.height > 24 {
+            println!("i ({c}): {:?}", metrics);
+        }
 
         // update maximums if this character is larger
         max_width = max_width.max(metrics.width);
         max_height = max_height.max(metrics.height);
 
         // Also consider the advance width to ensure proper spacing
-        let advance_width = metrics.advance_width.ceil() as usize;
-        max_width = max_width.max(advance_width);
+        // let advance_width = metrics.advance_width.ceil() as usize;
+        // max_width = max_width.max(advance_width);
     }
 
     // Add some padding to avoid characters being too close to the cell edges

@@ -37,6 +37,7 @@ fontdue = "0.9.3"
 image = "0.25.6"
 serde_json = "1.0.140"
 serde = { version = "1.0.219", features = ["derive"] }
+cosmic-text = { version = "0.14.2", optional = true }
 
 [[bin]]
 name = "webgl2"
@@ -45,5 +46,8 @@ path = "src/main.rs"
 [[bin]]
 name = "bitmap-font"
 path = "src/bitmap_font.rs"
+
+[features]
+cosmic-text = ["dep:cosmic-text"]
 
 
