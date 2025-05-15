@@ -1,13 +1,13 @@
 use crate::error::Error;
 use crate::gl::texture::Texture;
-use crate::gl::{Drawable, ShaderProgram, GL};
+use crate::gl::{Drawable, ShaderProgram, TextureAtlas, GL};
 use bon::bon;
 use web_sys::WebGl2RenderingContext;
 
 pub struct CellArray {
     vbo: web_sys::WebGlBuffer,
     index_buf: web_sys::WebGlBuffer,
-    texture: Texture,
+    atlas: TextureAtlas,
     sampler_loc: web_sys::WebGlUniformLocation,
     projection_loc: web_sys::WebGlUniformLocation,
     count: i32,
@@ -34,6 +34,7 @@ impl CellArray {
     #[builder]
     pub fn new(
         gl: &WebGl2RenderingContext,
+        atlas: TextureAtlas,
         vertices: &[f32],
         indices: &[u8],
         shader: &ShaderProgram,
@@ -68,14 +69,10 @@ impl CellArray {
         let projection_loc = gl.get_uniform_location(&shader.program, "u_projection")
             .ok_or(Error::UnableToRetrieveUniformLocation("u_projection"))?;
         
-        // create texture
-        const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font_2.png");
-        let texture = Texture::from_image_data(gl, GL::RGBA, PIXELS)?;
-        
         Ok(Self {
             vbo,
             index_buf,
-            texture,
+            atlas,
             sampler_loc,
             projection_loc,
             count: indices.len() as i32,
@@ -88,11 +85,8 @@ impl Drawable for CellArray {
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.vbo));
         gl.bind_buffer(GL::ELEMENT_ARRAY_BUFFER, Some(&self.index_buf));
 
-        self.texture.bind(gl, 0);
-    }
-
-    fn draw(&self, gl: &WebGl2RenderingContext) {
-        // set the sampler uniform to use texture unit 0
+        // bind texture and set the sampler uniform to use texture unit 0
+        self.atlas.bind(gl, 0);
         gl.uniform1i(Some(&self.sampler_loc), 0);
 
         const STRIDE: i32 = (2 + 2) * 4; // 2+2 f32 for position and UV
@@ -104,8 +98,9 @@ impl Drawable for CellArray {
         // setup UV attribute pointer
         gl.vertex_attrib_pointer_with_i32(Self::UV_ATTRIB, 2, GL::FLOAT, false, STRIDE, 2 * 4);
         gl.enable_vertex_attrib_array(Self::UV_ATTRIB);
+    }
 
-        // draw the elements
+    fn draw(&self, gl: &WebGl2RenderingContext) {
         gl.draw_elements_with_i32(GL::TRIANGLES, self.count, GL::UNSIGNED_BYTE, 0);
     }
 

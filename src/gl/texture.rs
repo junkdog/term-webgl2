@@ -172,7 +172,7 @@ impl TextureAtlas {
     pub fn from_grid(
         texture: Texture,
     ) -> Result<Self, Error> {
-        // 
+        // temp hard-coded values matching bitmap_font_2.png
         let cols: i32 = 50;
         let rows: i32 = 6;
         let cell_width: i32 = 18;
@@ -190,6 +190,9 @@ impl TextureAtlas {
         let mut idx = 0;
         for row in 0..rows {
             for col in 0..cols {
+                let padding_y = row * padding;
+                let padding_x = col * padding;
+                
                 let x = col * (cell_width + padding);
                 let y = row * (cell_height + padding);
 
@@ -207,7 +210,7 @@ impl TextureAtlas {
                 // store the region with a generated name
                 let region = AtlasRegion {
                     uvs: (u1, v1, u2, v2),
-                    pos: (x, y),
+                    pos: (x - padding_x, y),
                     width: cell_width,
                     height: cell_height,
                 };
