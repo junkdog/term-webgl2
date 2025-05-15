@@ -7,7 +7,9 @@ edition = "2021"
 cosmic-text = "0.11.0" 
 image = { workspace = true }
 serde_json = { workspace = true }
+serde = { version = "1.0.219" }
 thiserror = { workspace = true }
+color-eyre = "0.6.4"
 
 [[bin]]
 name = "bitmap-font"

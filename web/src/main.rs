@@ -6,7 +6,6 @@ use crate::mat4::Mat4;
 mod gl;
 mod error;
 mod shaders;
-mod bitmap_font;
 mod mat4;
 
 fn main() {
@@ -25,7 +24,7 @@ fn run() -> Result<(), Error> {
     );
 
     // create texture
-    const PIXELS: &[u8] = include_bytes!("../data/bitmap_font.png");
+    const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font.png");
     let texture = Texture::from_image_data(renderer.gl(), GL::RGBA, PIXELS)?;
     let atlas = TextureAtlas::from_grid(texture)?;
 
