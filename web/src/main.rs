@@ -28,14 +28,14 @@ fn run() -> Result<(), Error> {
     let texture = Texture::from_image_data(renderer.gl(), GL::RGBA, PIXELS)?;
     let atlas = TextureAtlas::from_grid(texture)?;
 
-    let region = atlas.get_region(8).unwrap();
+    let region = atlas.get_region(159).unwrap();
     let (u1, v1, u2, v2) = region.uvs;
     console::log_1(&format!("{:?}", region).into());
     let vertices: [f32; 16] = [
         //  x      y      u     v
-        500.0, 100.0,  u2, 1.0 - v1, //0.25,  1.0,  // top-right
+        300.0, 100.0,  u2, 1.0 - v1, //0.25,  1.0,  // top-right
         100.0, 500.0,  u1, 1.0 - v2, //0.0,   0.0,  // bottom-left
-        500.0, 500.0,  u2, 1.0 - v2, //0.25,  0.0,  // bottom-right
+        300.0, 500.0,  u2, 1.0 - v2, //0.25,  0.0,  // bottom-right
         100.0, 100.0,  u1, 1.0 - v1, //0.0,   1.0,  // top-left
     ];
 

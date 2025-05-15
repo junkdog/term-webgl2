@@ -173,11 +173,11 @@ impl TextureAtlas {
         texture: Texture,
     ) -> Result<Self, Error> {
         // temp hard-coded values matching bitmap_font_2.png
-        let cols: i32 = 50;
-        let rows: i32 = 6;
-        let cell_width: i32 = 18;
-        let cell_height: i32 = 28;
+        let cols: i32 = 60;
+        let rows: i32 = 5;
         let padding: i32 = 1;
+        let cell_width: i32 = 16 - padding;
+        let cell_height: i32 = 28 - padding;
         
         let img_width = texture.width;
         let img_height = texture.height;
