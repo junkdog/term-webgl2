@@ -46,20 +46,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 pub struct BitmapFont {
     /// The raw RGBA texture data
     pub texture_data: Vec<u32>,
+    /// The properties of the font
+    metadata: BitmapFontMetadata,
+}
+
+#[derive(Debug)]
+pub struct BitmapFontMetadata {
+    /// The font size in points
+    pub font_size: f32,
     /// Width of the texture in pixels
     pub texture_width: usize,
     /// Height of the texture in pixels
     pub texture_height: usize,
     /// Width of each character cell
-    pub cell_width: usize,
+    pub cell_width: i32,
     /// Height of each character cell
-    pub cell_height: usize,
+    pub cell_height: i32,
     /// Mapping from characters to UV coordinates (u1, v1, u2, v2)
     pub char_to_uv: HashMap<char, (f32, f32, f32, f32)>,
-    /// Number of columns in the character grid
-    pub grid_cols: usize,
-    /// Number of rows in the character grid
-    pub grid_rows: usize,
 }
 
 impl BitmapFont {
@@ -83,8 +87,8 @@ impl BitmapFont {
         println!("Cell height: {}", cell_height);
 
         // calculate the raw texture dimensions based on the grid
-        let raw_width = grid_cols * cell_width;
-        let raw_height = grid_rows * cell_height;
+        let raw_width = grid_cols * cell_width as usize;
+        let raw_height = grid_rows * cell_height as usize;
 
         // pad to power-of-2 dimensions
         let texture_width = next_pow2(raw_width);
@@ -96,6 +100,11 @@ impl BitmapFont {
         // create a mapping of characters to UV coordinates
         let mut char_to_uv = HashMap::new();
 
+        // for convenience, convert to f32
+        let pad = PADDING as f32;
+        let (texture_w, texture_h) = (texture_width as f32, texture_height as f32);
+        let (cell_w, cell_h) = (cell_width as f32, cell_height as f32);
+        
         // rasterize each character and place it in the grid
         for (i, c) in chars.chars().enumerate() {
             if i >= grid_cols * grid_rows { break; }
@@ -104,14 +113,14 @@ impl BitmapFont {
             let grid_y = i / grid_cols;
 
             // calculate pixel positions for this cell
-            let pixel_x = grid_x * cell_width;
-            let pixel_y = grid_y * cell_height;
+            let pixel_x = grid_x as f32 * cell_w;
+            let pixel_y = grid_y as f32 * cell_h;
 
             // calculate normalized UV coordinates
-            let u1 = pixel_x as f32 / texture_width as f32;
-            let v1 = pixel_y as f32 / texture_height as f32;
-            let u2 = (pixel_x + cell_width) as f32 / texture_width as f32;
-            let v2 = (pixel_y + cell_height) as f32 / texture_height as f32;
+            let u1 = (pixel_x + pad) / texture_w;
+            let v1 = (pixel_y + pad) / texture_h;
+            let u2 = (pixel_x + cell_w - pad) / texture_w;
+            let v2 = (pixel_y + cell_h - pad) / texture_h;
 
             // store UV coordinates for this character
             char_to_uv.insert(c, (u1, v1, u2, v2));
@@ -119,8 +128,7 @@ impl BitmapFont {
             // create a single-character buffer for rasterization
             let mut buffer = Buffer::new(font_system, metrics);
             let mut buffer = buffer.borrow_with(font_system);
-            buffer.set_size(2.0 * cell_width as f32, 2.0 * cell_height as f32);
-
+            buffer.set_size(2.0 * cell_w, 2.0 * cell_h);
 
             // add the character to the buffer
             buffer.set_text(&c.to_string(), attrs(), cosmic_text::Shaping::Advanced);
@@ -134,33 +142,34 @@ impl BitmapFont {
                 texture_width,
                 pixel_x as i32,
                 pixel_y as i32,
-                cell_width as i32,
-                cell_height as i32,
+                cell_w as i32,
+                cell_h as i32,
             );
         }
 
         Self {
             texture_data,
-            texture_width,
-            texture_height,
-            cell_width,
-            cell_height,
-            char_to_uv,
-            grid_cols,
-            grid_rows,
+            metadata: BitmapFontMetadata {
+                font_size,
+                texture_width,
+                texture_height,
+                cell_width: cell_width as i32,
+                cell_height: cell_height as i32,
+                char_to_uv,
+            },
         }
     }
 
     /// Save the bitmap font texture as a PNG file
     pub fn save_texture(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut img = ImageBuffer::<Rgba<u8>, Vec<u8>>::new(
-            self.texture_width as u32,
-            self.texture_height as u32
+            self.metadata.texture_width as u32,
+            self.metadata.texture_height as u32
         );
 
-        for y in 0..self.texture_height {
-            for x in 0..self.texture_width {
-                let idx = y * self.texture_width + x;
+        for y in 0..self.metadata.texture_height {
+            for x in 0..self.metadata.texture_width {
+                let idx = y * self.metadata.texture_width + x;
                 if let Some(color) = self.texture_data.get(idx) {
                     let pixel = [
                         (*color >> 24) as u8,
@@ -182,14 +191,14 @@ impl BitmapFont {
 
     /// Save font metadata to a JSON file
     pub fn save_metadata(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let metadata = &self.metadata;
         let font_info = serde_json::json!({
-            "texture_width": self.texture_width,
-            "texture_height": self.texture_height,
-            "cell_width": self.cell_width,
-            "cell_height": self.cell_height,
-            "grid_cols": self.grid_cols,
-            "grid_rows": self.grid_rows,
-            "characters": self.char_to_uv
+            "font_size": metadata.font_size,
+            "texture_width": metadata.texture_width,
+            "texture_height": metadata.texture_height,
+            "cell_width": metadata.cell_width,
+            "cell_height": metadata.cell_height,
+            "char_to_uv": metadata.char_to_uv
         });
 
         let mut file = File::create(path)?;
@@ -240,7 +249,7 @@ fn calculate_cell_dimensions(
     swash_cache: &mut SwashCache,
     chars: &str,
     metrics: Metrics
-) -> (usize, usize) {
+) -> (i32, i32) {
     let mut max_width = 0;
     let mut max_height = 0;
 
@@ -272,10 +281,10 @@ fn calculate_cell_dimensions(
     let cell_width = max_width + PADDING * 2;
     let cell_height = max_height + PADDING * 2;
 
-    (cell_width as _, cell_height as _)
+    (cell_width, cell_height)
 }
 
-/// Rounds up to the next power of 2
+// Rounds up to the next power of 2
 fn next_pow2(n: usize) -> usize {
     let mut v = n;
     v -= 1;
@@ -292,4 +301,23 @@ fn attrs() -> Attrs<'static> {
     Attrs::new()
         .family(Family::Monospace)
         .weight(Weight::NORMAL)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_next_pow2() {
+        assert_eq!(next_pow2(0), 1);
+        assert_eq!(next_pow2(1), 1);
+        assert_eq!(next_pow2(2), 2);
+        assert_eq!(next_pow2(3), 4);
+        assert_eq!(next_pow2(4), 4);
+        assert_eq!(next_pow2(5), 8);
+        assert_eq!(next_pow2(15), 16);
+        assert_eq!(next_pow2(16), 16);
+        assert_eq!(next_pow2(17), 32);
+        assert_eq!(next_pow2(1023), 1024);
+    }
 }

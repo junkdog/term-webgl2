@@ -1615,6 +1615,7 @@ dependencies = [
  "console_error_panic_hook",
  "image",
  "js-sys",
+ "serde",
  "serde_json",
  "thiserror 2.0.12",
  "web-sys",

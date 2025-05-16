@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use compact_str::{CompactString, ToCompactString};
 use image::{GenericImageView, ImageFormat};
 use image::metadata::Orientation;
 use web_sys::console;
+use crate::bitmap_font::BitmapFontMetadata;
 use crate::error::Error;
 use crate::gl::GL;
 
@@ -105,8 +107,6 @@ impl Texture {
 pub struct AtlasRegion {
     /// UV coordinates (u1, v1, u2, v2)
     pub uvs: (f32, f32, f32, f32),
-    /// Pixel coordinates (x, y)
-    pub pos: (i32, i32),
     /// Width of the sprite in pixels
     pub width: i32,
     /// Height of the sprite in pixels
@@ -119,7 +119,7 @@ pub struct TextureAtlas {
     /// The underlying texture
     texture: Texture,
     /// Map of sprite names to their regions
-    regions: HashMap<u16, AtlasRegion>,
+    regions: HashMap<CompactString, AtlasRegion>,
 }
 
 
@@ -135,8 +135,8 @@ impl TextureAtlas {
     }
 
     /// Gets a region by name
-    pub fn get_region(&self, key: u16) -> Option<&AtlasRegion> {
-        self.regions.get(&key)
+    pub fn get_region(&self, key: &str) -> Option<&AtlasRegion> {
+        self.regions.get(key)
     }
 
     /// Binds the atlas texture to the specified texture unit
@@ -147,13 +147,13 @@ impl TextureAtlas {
     /// Create vertices for rendering a sprite from this atlas
     pub fn create_sprite_vertices(
         &self,
-        region: u16,
+        key: &str,
         x: f32,
         y: f32,
         width: f32,
         height: f32
     ) -> Option<[f32; 16]> {
-        let region = self.get_region(region)?;
+        let region = self.get_region(key)?;
         let (u1, v1, u2, v2) = region.uvs;
 
         // Create a quad with position and texture coordinates
@@ -171,53 +171,67 @@ impl TextureAtlas {
     /// Creates a TextureAtlas from a grid of equal-sized cells
     pub fn from_grid(
         texture: Texture,
+        metadata: &BitmapFontMetadata,
     ) -> Result<Self, Error> {
         // temp hard-coded values matching bitmap_font_2.png
-        let cols: i32 = 60;
-        let rows: i32 = 5;
-        let padding: i32 = 1;
-        let cell_width: i32 = 16 - padding;
-        let cell_height: i32 = 28 - padding;
+        // let cols: i32 = 60;
+        // let rows: i32 = 5;
+        // let padding: i32 = 1;
+        // let cell_width: i32 = 16 - padding;
+        // let cell_height: i32 = 28 - padding;
         
-        let img_width = texture.width;
-        let img_height = texture.height;
+        // let img_width = texture.width;
+        // let img_height = texture.height;
 
-        console::log_1(&format!("Creating atlas grid: {}x{} cells", cols, rows).into());
+        console::log_1(&format!("Creating atlas grid with {} regions", metadata.char_to_uv.len()).into());
 
         let mut regions = HashMap::new();
 
+        metadata.char_to_uv
+            .iter()
+            .map(|(ch, uvs)| {
+                (ch, AtlasRegion {
+                    uvs: *uvs,
+                    width: metadata.cell_width,
+                    height: metadata.cell_height
+                })
+            })
+            .for_each(|(ch, region)| {
+                regions.insert(ch.to_compact_string(), region);
+            });
+        
         // Create regions for each cell
-        let mut idx = 0;
-        for row in 0..rows {
-            for col in 0..cols {
-                let padding_y = row * padding;
-                let padding_x = col * padding;
-                
-                let x = col * (cell_width + padding);
-                let y = row * (cell_height + padding);
-
-                // skip if this would go outside the image bounds
-                if x + cell_width > img_width || y + cell_height > img_height {
-                    continue;
-                }
-
-                // calculate UV coordinates
-                let u1 = x as f32 / img_width as f32;
-                let v1 = y as f32 / img_height as f32;
-                let u2 = (x + cell_width) as f32 / img_width as f32;
-                let v2 = (y + cell_height) as f32 / img_height as f32;
-
-                // store the region with a generated name
-                let region = AtlasRegion {
-                    uvs: (u1, v1, u2, v2),
-                    pos: (x - padding_x, y),
-                    width: cell_width,
-                    height: cell_height,
-                };
-                regions.insert(idx, region);
-                idx += 1;
-            }
-        }
+        // let mut idx = 0;
+        // for row in 0..rows {
+        //     for col in 0..cols {
+        //         let padding_y = row * padding;
+        //         let padding_x = col * padding;
+        //         
+        //         let x = col * (cell_width + padding);
+        //         let y = row * (cell_height + padding);
+        // 
+        //         // skip if this would go outside the image bounds
+        //         if x + cell_width > img_width || y + cell_height > img_height {
+        //             continue;
+        //         }
+        // 
+        //         // calculate UV coordinates
+        //         let u1 = x as f32 / img_width as f32;
+        //         let v1 = y as f32 / img_height as f32;
+        //         let u2 = (x + cell_width) as f32 / img_width as f32;
+        //         let v2 = (y + cell_height) as f32 / img_height as f32;
+        // 
+        //         // store the region with a generated name
+        //         let region = AtlasRegion {
+        //             uvs: (u1, v1, u2, v2),
+        //             pos: (x - padding_x, y),
+        //             width: cell_width,
+        //             height: cell_height,
+        //         };
+        //         regions.insert(idx, region);
+        //         idx += 1;
+        //     }
+        // }
 
         Ok(Self {
             texture,

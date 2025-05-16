@@ -1,4 +1,6 @@
+use serde::Deserialize;
 use web_sys::console;
+use crate::bitmap_font::BitmapFontMetadata;
 use crate::error::Error;
 use crate::gl::{CellArray, Renderer, Texture, TextureAtlas, GL};
 use crate::mat4::Mat4;
@@ -7,6 +9,7 @@ mod gl;
 mod error;
 mod shaders;
 mod mat4;
+mod bitmap_font;
 
 fn main() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -25,17 +28,19 @@ fn run() -> Result<(), Error> {
 
     // create texture
     const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font.png");
+    const METADATA_JSON: &'static str = include_str!("../../data/bitmap_font.json");
     let texture = Texture::from_image_data(renderer.gl(), GL::RGBA, PIXELS)?;
-    let atlas = TextureAtlas::from_grid(texture)?;
+    let metadata: BitmapFontMetadata = serde_json::from_str(METADATA_JSON).unwrap();
+    let atlas = TextureAtlas::from_grid(texture, &metadata)?;
 
-    let region = atlas.get_region(159).unwrap();
+    let region = atlas.get_region(")").unwrap();
     let (u1, v1, u2, v2) = region.uvs;
     console::log_1(&format!("{:?}", region).into());
     let vertices: [f32; 16] = [
         //  x      y      u     v
-        300.0, 100.0,  u2, 1.0 - v1, //0.25,  1.0,  // top-right
-        100.0, 500.0,  u1, 1.0 - v2, //0.0,   0.0,  // bottom-left
-        300.0, 500.0,  u2, 1.0 - v2, //0.25,  0.0,  // bottom-right
+        320.0, 100.0,  u2, 1.0 - v1, //0.25,  1.0,  // top-right
+        100.0, 560.0,  u1, 1.0 - v2, //0.0,   0.0,  // bottom-left
+        320.0, 560.0,  u2, 1.0 - v2, //0.25,  0.0,  // bottom-right
         100.0, 100.0,  u1, 1.0 - v1, //0.0,   1.0,  // top-left
     ];
 

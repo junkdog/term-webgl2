@@ -36,6 +36,7 @@ web-time = "1.1.0"
 js-sys = "0.3.77"
 image = { workspace = true }
 serde_json = { workspace = true }
+serde = { version = "1.0.219", features = ["derive"] }
 
 [[bin]]
 name = "webgl2"
