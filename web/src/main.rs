@@ -33,15 +33,15 @@ fn run() -> Result<(), Error> {
     let metadata: BitmapFontMetadata = serde_json::from_str(METADATA_JSON).unwrap();
     let atlas = TextureAtlas::from_grid(texture, &metadata)?;
 
-    let region = atlas.get_region(")").unwrap();
+    let region = atlas.get_region("A").unwrap();
     let (u1, v1, u2, v2) = region.uvs;
     console::log_1(&format!("{:?}", region).into());
     let vertices: [f32; 16] = [
-        //  x      y      u     v
-        320.0, 100.0,  u2, 1.0 - v1, //0.25,  1.0,  // top-right
-        100.0, 560.0,  u1, 1.0 - v2, //0.0,   0.0,  // bottom-left
-        320.0, 560.0,  u2, 1.0 - v2, //0.25,  0.0,  // bottom-right
-        100.0, 100.0,  u1, 1.0 - v1, //0.0,   1.0,  // top-left
+        //  x      y    u   v
+        320.0, 100.0,  u2, v1, //0.25,  1.0,  // top-right
+        100.0, 560.0,  u1, v2, //0.0,   0.0,  // bottom-left
+        320.0, 560.0,  u2, v2, //0.25,  0.0,  // bottom-right
+        100.0, 100.0,  u1, v1, //0.0,   1.0,  // top-left
     ];
 
     let indices = [

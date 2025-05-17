@@ -26,8 +26,6 @@ impl Texture {
                 Error::ImageLoadError("failed to load image data")
             })?;
         
-        img.apply_orientation(Orientation::FlipVertical);
-
         // convert the image to RGBA format
         let (width, height) = img.dimensions();
         console::log_1(&format!("Image dimensions: {}x{}", width, height).into());

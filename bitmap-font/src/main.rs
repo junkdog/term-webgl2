@@ -104,7 +104,7 @@ impl BitmapFont {
         let pad = PADDING as f32;
         let (texture_w, texture_h) = (texture_width as f32, texture_height as f32);
         let (cell_w, cell_h) = (cell_width as f32, cell_height as f32);
-        
+
         // rasterize each character and place it in the grid
         for (i, c) in chars.chars().enumerate() {
             if i >= grid_cols * grid_rows { break; }
