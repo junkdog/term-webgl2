@@ -143,8 +143,7 @@ impl Drawable for CellArray {
     }
 
     fn draw(&self, gl: &WebGl2RenderingContext) {
-        // gl.draw_elements_with_i32(GL::TRIANGLES, self.count, GL::UNSIGNED_BYTE, 0);
-        gl.draw_arrays_instanced(GL::TRIANGLES, 0, 4, 4);
+        gl.draw_elements_instanced_with_i32(GL::TRIANGLES, self.count, GL::UNSIGNED_BYTE, 0, 6);
     }
 
     fn unbind(&self, gl: &WebGl2RenderingContext) {

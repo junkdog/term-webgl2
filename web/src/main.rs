@@ -49,13 +49,13 @@ fn run() -> Result<(), Error> {
     ];
     
     let transform_data: [InstanceData; 6] = [
-        // xy         // depth      // fg              bg
-        InstanceData::new((0, 0), 0, 0xffffffff, 0x000000FF), 
-        InstanceData::new((1, 0), 1, 0xffffffff, 0x000000FF),
-        InstanceData::new((2, 1), 2, 0xffffffff, 0x000000FF), 
-        InstanceData::new((3, 1), 3, 0xffffffff, 0x000000FF), 
-        InstanceData::new((4, 1), 4, 0xffffffff, 0x000000FF), 
-        InstanceData::new((5, 1), 5, 0xffffffff, 0x000000FF),
+        //                 x  y depth   fg           bg
+        InstanceData::new((0, 0), 0, 0xffffffff, 0xff0000ff), 
+        InstanceData::new((1, 0), 1, 0xff000000, 0x000000ff),
+        InstanceData::new((2, 1), 2, 0xffffffff, 0x000000ff), 
+        InstanceData::new((3, 1), 3, 0xffffffff, 0x000000ff), 
+        InstanceData::new((4, 1), 4, 0xffffffff, 0x000000ff), 
+        InstanceData::new((5, 1), 5, 0xffffffff, 0x000000ff),
     ];
 
     let indices = [
