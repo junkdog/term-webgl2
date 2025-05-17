@@ -1,11 +1,10 @@
-use std::collections::HashMap;
-use compact_str::{CompactString, ToCompactString};
-use image::{metadata, DynamicImage, GenericImageView, ImageFormat};
-use image::metadata::Orientation;
-use web_sys::console;
 use crate::bitmap_font::BitmapFontMetadata;
 use crate::error::Error;
 use crate::gl::GL;
+use compact_str::{CompactString, ToCompactString};
+use image::{GenericImageView, ImageFormat};
+use std::collections::HashMap;
+use web_sys::console;
 
 pub struct Texture {
     gl_texture: web_sys::WebGlTexture,
@@ -37,22 +36,21 @@ impl Texture {
         let raw_data = rgba_image.as_raw();
 
         // create the texture
-        // Self::new(gl, format, raw_data, width as i32, height as i32)
         Self::new(gl, format, raw_data, width as i32, height as i32, metadata)
     }
-    
+
     pub fn new(
         gl: &web_sys::WebGl2RenderingContext,
         format: u32,
         data: &[u8],
-        width: i32,
-        height: i32,
+        texture_width: i32,
+        texture_height: i32,
         metadata: &BitmapFontMetadata,
     ) -> Result<Self, Error> {
         console::log_1(&format!("Creating texture with format: {}", format).into());
-        console::log_1(&format!("image={width}x{height}, grid={}x{}, glyps={}", 
+        console::log_1(&format!("image={texture_width}x{texture_height}, grid={}x{}, glyps={}",
             metadata.cell_width, metadata.cell_height, metadata.char_to_uv.len()).into());
-        console::log_1(&format!("Data length: {}", data.len()).into());
+        console::log_1(&format!("Data length: {}kb", data.len() / 1024).into());
 
         // expected data length for error checking
         let cell_width = metadata.cell_width;
@@ -61,29 +59,25 @@ impl Texture {
         if data.len() != expected_length && format == GL::RGBA {
             console::warn_1(&format!("Data length mismatch: got {}, expected {}", data.len(), expected_length).into());
         }
-        
+
         // prepare texture
         let gl_texture = gl.create_texture()
             .ok_or(Error::TextureCreationError)?;
         gl.bind_texture(GL::TEXTURE_2D_ARRAY, Some(&gl_texture));
         gl.tex_storage_3d(GL::TEXTURE_2D_ARRAY, 1, GL::RGBA8, cell_width, cell_height, metadata.char_to_px.len() as i32);
-        
-        // prepare a pbo for the the atlas, it will upload the texture data
+
+        // prepare a pbo for the the atlas, it will upload the texture data,
+        // and then we will use gl.tex_sub_image_3d to upload the subregions
         let pbo = gl.create_buffer()
             .ok_or(Error::BufferCreationError("pbo"))?;
-        
+
         gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, Some(&pbo));
         gl.buffer_data_with_u8_array(GL::PIXEL_UNPACK_BUFFER, data, GL::STATIC_DRAW);
-        
-        gl.pixel_storei(GL::UNPACK_ROW_LENGTH, width);
-        gl.pixel_storei(GL::UNPACK_IMAGE_HEIGHT, height);
-        
-        gl.generate_mipmap(GL::TEXTURE_2D_ARRAY);
-        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
-        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
-        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_BASE_LEVEL, 0);
-        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
-        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
+
+        gl.pixel_storei(GL::UNPACK_ROW_LENGTH, texture_width);
+        gl.pixel_storei(GL::UNPACK_IMAGE_HEIGHT, texture_height);
+
+        Self::setup_mipmap(gl);
 
         Ok(Self { gl_texture, pbo, format, width: cell_width, height: cell_height })
     }
@@ -102,10 +96,19 @@ impl Texture {
     pub fn gl_texture(&self) -> &web_sys::WebGlTexture {
         &self.gl_texture
     }
+    
+    fn setup_mipmap(gl: &web_sys::WebGl2RenderingContext) {
+        gl.generate_mipmap(GL::TEXTURE_2D_ARRAY);
+        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
+        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
+        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_BASE_LEVEL, 0);
+        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
+        gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
+    }
 }
 
 /// A texture atlas that contains multiple sprites packed into a single texture
-pub struct TextureAtlas {
+pub struct FontAtlas {
     /// The underlying texture
     texture: Texture,
     /// region key to texture 2d array depth index
@@ -113,7 +116,7 @@ pub struct TextureAtlas {
 }
 
 
-impl TextureAtlas {
+impl FontAtlas {
 
     /// Creates a TextureAtlas from a grid of equal-sized cells
     pub fn from_bitmap_font(
@@ -130,7 +133,7 @@ impl TextureAtlas {
         for (depth, (symbol, (x, y))) in metadata.char_to_px.iter().enumerate() {
             gl.pixel_storei(GL::UNPACK_SKIP_PIXELS, *x);
             gl.pixel_storei(GL::UNPACK_SKIP_ROWS, *y);
-            
+
             gl.tex_sub_image_3d_with_i32(
                 GL::TEXTURE_2D_ARRAY,
                 0,
@@ -139,7 +142,7 @@ impl TextureAtlas {
                 depth as i32,
                 cell_width - BitmapFontMetadata::PADDING * 2,
                 cell_height - BitmapFontMetadata::PADDING * 2,
-                1,
+                1, // only one layer
                 texture.format,
                 GL::UNSIGNED_BYTE,
                 0, // use pbo
@@ -147,19 +150,19 @@ impl TextureAtlas {
                 console::error_2(&"Failed to define subregion for ".into(), &v);
                 Error::TextureCreationError
             })?;
-            
+
             depths.insert(symbol.to_compact_string(), depth as i32);
         }
-        
+
 
         Ok(Self {
             texture,
             depths,
         })
     }
-    
-    /// Gets a region by name
-    pub fn get_region(&self, key: &str) -> Option<i32> {
+
+    /// Gets a glyph by name
+    pub fn get_glyph_depth(&self, key: &str) -> Option<i32> {
         self.depths.get(key).copied()
     }
 

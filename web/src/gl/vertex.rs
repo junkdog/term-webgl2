@@ -1,7 +1,6 @@
 use std::slice;
 use crate::error::Error;
-use crate::gl::texture::Texture;
-use crate::gl::{Drawable, InstanceData, ShaderProgram, TextureAtlas, GL};
+use crate::gl::{Drawable, ShaderProgram, FontAtlas, GL};
 use bon::bon;
 use web_sys::{console, WebGl2RenderingContext};
 
@@ -9,7 +8,7 @@ pub struct CellArray {
     vbo: web_sys::WebGlBuffer,
     instance_buf: web_sys::WebGlBuffer,
     index_buf: web_sys::WebGlBuffer,
-    atlas: TextureAtlas,
+    atlas: FontAtlas,
     sampler_loc: web_sys::WebGlUniformLocation,
     projection_loc: web_sys::WebGlUniformLocation,
     count: i32,
@@ -27,7 +26,7 @@ impl CellArray {
     #[builder]
     pub fn new(
         gl: &WebGl2RenderingContext,
-        atlas: TextureAtlas,
+        atlas: FontAtlas,
         model_data: &[f32],
         transform_data: &[InstanceData],
         indices: &[u8],
@@ -154,5 +153,25 @@ impl Drawable for CellArray {
         gl.bind_buffer(GL::ARRAY_BUFFER, None);
         
         gl.bind_texture(GL::TEXTURE_2D, None);
+    }
+}
+
+
+#[repr(C, align(4))]
+pub(crate) struct InstanceData {
+    pub position: [u16; 2],
+    pub depth: f32,
+    pub fg: u32,
+    pub bg: u32,
+}
+
+impl InstanceData {
+    pub(crate) const POS_ATTRIB: u32 = 2;
+    pub(crate) const DEPTH_ATTRIB: u32 = 3;
+    pub(crate) const FG_ATTRIB: u32 = 4;
+    pub(crate) const BG_ATTRIB: u32 = 5;
+
+    pub(crate) fn new(xy: (u16, u16), depth: u16, fg: u32, bg: u32) -> Self {
+        Self { position: [xy.0, xy.1], depth: depth as f32, fg, bg }
     }
 }

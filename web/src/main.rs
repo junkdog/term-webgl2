@@ -4,7 +4,7 @@ use serde::Deserialize;
 use web_sys::console;
 use crate::bitmap_font::BitmapFontMetadata;
 use crate::error::Error;
-use crate::gl::{CellArray, InstanceData, Renderer, Texture, TextureAtlas, GL};
+use crate::gl::{CellArray, InstanceData, Renderer, Texture, FontAtlas, GL};
 use crate::mat4::Mat4;
 
 mod gl;
@@ -34,9 +34,9 @@ fn run() -> Result<(), Error> {
     const METADATA_JSON: &'static str = include_str!("../../data/bitmap_font.json");
     let metadata: BitmapFontMetadata = serde_json::from_str(METADATA_JSON).unwrap();
     let texture = Texture::from_image_data(renderer.gl(), GL::RGBA, PIXELS, &metadata)?;
-    let atlas = TextureAtlas::from_bitmap_font(renderer.gl(), texture, &metadata)?;
+    let atlas = FontAtlas::from_bitmap_font(renderer.gl(), texture, &metadata)?;
 
-    let region = atlas.get_region("B").unwrap();
+    let region = atlas.get_glyph_depth("B").unwrap();
     console::log_1(&format!("{:?}", region).into());
     // model data
     let cell_width = metadata.cell_width  ; // - BitmapFontMetadata::PADDING * 2;
@@ -51,6 +51,7 @@ fn run() -> Result<(), Error> {
     ];
 
     let transform_data = crate_cell_instance_data(
+        &atlas,
         (renderer.canvas_width(), renderer.canvas_height()),
         &metadata,
     );
@@ -81,6 +82,7 @@ fn run() -> Result<(), Error> {
 }
 
 fn crate_cell_instance_data(
+    font_atlas: &FontAtlas,
     screen_size: (i32, i32),
     metadata: &BitmapFontMetadata,
 ) -> Vec<InstanceData> {
@@ -91,12 +93,25 @@ fn crate_cell_instance_data(
 
     let mut rng = SimpleRng::default();
 
+    let s = "hello, ratatui/ratzilla! ";
+
     for row in 0..rows {
         for col in 0..cols {
             let depth = (row * cols + col) % metadata.char_to_uv.len() as i32;
+            let (a, b) = ((col as usize) % s.len(), (col as usize + 1) % s.len());
+            let (a, b) = if a > b {
+                (0, 1)
+            } else {
+                (a, b)
+            };
+
+            let depth = font_atlas.get_glyph_depth(&s[a..b]).unwrap_or_else(|| {
+                console::error_1(&format!("Failed to get depth for char: {}", &s[a..=b]).into());
+                0
+            });
             let fg = rng.gen() | 0xff;
             let bg = rng.gen() | 0xff;
-            // let fg = 0xffffffff;
+            let fg = 0xffffffff;
             // let bg = 0x000000ff;
             instance_data.push(InstanceData::new((col as u16, row as u16), depth as u16, fg, bg));
         }
