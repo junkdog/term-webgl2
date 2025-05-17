@@ -15,4 +15,10 @@ pub struct BitmapFontMetadata {
     pub cell_height: i32,
     /// Mapping from characters to UV coordinates (u1, v1, u2, v2)
     pub char_to_uv: HashMap<char, (f32, f32, f32, f32)>,
+    /// Mapping from characters to pixel coordinates (x, y)
+    pub char_to_px: HashMap<char, (i32, i32)>,
+}
+
+impl BitmapFontMetadata {
+    pub const PADDING: i32 = 1;
 }

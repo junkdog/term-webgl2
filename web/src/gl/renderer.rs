@@ -2,6 +2,7 @@ use crate::error::Error;
 use crate::gl::gl_state::{BoundGlState, GlState};
 use crate::gl::{ShaderProgram, GL};
 use js_sys::wasm_bindgen::JsCast;
+use crate::js;
 
 pub(crate) struct Renderer {
     gl: web_sys::WebGl2RenderingContext,
@@ -11,9 +12,7 @@ pub(crate) struct Renderer {
 
 impl Renderer {
     pub fn create(canvas_id: &str) -> Result<Self, Error> {
-        let document = web_sys::window()
-            .ok_or(Error::UnableToRetrieveWindow)
-            .and_then(|w| w.document().ok_or(Error::UnableToRetrieveDocument))?;
+        let document = js::document()?;
 
         let canvas = document.query_selector(canvas_id)
             .map_err(|_| Error::UnableToRetrieveCanvas)?
@@ -24,11 +23,7 @@ impl Renderer {
         let (width, height) = (canvas.width(), canvas.height());
 
         // initialize WebGL context
-        let gl = canvas.get_context("webgl2")
-            .map_err(|_| Error::FailedToRetrieveWebGl2RenderingContext)?
-            .ok_or(Error::FailedToRetrieveWebGl2RenderingContext)?
-            .dyn_into::<web_sys::WebGl2RenderingContext>()
-            .map_err(|_| Error::FailedToRetrieveWebGl2RenderingContext)?;
+        let gl = js::get_webgl2_context(&canvas)?;
 
         let state = GlState::new(&gl);
         

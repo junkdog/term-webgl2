@@ -32,6 +32,9 @@ pub enum Error {
     /// Unable to retrieve WebGl2RenderingContext.
     #[error("Unable to retrieve WebGl2RenderingContext")]
     FailedToRetrieveWebGl2RenderingContext,
+
+    #[error("Unable to retrieve CanvasRenderingContext2d")]
+    FailedToRetrieveCanvasRenderingContext2d,
     
     /// WebGL error.
     #[error("WebGL error: {0}")]
@@ -51,4 +54,7 @@ pub enum Error {
     
     #[error("Failed to load image from path: {0}")]
     ImageLoadError(&'static str),
+    
+    #[error("Failed to creeate element: {0}")]
+    UnableToCreateElement(&'static str),
 }

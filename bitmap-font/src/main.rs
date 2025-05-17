@@ -64,6 +64,8 @@ pub struct BitmapFontMetadata {
     pub cell_height: i32,
     /// Mapping from characters to UV coordinates (u1, v1, u2, v2)
     pub char_to_uv: HashMap<char, (f32, f32, f32, f32)>,
+    /// Mapping from characters to pixel coordinates (x, y)
+    pub char_to_px: HashMap<char, (i32, i32)>,
 }
 
 impl BitmapFont {
@@ -97,8 +99,9 @@ impl BitmapFont {
         // create the texture data (RGBA)
         let mut texture_data = vec![0; texture_width * texture_height];
 
-        // create a mapping of characters to UV coordinates
+        // create a mapping of characters to UV and pixel coordinates
         let mut char_to_uv = HashMap::new();
+        let mut char_to_px = HashMap::new();
 
         // for convenience, convert to f32
         let pad = PADDING as f32;
@@ -122,8 +125,9 @@ impl BitmapFont {
             let u2 = (pixel_x + cell_w - pad) / texture_w;
             let v2 = (pixel_y + cell_h - pad) / texture_h;
 
-            // store UV coordinates for this character
+            // store UV and pixel coordinates for this character
             char_to_uv.insert(c, (u1, v1, u2, v2));
+            char_to_px.insert(c, ((pixel_x + pad) as i32, (pixel_y + pad) as i32));
 
             // create a single-character buffer for rasterization
             let mut buffer = Buffer::new(font_system, metrics);
@@ -156,6 +160,7 @@ impl BitmapFont {
                 cell_width: cell_width as i32,
                 cell_height: cell_height as i32,
                 char_to_uv,
+                char_to_px,
             },
         }
     }
@@ -198,7 +203,8 @@ impl BitmapFont {
             "texture_height": metadata.texture_height,
             "cell_width": metadata.cell_width,
             "cell_height": metadata.cell_height,
-            "char_to_uv": metadata.char_to_uv
+            "char_to_uv": metadata.char_to_uv,
+            "char_to_px": metadata.char_to_px,
         });
 
         let mut file = File::create(path)?;
