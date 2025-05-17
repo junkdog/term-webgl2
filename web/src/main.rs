@@ -4,7 +4,7 @@ use serde::Deserialize;
 use web_sys::console;
 use crate::bitmap_font::BitmapFontMetadata;
 use crate::error::Error;
-use crate::gl::{CellArray, InstanceData, Renderer, Texture, FontAtlas, GL};
+use crate::gl::{TerminalGrid, TerminalCell, Renderer, Texture, FontAtlas, GL};
 use crate::mat4::Mat4;
 
 mod gl;
@@ -22,7 +22,7 @@ fn main() {
 fn run() -> Result<(), Error> {
     
     let mut renderer = Renderer::create("canvas")?;
-    let shader = renderer.create_shader_program(CellArray::VERTEX_GLSL, CellArray::FRAGMENT_GLSL)?;
+    let shader = renderer.create_shader_program(TerminalGrid::VERTEX_GLSL, TerminalGrid::FRAGMENT_GLSL)?;
 
     let projection = Mat4::orthographic_from_size(
         renderer.canvas_width() as f32,
@@ -61,7 +61,7 @@ fn run() -> Result<(), Error> {
         0, 3, 1, // second triangle
     ];
 
-    let vertex_array = CellArray::builder()
+    let vertex_array = TerminalGrid::builder()
         .gl(renderer.gl())
         .model_data(&model_data)
         .indices(&indices)
@@ -85,7 +85,7 @@ fn crate_cell_instance_data(
     font_atlas: &FontAtlas,
     screen_size: (i32, i32),
     metadata: &BitmapFontMetadata,
-) -> Vec<InstanceData> {
+) -> Vec<TerminalCell> {
     let (cell_width, cell_height) = (metadata.cell_width, metadata.cell_height);
     let (cols, rows) = (screen_size.0 / cell_width, screen_size.1 / cell_height);
 
@@ -113,7 +113,7 @@ fn crate_cell_instance_data(
             let bg = rng.gen() | 0xff;
             let fg = 0xffffffff;
             // let bg = 0x000000ff;
-            instance_data.push(InstanceData::new((col as u16, row as u16), depth as u16, fg, bg));
+            instance_data.push(TerminalCell::new((col as u16, row as u16), depth as u16, fg, bg));
         }
     }
 

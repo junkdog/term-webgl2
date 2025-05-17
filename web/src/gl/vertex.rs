@@ -4,7 +4,7 @@ use crate::gl::{Drawable, ShaderProgram, FontAtlas, GL};
 use bon::bon;
 use web_sys::{console, WebGl2RenderingContext};
 
-pub struct CellArray {
+pub struct TerminalGrid {
     vao: web_sys::WebGlVertexArrayObject,
     vbo: web_sys::WebGlBuffer,
     instance_buf: web_sys::WebGlBuffer,
@@ -16,7 +16,7 @@ pub struct CellArray {
 }
 
 #[bon]
-impl CellArray {
+impl TerminalGrid {
     pub const FRAGMENT_GLSL: &'static str = include_str!("../shaders/cell.frag");
     pub const VERTEX_GLSL: &'static str = include_str!("../shaders/cell.vert");
 
@@ -29,7 +29,7 @@ impl CellArray {
         gl: &WebGl2RenderingContext,
         atlas: FontAtlas,
         model_data: &[f32],
-        transform_data: &[InstanceData],
+        transform_data: &[TerminalCell],
         indices: &[u8],
         shader: &ShaderProgram,
     ) -> Result<Self, Error> {
@@ -64,13 +64,13 @@ impl CellArray {
         // upload instance data
         unsafe {
             let data_ptr = transform_data.as_ptr() as *const u8;
-            let size = transform_data.len() * size_of::<InstanceData>();
+            let size = transform_data.len() * size_of::<TerminalCell>();
             let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
             gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
         }
 
         // setup instance attributes (while VAO is bound)
-        use InstanceData as ID;
+        use TerminalCell as ID;
         enable_vertex_attrib_array(gl, ID::POS_ATTRIB,   2, GL::UNSIGNED_SHORT,  0);
         enable_vertex_attrib_array(gl, ID::DEPTH_ATTRIB, 1, GL::FLOAT,           4);
         enable_vertex_attrib_array(gl, ID::FG_ATTRIB,    1, GL::UNSIGNED_INT,    8);
@@ -82,10 +82,7 @@ impl CellArray {
         gl.bind_buffer(WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, Some(&index_buf));
 
         // upload index data
-        unsafe {
-            let view = js_sys::Uint8Array::view(indices);
-            gl.buffer_data_with_array_buffer_view(GL::ELEMENT_ARRAY_BUFFER, &view, GL::STATIC_DRAW);
-        }
+        gl.buffer_data_with_u8_array(GL::ELEMENT_ARRAY_BUFFER, indices, GL::STATIC_DRAW);
 
         // unbind VAO to prevent accidental modification
         gl.bind_vertex_array(None);
@@ -118,19 +115,18 @@ fn enable_vertex_attrib_array(
     type_: u32,
     offset: i32,
 ) {
-    const STRIDE: i32 = size_of::<InstanceData>() as i32;
+    const STRIDE: i32 = size_of::<TerminalCell>() as i32;
 
     gl.enable_vertex_attrib_array(index);
-    if type_ == GL::FLOAT {
-        gl.vertex_attrib_pointer_with_i32(index, size, type_, false, STRIDE, offset);
-    } else {
-        gl.vertex_attrib_i_pointer_with_i32(index, size, type_, STRIDE, offset);
+    match type_ { 
+        GL::FLOAT => gl.vertex_attrib_pointer_with_i32(index, size, type_, false, STRIDE, offset),
+        t         => gl.vertex_attrib_i_pointer_with_i32(index, size, t, STRIDE, offset)
     }
     gl.vertex_attrib_divisor(index, 1);
 }
 
 
-impl Drawable for CellArray {
+impl Drawable for TerminalGrid {
     fn bind(&self, gl: &WebGl2RenderingContext) {
         gl.bind_vertex_array(Some(&self.vao));
 
@@ -150,14 +146,14 @@ impl Drawable for CellArray {
 
 
 #[repr(C, align(4))]
-pub(crate) struct InstanceData {
+pub(crate) struct TerminalCell {
     pub position: [u16; 2],
     pub depth: f32,
     pub fg: u32,
     pub bg: u32,
 }
 
-impl InstanceData {
+impl TerminalCell {
     pub(crate) const POS_ATTRIB: u32 = 2;
     pub(crate) const DEPTH_ATTRIB: u32 = 3;
     pub(crate) const FG_ATTRIB: u32 = 4;

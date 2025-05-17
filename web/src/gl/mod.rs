@@ -1,10 +1,10 @@
-mod shader_program;
+mod program;
 mod vertex;
 mod renderer;
 mod texture;
-mod gl_state;
+mod context;
 
-pub(crate) use shader_program::*;
+pub(crate) use program::*;
 pub(crate) use vertex::*;
 pub(crate) use renderer::*;
 pub(crate) use texture::*;

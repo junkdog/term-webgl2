@@ -96,7 +96,7 @@ impl Texture {
     pub fn gl_texture(&self) -> &web_sys::WebGlTexture {
         &self.gl_texture
     }
-    
+
     fn setup_mipmap(gl: &web_sys::WebGl2RenderingContext) {
         gl.generate_mipmap(GL::TEXTURE_2D_ARRAY);
         gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);

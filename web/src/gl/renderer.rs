@@ -1,6 +1,6 @@
 use std::slice;
 use crate::error::Error;
-use crate::gl::gl_state::{BoundGlState, GlState};
+use crate::gl::context::{BoundGlState, GlState};
 use crate::gl::{ShaderProgram, GL};
 use js_sys::wasm_bindgen::JsCast;
 use crate::js;
