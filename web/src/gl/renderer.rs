@@ -1,3 +1,4 @@
+use std::slice;
 use crate::error::Error;
 use crate::gl::gl_state::{BoundGlState, GlState};
 use crate::gl::{ShaderProgram, GL};
@@ -76,4 +77,40 @@ pub(crate) trait Drawable {
     fn bind(&self, gl: &web_sys::WebGl2RenderingContext);
     fn draw(&self, gl: &web_sys::WebGl2RenderingContext);
     fn unbind(&self, gl: &web_sys::WebGl2RenderingContext);
+}
+
+#[repr(C, align(4))]
+pub(crate) struct InstanceData {
+    pub position: [u16; 2],
+    pub depth: f32,
+    pub fg: u32,
+    pub bg: u32,
+}
+
+impl InstanceData {
+    const STRIDE: i32 = size_of::<Self>() as i32;
+
+    pub(crate) const POS_ATTRIB: u32 = 2;
+    pub(crate) const DEPTH_ATTRIB: u32 = 3;
+    pub(crate) const FG_ATTRIB: u32 = 4;
+    pub(crate) const BG_ATTRIB: u32 = 5;
+
+    pub(crate) fn new(xy: (u16, u16), depth: u16, fg: u32, bg: u32) -> Self {
+        Self { position: [xy.0, xy.1], depth: depth as f32, fg, bg }
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bitmap_font::BitmapFontMetadata;
+    use crate::gl::texture::Texture;
+
+    #[test]
+    fn test_renderer() {
+        println!("instanve size: {}", InstanceData::STRIDE);
+    }
+
 }

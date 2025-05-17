@@ -1,11 +1,13 @@
+use std::slice;
 use crate::error::Error;
 use crate::gl::texture::Texture;
-use crate::gl::{Drawable, ShaderProgram, TextureAtlas, GL};
+use crate::gl::{Drawable, InstanceData, ShaderProgram, TextureAtlas, GL};
 use bon::bon;
 use web_sys::WebGl2RenderingContext;
 
 pub struct CellArray {
     vbo: web_sys::WebGlBuffer,
+    instance_buf: web_sys::WebGlBuffer,
     index_buf: web_sys::WebGlBuffer,
     atlas: TextureAtlas,
     sampler_loc: web_sys::WebGlUniformLocation,
@@ -22,20 +24,12 @@ impl CellArray {
     const POS_ATTRIB: u32 = 0;
     const UV_ATTRIB: u32 = 1;
 
-    const PIXELS: &'static [u8] = &[
-        0x10,0,0,    0x20,0,0,    0x30,0,0,    0x40,0,0,
-        0x50,0,0,    0x60,0,0,    0x70,0,0,    0x80,0,0,
-        0x90,0,0,    0xA0,0,0,    0xB0,0,0,    0xC0,0,0,
-        0xD0,0,0,    0xE0,0,0,    0xF0,0,0,    0,0,0x10,
-        0,0,0x10,    0,0,0x20,    0,0,0x30,    0,0,0x40,
-        0,0,0x50,    0,0,0x60,    0,0,0x70,    0,0,0x80,
-    ];
-
     #[builder]
     pub fn new(
         gl: &WebGl2RenderingContext,
         atlas: TextureAtlas,
-        vertices: &[f32],
+        model_data: &[f32],
+        transform_data: &[InstanceData],
         indices: &[u8],
         shader: &ShaderProgram,
     ) -> Result<Self, Error> {
@@ -57,9 +51,12 @@ impl CellArray {
 
         // upload vertex data to GPU
         unsafe {
-            let view = js_sys::Float32Array::view(vertices);
+            let view = js_sys::Float32Array::view(model_data);
             gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
         }
+
+        // create and bind instance buffer
+        let instance_buf = create_instance_buffer(gl, transform_data)?;
 
         // get Sampler uniform location
         let sampler_loc = gl.get_uniform_location(&shader.program, "u_sampler")
@@ -72,6 +69,7 @@ impl CellArray {
         Ok(Self {
             vbo,
             index_buf,
+            instance_buf,
             atlas,
             sampler_loc,
             projection_loc,
@@ -79,6 +77,50 @@ impl CellArray {
         })
     }
 }
+
+pub(crate) fn create_instance_buffer(
+    gl: &WebGl2RenderingContext,
+    instances: &[InstanceData],
+) -> Result<web_sys::WebGlBuffer, Error> {
+    let buffer = gl.create_buffer()
+        .ok_or(Error::BufferCreationError("instance buffer"))?;
+    gl.bind_buffer(GL::ARRAY_BUFFER, Some(&buffer));
+
+    unsafe {
+        let data_ptr = instances.as_ptr() as *const u8;
+        let size = instances.len() * size_of::<InstanceData>();
+        let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
+        gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
+    }
+
+    use InstanceData as ID;
+    //                               attribute,    size,     type,         offset
+    enable_vertex_attrib_array(gl, ID::POS_ATTRIB,   2, GL::UNSIGNED_SHORT,  0);
+    enable_vertex_attrib_array(gl, ID::DEPTH_ATTRIB, 1, GL::FLOAT,           4);
+    enable_vertex_attrib_array(gl, ID::FG_ATTRIB,    1, GL::UNSIGNED_INT,    8);
+    enable_vertex_attrib_array(gl, ID::BG_ATTRIB,    1, GL::UNSIGNED_INT,    12);
+
+    Ok(buffer)
+}
+
+fn enable_vertex_attrib_array(
+    gl: &WebGl2RenderingContext,
+    index: u32,
+    size: i32,
+    type_: u32,
+    offset: i32,
+) {
+    const STRIDE: i32 = size_of::<InstanceData>() as i32;
+
+    gl.enable_vertex_attrib_array(index);
+    if type_ == GL::FLOAT {
+        gl.vertex_attrib_pointer_with_i32(index, size, type_, false, STRIDE, offset);
+    } else {
+        gl.vertex_attrib_i_pointer_with_i32(index, size, type_, STRIDE, offset);
+    }
+    gl.vertex_attrib_divisor(index, 1);
+}
+
 
 impl Drawable for CellArray {
     fn bind(&self, gl: &WebGl2RenderingContext) {
@@ -101,7 +143,8 @@ impl Drawable for CellArray {
     }
 
     fn draw(&self, gl: &WebGl2RenderingContext) {
-        gl.draw_elements_with_i32(GL::TRIANGLES, self.count, GL::UNSIGNED_BYTE, 0);
+        // gl.draw_elements_with_i32(GL::TRIANGLES, self.count, GL::UNSIGNED_BYTE, 0);
+        gl.draw_arrays_instanced(GL::TRIANGLES, 0, 4, 4);
     }
 
     fn unbind(&self, gl: &WebGl2RenderingContext) {

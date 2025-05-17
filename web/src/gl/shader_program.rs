@@ -1,5 +1,6 @@
 use crate::error::Error;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
+use crate::gl::GL;
 use crate::mat4::Mat4;
 
 pub(crate) struct ShaderProgram {
@@ -49,6 +50,21 @@ impl ShaderProgram {
             false,  // don't transpose
             matrix.as_slice()
         );
+
+        Ok(())
+    }
+
+    pub(crate) fn set_uniform_vec2(
+        &self, gl: &GL,
+        name: &'static str,
+        x: f32,
+        y: f32
+    )  -> Result<(), Error> {
+        self.use_program(gl);
+        let location = gl.get_uniform_location(&self.program, name)
+            .ok_or(Error::UnableToRetrieveUniformLocation(name))?;
+
+        gl.uniform2f(Some(&location), x, y);
 
         Ok(())
     }
