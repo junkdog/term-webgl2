@@ -39,7 +39,9 @@ fn run() -> Result<(), Error> {
     let region = atlas.get_region("B").unwrap();
     console::log_1(&format!("{:?}", region).into());
     // model data
-    let (w, h) = (metadata.cell_width as f32, metadata.cell_height as f32);
+    let cell_width = metadata.cell_width  ; // - BitmapFontMetadata::PADDING * 2;
+    let cell_height = metadata.cell_height; // - BitmapFontMetadata::PADDING * 2;
+    let (w, h) = (cell_width as f32, cell_height as f32);
     let model_data: [f32; 16] = [
         //  x      y     u     v
             w,   0.0,  1.0,  0.0,  // top-right
@@ -47,16 +49,11 @@ fn run() -> Result<(), Error> {
             w,     h,  1.0,  1.0,  // bottom-right
           0.0,   0.0,  0.0,  0.0,  // top-left
     ];
-    
-    let transform_data: [InstanceData; 6] = [
-        //                 x  y depth   fg           bg
-        InstanceData::new((0, 0), 0, 0xffffffff, 0xff0000ff), 
-        InstanceData::new((1, 0), 1, 0xff000000, 0x000000ff),
-        InstanceData::new((2, 1), 2, 0xffffffff, 0x000000ff), 
-        InstanceData::new((3, 1), 3, 0xffffffff, 0x000000ff), 
-        InstanceData::new((4, 1), 4, 0xffffffff, 0x000000ff), 
-        InstanceData::new((5, 1), 5, 0xffffffff, 0x000000ff),
-    ];
+
+    let transform_data = crate_cell_instance_data(
+        (renderer.canvas_width(), renderer.canvas_height()),
+        &metadata,
+    );
 
     let indices = [
         0, 1, 2, // first triangle
@@ -72,8 +69,6 @@ fn run() -> Result<(), Error> {
         .atlas(atlas)
         .build()?;
     
-    
-    
     renderer.clear(0.2, 0.2, 0.2);
     renderer.state()
         .blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
@@ -83,4 +78,59 @@ fn run() -> Result<(), Error> {
     renderer.draw(&shader, &vertex_array);
 
     Ok(())
+}
+
+fn crate_cell_instance_data(
+    screen_size: (i32, i32),
+    metadata: &BitmapFontMetadata,
+) -> Vec<InstanceData> {
+    let (cell_width, cell_height) = (metadata.cell_width, metadata.cell_height);
+    let (cols, rows) = (screen_size.0 / cell_width, screen_size.1 / cell_height);
+
+    let mut instance_data = Vec::new();
+
+    let mut rng = SimpleRng::default();
+
+    for row in 0..rows {
+        for col in 0..cols {
+            let depth = (row * cols + col) % metadata.char_to_uv.len() as i32;
+            let fg = rng.gen() | 0xff;
+            let bg = rng.gen() | 0xff;
+            // let fg = 0xffffffff;
+            // let bg = 0x000000ff;
+            instance_data.push(InstanceData::new((col as u16, row as u16), depth as u16, fg, bg));
+        }
+    }
+
+    instance_data
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SimpleRng {
+    state: u32,
+}
+
+impl SimpleRng {
+    const A: u32 = 1664525;
+    const C: u32 = 1013904223;
+
+    pub fn new(seed: u32) -> Self {
+        SimpleRng { state: seed }
+    }
+
+    pub fn gen(&mut self) -> u32 {
+        self.state = self.state.wrapping_mul(Self::A).wrapping_add(Self::C);
+        self.state
+    }
+}
+
+impl Default for SimpleRng {
+    fn default() -> Self {
+        let seed = web_time::SystemTime::now()
+            .duration_since(web_time::SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u32;
+
+        SimpleRng::new(seed)
+    }
 }

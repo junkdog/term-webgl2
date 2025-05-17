@@ -3,7 +3,7 @@ use crate::error::Error;
 use crate::gl::texture::Texture;
 use crate::gl::{Drawable, InstanceData, ShaderProgram, TextureAtlas, GL};
 use bon::bon;
-use web_sys::WebGl2RenderingContext;
+use web_sys::{console, WebGl2RenderingContext};
 
 pub struct CellArray {
     vbo: web_sys::WebGlBuffer,
@@ -66,6 +66,8 @@ impl CellArray {
         let projection_loc = gl.get_uniform_location(&shader.program, "u_projection")
             .ok_or(Error::UnableToRetrieveUniformLocation("u_projection"))?;
         
+        console::log_2(&"terminal cells".into(), &transform_data.len().into());
+        
         Ok(Self {
             vbo,
             index_buf,
@@ -73,7 +75,7 @@ impl CellArray {
             atlas,
             sampler_loc,
             projection_loc,
-            count: indices.len() as i32,
+            count: transform_data.len() as i32,
         })
     }
 }
@@ -143,7 +145,7 @@ impl Drawable for CellArray {
     }
 
     fn draw(&self, gl: &WebGl2RenderingContext) {
-        gl.draw_elements_instanced_with_i32(GL::TRIANGLES, self.count, GL::UNSIGNED_BYTE, 0, 6);
+        gl.draw_elements_instanced_with_i32(GL::TRIANGLES, 6, GL::UNSIGNED_BYTE, 0, self.count);
     }
 
     fn unbind(&self, gl: &WebGl2RenderingContext) {
