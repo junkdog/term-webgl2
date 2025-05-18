@@ -1,4 +1,4 @@
-use crate::bitmap_font::FontAtlasConfig;
+use crate::font_atlas::FontAtlasConfig;
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
 use crate::gl::{Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
@@ -43,24 +43,24 @@ impl TerminalGrid {
     pub fn new(
         gl: &WebGl2RenderingContext,
         atlas: FontAtlas,
-        font_config: &FontAtlasConfig,
         screen_size: (i32, i32),
+        cell_size: (i32, i32),
     ) -> Result<Self, Error> {
-        let shader = ShaderProgram::create(gl, Self::VERTEX_GLSL, Self::FRAGMENT_GLSL)?;
-        shader.use_program(gl);
-        
         // create and setup the Vertex Array Object
         let vao = create_vao(gl)?;
         gl.bind_vertex_array(Some(&vao));
 
         // prepare vertex, index and instance buffers
-        let cell_data = create_terminal_cell_data(screen_size, font_config);
-        let buffers = setup_buffers(gl, &cell_data, font_config)?;
+        let cell_data = create_terminal_cell_data(screen_size, cell_size);
+        let buffers = setup_buffers(gl, &cell_data, cell_size)?;
 
         // unbind VAO to prevent accidental modification
         gl.bind_vertex_array(None);
 
-        // setup uniform data
+        // setup shader and uniform data
+        let shader = ShaderProgram::create(gl, Self::VERTEX_GLSL, Self::FRAGMENT_GLSL)?;
+        shader.use_program(gl);
+        
         let ubo = UniformBufferObject::new(gl, CellUbo::BINDING_POINT)?;
         ubo.bind_to_shader(gl, &shader, "CellUniforms")?;
         
@@ -107,9 +107,9 @@ fn create_vao(gl: &WebGl2RenderingContext) -> Result<web_sys::WebGlVertexArrayOb
 fn setup_buffers(
     gl: &WebGl2RenderingContext,
     cell_data: &[TerminalCell],
-    font_config: &FontAtlasConfig,
+    cell_size: (i32, i32),
 ) -> Result<TerminalBuffers, Error> {
-    let (w, h) = (font_config.cell_width as f32, font_config.cell_height as f32);
+    let (w, h) = (cell_size.0 as f32, cell_size.1 as f32);
     let vertices = [
         // x, y, u, v
           w, 0.0, 1.0, 0.0, // top-right
@@ -293,10 +293,9 @@ impl CellUbo {
 
 fn create_terminal_cell_data(
     screen_size: (i32, i32),
-    font_config: &FontAtlasConfig,
+    cell_size: (i32, i32),
 ) -> Vec<TerminalCell> {
-    let (cell_width, cell_height) = (font_config.cell_width, font_config.cell_height);
-    let (cols, rows) = (screen_size.0 / cell_width, screen_size.1 / cell_height);
+    let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
 
     let mut cells = Vec::new();
 

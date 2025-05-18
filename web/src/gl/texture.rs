@@ -1,4 +1,4 @@
-use crate::bitmap_font::FontAtlasConfig;
+use crate::font_atlas::FontAtlasConfig;
 use crate::error::Error;
 use crate::gl::GL;
 use compact_str::{CompactString, ToCompactString};
@@ -161,7 +161,7 @@ impl FontAtlas {
             depths,
         })
     }
-
+    
     /// Gets a glyph by name
     pub fn get_glyph_depth(&self, key: &str) -> Option<i32> {
         self.depths.get(key).copied()

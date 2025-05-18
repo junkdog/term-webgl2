@@ -1,12 +1,12 @@
 mod program;
-mod vertex;
+mod terminal_grid;
 mod renderer;
 mod texture;
 mod context;
 mod ubo;
 
 pub(crate) use program::*;
-pub(crate) use vertex::*;
+pub(crate) use terminal_grid::*;
 pub(crate) use renderer::*;
 pub(crate) use texture::*;
 pub(crate) use ubo::*;
