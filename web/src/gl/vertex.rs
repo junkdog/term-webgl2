@@ -1,12 +1,11 @@
-use std::slice;
-use crate::error::Error;
-use crate::gl::{Drawable, ShaderProgram, FontAtlas, GL, RenderContext};
-use bon::bon;
-use web_sys::{console, WebGl2RenderingContext};
 use crate::bitmap_font::FontAtlasConfig;
+use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
+use crate::gl::{Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
 use crate::mat4::Mat4;
 use crate::SimpleRng;
+use std::slice;
+use web_sys::{console, WebGl2RenderingContext};
 
 // todo: split vbo_instance into STATIC_DRAW vbo_cell(x, y) and STREAM vbo_data(depth, fg, bg)
 pub struct TerminalGrid {
@@ -33,7 +32,6 @@ struct TerminalBuffers {
 }
 
 
-#[bon]
 impl TerminalGrid {
     const FRAGMENT_GLSL: &'static str = include_str!("../shaders/cell.frag");
     const VERTEX_GLSL: &'static str = include_str!("../shaders/cell.vert");
@@ -42,7 +40,6 @@ impl TerminalGrid {
     const POS_ATTRIB: u32 = 0;
     const UV_ATTRIB: u32 = 1;
 
-    #[builder]
     pub fn new(
         gl: &WebGl2RenderingContext,
         atlas: FontAtlas,
@@ -72,7 +69,7 @@ impl TerminalGrid {
 
         console::log_2(&"terminal cells".into(), &cell_data.len().into());
 
-        Ok(Self {
+        let grid = Self {
             shader,
             cells: cell_data,
             buffers,
@@ -80,10 +77,24 @@ impl TerminalGrid {
             vao,
             atlas,
             sampler_loc,
-        })
+        }; 
+        
+        Ok(grid)
     }
     
-    pub(crate) fn upload_ubo_data(&self, gl: &WebGl2RenderingContext, data: CellUbo) {
+    pub(crate) fn upload_ubo_data(
+        &self, 
+        gl: &WebGl2RenderingContext,
+        screen_size: (i32, i32),
+        cell_size: (i32, i32),
+    ) {
+        let data = CellUbo {
+            projection: Mat4::orthographic_from_size(
+                screen_size.0 as f32,
+                screen_size.1 as f32
+            ).data,
+            cell_size: [cell_size.0 as f32, cell_size.1 as f32],
+        };
         self.ubo.upload_data(gl, &data);
     }
 }
@@ -244,7 +255,7 @@ impl Drawable for TerminalGrid {
 
 // todo: split into 2 structs
 #[repr(C, align(4))]
-pub(crate) struct TerminalCell {
+struct TerminalCell {
     pub position: [u16; 2],
     pub depth: f32,
     pub fg: u32,
@@ -264,7 +275,7 @@ impl TerminalCell {
 
 
 #[repr(C, align(16))] // std140 layout requires proper alignment
-pub struct CellUbo {
+struct CellUbo {
     pub projection: [f32; 16], // mat4
     pub cell_size: [f32; 2],   // vec2
 }

@@ -1,7 +1,6 @@
 use crate::bitmap_font::FontAtlasConfig;
 use crate::error::Error;
-use crate::gl::{CellUbo, FontAtlas, Renderer, TerminalGrid};
-use crate::mat4::Mat4;
+use crate::gl::{FontAtlas, Renderer, TerminalGrid};
 
 mod gl;
 mod error;
@@ -25,21 +24,9 @@ fn run() -> Result<(), Error> {
     let font_config: FontAtlasConfig = FontAtlasConfig::from_json(METADATA_JSON)?;
     let atlas = FontAtlas::load(renderer.gl(), PIXELS, &font_config)?;
 
-    let terminal_grid = TerminalGrid::builder()
-        .gl(renderer.gl())
-        .screen_size(renderer.canvas_size())
-        .atlas(atlas)
-        .font_config(&font_config)
-        .build()?;
-    
-    let (cell_width, cell_height) = font_config.cell_size();
-    terminal_grid.upload_ubo_data(renderer.gl(), CellUbo {
-        projection: Mat4::orthographic_from_size(
-            renderer.canvas_width() as f32,
-            renderer.canvas_height() as f32
-        ).data,
-        cell_size: [cell_width as f32, cell_height as f32],
-    });
+    let gl = renderer.gl();
+    let terminal_grid = TerminalGrid::new(gl, atlas, &font_config, renderer.canvas_size())?;
+    terminal_grid.upload_ubo_data(renderer.gl(), renderer.canvas_size(), font_config.cell_size());
     
     renderer.begin_frame();
     renderer.render(&terminal_grid);
