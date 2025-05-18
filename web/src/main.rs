@@ -4,7 +4,6 @@ use crate::gl::{FontAtlas, Renderer, TerminalGrid};
 
 mod gl;
 mod error;
-mod shaders;
 mod mat4;
 mod bitmap_font;
 mod js;
@@ -20,14 +19,14 @@ fn run() -> Result<(), Error> {
 
     const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font.png");
     const METADATA_JSON: &'static str = include_str!("../../data/bitmap_font.json");
-    
+
     let font_config: FontAtlasConfig = FontAtlasConfig::from_json(METADATA_JSON)?;
     let atlas = FontAtlas::load(renderer.gl(), PIXELS, &font_config)?;
 
     let gl = renderer.gl();
     let terminal_grid = TerminalGrid::new(gl, atlas, &font_config, renderer.canvas_size())?;
     terminal_grid.upload_ubo_data(renderer.gl(), renderer.canvas_size(), font_config.cell_size());
-    
+
     renderer.begin_frame();
     renderer.render(&terminal_grid);
     renderer.end_frame();

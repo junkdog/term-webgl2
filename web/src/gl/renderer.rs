@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::gl::context::{BoundGlState, GlState};
+use crate::gl::context::GlState;
 use crate::gl::GL;
 use crate::js;
 use crate::mat4::Mat4;
@@ -68,10 +68,6 @@ impl Renderer {
         &self.gl
     }
     
-    pub fn state(&mut self) -> BoundGlState {
-        BoundGlState::new(&self.gl, &mut self.state)
-    }
-
     pub fn canvas_width(&self) -> i32 {
         self.canvas.width() as i32
     }
