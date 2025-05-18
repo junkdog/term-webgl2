@@ -47,11 +47,11 @@ pub struct BitmapFont {
     /// The raw RGBA texture data
     pub texture_data: Vec<u32>,
     /// The properties of the font
-    metadata: BitmapFontMetadata,
+    metadata: FontAtlasConfig,
 }
 
 #[derive(Debug)]
-pub struct BitmapFontMetadata {
+pub struct FontAtlasConfig {
     /// The font size in points
     pub font_size: f32,
     /// Width of the texture in pixels
@@ -153,12 +153,12 @@ impl BitmapFont {
 
         Self {
             texture_data,
-            metadata: BitmapFontMetadata {
+            metadata: FontAtlasConfig {
                 font_size,
                 texture_width,
                 texture_height,
-                cell_width: cell_width as i32,
-                cell_height: cell_height as i32,
+                cell_width: cell_width,
+                cell_height: cell_height,
                 char_to_uv,
                 char_to_px,
             },
