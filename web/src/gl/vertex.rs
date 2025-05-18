@@ -3,13 +3,17 @@ use crate::error::Error;
 use crate::gl::{Drawable, ShaderProgram, FontAtlas, GL, RenderContext};
 use bon::bon;
 use web_sys::{console, WebGl2RenderingContext};
+use crate::bitmap_font::FontAtlasConfig;
 use crate::gl::ubo::UniformBufferObject;
 use crate::mat4::Mat4;
+use crate::SimpleRng;
 
 // todo: split vbo_instance into STATIC_DRAW vbo_cell(x, y) and STREAM vbo_data(depth, fg, bg)
 pub struct TerminalGrid {
     /// Shader program for rendering the terminal cells.
     shader: ShaderProgram,
+    /// Terminal cell instance data
+    cells: Vec<TerminalCell>,
     /// shared state for the shader program
     ubo: UniformBufferObject,
     /// Vertex Array Object. Stores the per-vertex state of the model data.
@@ -24,8 +28,6 @@ pub struct TerminalGrid {
     atlas: FontAtlas,
     /// Uniform location for the texture sampler.
     sampler_loc: web_sys::WebGlUniformLocation,
-    /// Number of terminal cells to draw.
-    count: i32,
 }
 
 #[bon]
@@ -41,10 +43,20 @@ impl TerminalGrid {
     pub fn new(
         gl: &WebGl2RenderingContext,
         atlas: FontAtlas,
-        model_data: &[f32],
-        transform_data: &[TerminalCell],
-        indices: &[u8],
+        font_config: &FontAtlasConfig,
+        // transform_data: &[TerminalCell],
+        screen_size: (i32, i32),
+        // indices: &[u8],
     ) -> Result<Self, Error> {
+        let (w, h) = (font_config.cell_width as f32, font_config.cell_height as f32);
+        let model_data: [f32; 16] = [
+            //  x      y     u     v
+            w,   0.0,  1.0,  0.0,  // top-right
+            0.0,   h,  0.0,  1.0,  // bottom-left
+            w,     h,  1.0,  1.0,  // bottom-right
+            0.0, 0.0,  0.0,  0.0,  // top-left
+        ];
+        
         let shader = ShaderProgram::create(gl, Self::VERTEX_GLSL, Self::FRAGMENT_GLSL)?;
         
         // create Vertex Array Object for storing the 
@@ -57,9 +69,8 @@ impl TerminalGrid {
             .ok_or(Error::BufferCreationError("vbo"))?;
         gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&vbo));
 
-        // upload vertex data to GPU
         unsafe {
-            let view = js_sys::Float32Array::view(model_data);
+            let view = js_sys::Float32Array::view(&model_data);
             gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
         }
 
@@ -76,9 +87,10 @@ impl TerminalGrid {
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
 
         // upload instance data
+        let cell_data = create_terminal_cell_data(screen_size, font_config);
         unsafe {
-            let data_ptr = transform_data.as_ptr() as *const u8;
-            let size = transform_data.len() * size_of::<TerminalCell>();
+            let data_ptr = cell_data.as_ptr() as *const u8;
+            let size = cell_data.len() * size_of::<TerminalCell>();
             let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
             gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
         }
@@ -97,7 +109,11 @@ impl TerminalGrid {
         gl.bind_buffer(WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, Some(&index_buf));
 
         // upload index data
-        gl.buffer_data_with_u8_array(GL::ELEMENT_ARRAY_BUFFER, indices, GL::STATIC_DRAW);
+        let indices = [
+            0, 1, 2, // first triangle
+            0, 3, 1, // second triangle
+        ];
+        gl.buffer_data_with_u8_array(GL::ELEMENT_ARRAY_BUFFER, &indices, GL::STATIC_DRAW);
 
         // unbind VAO to prevent accidental modification
         gl.bind_vertex_array(None);
@@ -109,10 +125,11 @@ impl TerminalGrid {
         let sampler_loc = gl.get_uniform_location(&shader.program, "u_sampler")
             .ok_or(Error::UnableToRetrieveUniformLocation("u_sampler"))?;
 
-        console::log_2(&"terminal cells".into(), &transform_data.len().into());
+        console::log_2(&"terminal cells".into(), &cell_data.len().into());
 
         Ok(Self {
             shader,
+            cells: cell_data,
             ubo,
             vao,
             vbo,
@@ -121,7 +138,6 @@ impl TerminalGrid {
             atlas,
             sampler_loc,
             // projection_loc,
-            count: transform_data.len() as i32,
         })
     }
     
@@ -173,7 +189,8 @@ impl Drawable for TerminalGrid {
 
     fn draw(&self, context: &mut RenderContext) {
         let gl = context.gl;
-        gl.draw_elements_instanced_with_i32(GL::TRIANGLES, 6, GL::UNSIGNED_BYTE, 0, self.count);
+        let cell_count = self.cells.len() as i32;
+        gl.draw_elements_instanced_with_i32(GL::TRIANGLES, 6, GL::UNSIGNED_BYTE, 0, cell_count);
     }
 
     fn cleanup(&self, context: &mut RenderContext) {
@@ -223,4 +240,38 @@ impl CellUbo {
             cell_size: [cell_width as f32, cell_height as f32],
         }
     }
+}
+
+fn create_terminal_cell_data(
+    screen_size: (i32, i32),
+    font_config: &FontAtlasConfig,
+) -> Vec<TerminalCell> {
+    let (cell_width, cell_height) = (font_config.cell_width, font_config.cell_height);
+    let (cols, rows) = (screen_size.0 / cell_width, screen_size.1 / cell_height);
+
+    let mut cells = Vec::new();
+
+    let mut rng = SimpleRng::default();
+
+
+    for row in 0..rows {
+        for col in 0..cols {
+            // let depth = (row * cols + col) % metadata.char_to_uv.len() as i32;
+            // let (a, b) = ((col as usize) % s.len(), (col as usize + 1) % s.len());
+            // let (a, b) = if a > b {
+            //     (0, 1)
+            // } else {
+            //     (a, b)
+            // };
+
+            let fg = rng.gen() | 0xff;
+            let bg = rng.gen() | 0xff;
+            let fg = 0xffffffff;
+            // let bg = 0x000000ff;
+            let depth = 0;
+            cells.push(TerminalCell::new((col as u16, row as u16), depth as u16, fg, bg));
+        }
+    }
+
+    cells
 }

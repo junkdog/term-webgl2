@@ -3,7 +3,7 @@ use serde::Deserialize;
 use crate::error::Error;
 
 #[derive(Debug, Deserialize)]
-pub struct BitmapFontMetadata {
+pub struct FontAtlasConfig {
     /// The font size in points
     pub font_size: f32,
     /// Width of the texture in pixels
@@ -20,7 +20,7 @@ pub struct BitmapFontMetadata {
     pub char_to_px: HashMap<char, (i32, i32)>,
 }
 
-impl BitmapFontMetadata {
+impl FontAtlasConfig {
     pub const PADDING: i32 = 1;
     
     pub fn from_json(json: &str) -> Result<Self, Error> {
@@ -34,5 +34,9 @@ impl BitmapFontMetadata {
         viewport_height: i32
     ) -> (i32, i32) {
         (viewport_width / self.cell_width, viewport_height / self.cell_height)
+    }
+    
+    pub fn cell_size(&self) -> (i32, i32) {
+        (self.cell_width, self.cell_height)
     }
 }

@@ -3,8 +3,6 @@ use crate::gl::context::{BoundGlState, GlState};
 use crate::gl::GL;
 use crate::js;
 use crate::mat4::Mat4;
-use js_sys::wasm_bindgen::JsCast;
-use crate::js::get_canvas_by_id;
 
 pub(crate) struct RenderContext<'a> {
     pub(crate) gl: &'a web_sys::WebGl2RenderingContext,
@@ -49,7 +47,7 @@ impl Renderer {
         self.clear(0.0, 0.0, 0.0);
     }
 
-    pub fn render<'a>(&'a mut self, drawable: &impl Drawable) {
+    pub fn render(&mut self, drawable: &impl Drawable) {
         let mut context = RenderContext {
             gl: &self.gl,
             state: &mut self.state,
@@ -76,6 +74,10 @@ impl Renderer {
 
     pub fn canvas_width(&self) -> i32 {
         self.canvas.width() as i32
+    }
+    
+    pub fn canvas_size(&self) -> (i32, i32) {
+        (self.canvas.width() as i32, self.canvas.height() as i32)
     }
 
     pub fn canvas_height(&self) -> i32 {

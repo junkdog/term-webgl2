@@ -1,4 +1,4 @@
-use crate::bitmap_font::BitmapFontMetadata;
+use crate::bitmap_font::FontAtlasConfig;
 use crate::error::Error;
 use crate::gl::GL;
 use compact_str::{CompactString, ToCompactString};
@@ -19,7 +19,7 @@ impl Texture {
         gl: &web_sys::WebGl2RenderingContext,
         format: u32,
         image_data: &[u8],
-        metadata: &BitmapFontMetadata,
+        metadata: &FontAtlasConfig,
     ) -> Result<Self, Error> {
         // load the image
         let img = image::load_from_memory_with_format(image_data, ImageFormat::Png)
@@ -45,7 +45,7 @@ impl Texture {
         data: &[u8],
         texture_width: i32,
         texture_height: i32,
-        metadata: &BitmapFontMetadata,
+        metadata: &FontAtlasConfig,
     ) -> Result<Self, Error> {
         console::log_1(&format!("Creating texture with format: {}", format).into());
         console::log_1(&format!("image={texture_width}x{texture_height}, grid={}x{}, glyps={}",
@@ -119,29 +119,30 @@ pub struct FontAtlas {
 impl FontAtlas {
 
     /// Creates a TextureAtlas from a grid of equal-sized cells
-    pub fn from_bitmap_font(
+    pub fn load(
         gl: &web_sys::WebGl2RenderingContext,
-        texture: Texture,
-        metadata: &BitmapFontMetadata,
+        texture_data: &[u8],
+        config: &FontAtlasConfig,
     ) -> Result<Self, Error> {
-        console::log_1(&format!("Creating atlas grid with {} regions", metadata.char_to_uv.len()).into());
-
+        console::log_1(&format!("loading texture, {} bytes", texture_data.len()).into());
+        let texture = Texture::from_image_data(gl, GL::RGBA, texture_data, config)?;
+        
+        console::log_1(&format!("Creating atlas grid with {} regions", config.char_to_uv.len()).into());
+        let (cell_width, cell_height) = (config.cell_width, config.cell_height);
         let mut depths = HashMap::new();
 
-        let (cell_width, cell_height) = (metadata.cell_width, metadata.cell_height);
-
-        for (depth, (symbol, (x, y))) in metadata.char_to_px.iter().enumerate() {
+        for (depth, (symbol, (x, y))) in config.char_to_px.iter().enumerate() {
             gl.pixel_storei(GL::UNPACK_SKIP_PIXELS, *x);
             gl.pixel_storei(GL::UNPACK_SKIP_ROWS, *y);
 
             gl.tex_sub_image_3d_with_i32(
                 GL::TEXTURE_2D_ARRAY,
                 0,
-                BitmapFontMetadata::PADDING,
-                BitmapFontMetadata::PADDING,
+                FontAtlasConfig::PADDING,
+                FontAtlasConfig::PADDING,
                 depth as i32,
-                cell_width - BitmapFontMetadata::PADDING * 2,
-                cell_height - BitmapFontMetadata::PADDING * 2,
+                cell_width - FontAtlasConfig::PADDING * 2,
+                cell_height - FontAtlasConfig::PADDING * 2,
                 1, // only one layer
                 texture.format,
                 GL::UNSIGNED_BYTE,
