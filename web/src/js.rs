@@ -8,12 +8,15 @@ pub(crate) fn document() -> Result<Document, Error> {
         .and_then(|w| w.document().ok_or(Error::UnableToRetrieveDocument))
 }
 
-pub(crate) fn create_canvas(width: u32, height: u32) -> Result<HtmlCanvasElement, Error> {
+pub(crate) fn get_canvas_by_id(
+    canvas_id: &str,
+) -> Result<HtmlCanvasElement, Error> {
     let document = document()?;
-    document.create_element("canvas")
-        .map_err(|_| Error::UnableToCreateElement("canvas"))?
-        .dyn_into::<HtmlCanvasElement>()
-        .map_err(|_| Error::UnableToCreateElement("canvas"))
+    document.query_selector(canvas_id)
+        .map_err(|_| Error::UnableToRetrieveCanvas)?
+        .ok_or(Error::UnableToRetrieveCanvas)?
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| Error::UnableToRetrieveCanvas)
 }
 
 pub(crate) fn get_webgl2_context(
@@ -25,3 +28,4 @@ pub(crate) fn get_webgl2_context(
         .dyn_into::<web_sys::WebGl2RenderingContext>()
         .map_err(|_| Error::FailedToRetrieveWebGl2RenderingContext)
 }
+

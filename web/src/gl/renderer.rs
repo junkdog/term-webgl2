@@ -4,6 +4,7 @@ use crate::gl::GL;
 use crate::js;
 use crate::mat4::Mat4;
 use js_sys::wasm_bindgen::JsCast;
+use crate::js::get_canvas_by_id;
 
 pub(crate) struct RenderContext<'a> {
     pub(crate) gl: &'a web_sys::WebGl2RenderingContext,
@@ -20,21 +21,13 @@ pub(crate) struct Renderer {
 
 impl Renderer {
     pub fn create(canvas_id: &str) -> Result<Self, Error> {
-        let document = js::document()?;
-
-        let canvas = document.query_selector(canvas_id)
-            .map_err(|_| Error::UnableToRetrieveCanvas)?
-            .ok_or(Error::UnableToRetrieveCanvas)?
-            .dyn_into::<web_sys::HtmlCanvasElement>()
-            .map_err(|_| Error::UnableToRetrieveCanvas)?;
-        
+        let canvas = js::get_canvas_by_id(canvas_id)?;
         let (width, height) = (canvas.width(), canvas.height());
 
         // initialize WebGL context
         let gl = js::get_webgl2_context(&canvas)?;
         let state = GlState::new(&gl);
         let projection = Mat4::orthographic_from_size(width as f32, height as f32);
-
         
         let mut renderer = Self { gl, projection, canvas, state };
         renderer.resize(width as _, height as _);
@@ -53,7 +46,7 @@ impl Renderer {
     }
     
     pub fn begin_frame(&mut self) {
-        self.gl.clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
+        self.clear(0.0, 0.0, 0.0);
     }
 
     pub fn render<'a>(&'a mut self, drawable: &impl Drawable) {

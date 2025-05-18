@@ -71,10 +71,9 @@ fn run() -> Result<(), Error> {
         cell_size: [cell_width as f32, cell_height as f32],
     });
     
-    renderer.clear(0.2, 0.2, 0.2);
-    renderer.state()
-        .blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
+    renderer.begin_frame();
     renderer.render(&terminal_grid);
+    renderer.end_frame();
 
     Ok(())
 }
