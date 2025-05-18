@@ -1,3 +1,4 @@
+use std::fmt::format;
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
 use crate::gl::{Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
@@ -11,12 +12,11 @@ pub struct TerminalGrid {
     shader: ShaderProgram,
     /// Terminal cell instance data
     cells: Vec<TerminalCell>,
+    terminal_size: (u16, u16),
     /// Buffers for the terminal grid
     buffers: TerminalBuffers,
     /// shared state for the shader program
     ubo: UniformBufferObject,
-    /// Vertex Array Object. Stores the per-vertex state of the model data.
-    vao: web_sys::WebGlVertexArrayObject,
     /// Font atlas for rendering text.
     atlas: FontAtlas,
     /// Uniform location for the texture sampler.
@@ -24,9 +24,29 @@ pub struct TerminalGrid {
 }
 
 struct TerminalBuffers {
+    vao: web_sys::WebGlVertexArrayObject,
     vertices: web_sys::WebGlBuffer,
     instances: web_sys::WebGlBuffer,
     indices: web_sys::WebGlBuffer,
+}
+
+impl TerminalBuffers {
+    fn upload_instance_data<T>(
+        &self,
+        gl: &WebGl2RenderingContext,
+        instance_data: &[T],
+    ) {
+        gl.bind_vertex_array(Some(&self.vao));
+        gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.instances));
+        unsafe {
+            let data_ptr = instance_data.as_ptr() as *const u8;
+            let size = instance_data.len() * size_of::<T>();
+            let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
+            gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::DYNAMIC_DRAW);
+        }
+
+        gl.bind_vertex_array(None);
+    }
 }
 
 
@@ -42,15 +62,15 @@ impl TerminalGrid {
         gl: &WebGl2RenderingContext,
         atlas: FontAtlas,
         screen_size: (i32, i32),
-        cell_size: (i32, i32),
     ) -> Result<Self, Error> {
         // create and setup the Vertex Array Object
         let vao = create_vao(gl)?;
         gl.bind_vertex_array(Some(&vao));
 
         // prepare vertex, index and instance buffers
+        let cell_size = atlas.cell_size();
         let cell_data = create_terminal_cell_data(screen_size, cell_size);
-        let buffers = setup_buffers(gl, &cell_data, cell_size)?;
+        let buffers = setup_buffers(gl, vao, &cell_data, cell_size)?;
 
         // unbind VAO to prevent accidental modification
         gl.bind_vertex_array(None);
@@ -58,34 +78,45 @@ impl TerminalGrid {
         // setup shader and uniform data
         let shader = ShaderProgram::create(gl, Self::VERTEX_GLSL, Self::FRAGMENT_GLSL)?;
         shader.use_program(gl);
-        
+
         let ubo = UniformBufferObject::new(gl, CellUbo::BINDING_POINT)?;
         ubo.bind_to_shader(gl, &shader, "CellUniforms")?;
-        
+
         let sampler_loc = gl.get_uniform_location(&shader.program, "u_sampler")
             .ok_or(Error::UnableToRetrieveUniformLocation("u_sampler"))?;
 
         console::log_2(&"terminal cells".into(), &cell_data.len().into());
-
+        
+        let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
+        console::log_1(&format!("terminal size {cols}x{rows}").into());
         let grid = Self {
             shader,
+            terminal_size: (cols as u16, rows as u16),
             cells: cell_data,
             buffers,
             ubo,
-            vao,
             atlas,
             sampler_loc,
-        }; 
-        
+        };
+
         Ok(grid)
     }
+
+    pub fn cell_size(&self) -> (i32, i32) {
+        self.atlas.cell_size()
+    }
     
+    pub fn terminal_size(&self) -> (u16, u16) {
+        self.terminal_size
+    }
+
     pub fn upload_ubo_data(
-        &self, 
+        &self,
         gl: &WebGl2RenderingContext,
         screen_size: (i32, i32),
         cell_size: (i32, i32),
     ) {
+        // todo: this should reflect on self.cell_size - but needs more wörk
         let data = CellUbo {
             projection: Mat4::orthographic_from_size(
                 screen_size.0 as f32,
@@ -93,7 +124,37 @@ impl TerminalGrid {
             ).data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
         };
+        console::log_1(&format!("cell size: {:?}", data.cell_size).into());
+        console::log_1(&format!("screen size: {:?}", screen_size).into());
         self.ubo.upload_data(gl, &data);
+    }
+
+    pub fn cell_count(&self) -> usize {
+        self.cells.len()
+    }
+
+    pub fn update_cells<'a>(
+        &mut self,
+        gl: &WebGl2RenderingContext,
+        cells: impl Iterator<Item = CellData<'a>>,
+    ) -> Result<(), Error> {
+        // update instance buffer with new cell data
+        let atlas = &self.atlas;
+
+        let cells = cells.collect::<Vec<_>>();
+        assert_eq!(cells.len(), self.cells.len());
+
+        self.cells.iter_mut()
+            .zip(cells)
+            .for_each(|(cell, data)| {
+                cell.fg = data.fg;
+                cell.bg = data.bg;
+                cell.depth = atlas.get_glyph_depth(data.symbol).map(|d| d as f32).unwrap_or(0.0);
+            });
+
+        self.buffers.upload_instance_data(gl, &self.cells);
+
+        Ok(())
     }
 }
 
@@ -104,6 +165,7 @@ fn create_vao(gl: &WebGl2RenderingContext) -> Result<web_sys::WebGlVertexArrayOb
 
 fn setup_buffers(
     gl: &WebGl2RenderingContext,
+    vao: web_sys::WebGlVertexArrayObject,
     cell_data: &[TerminalCell],
     cell_size: (i32, i32),
 ) -> Result<TerminalBuffers, Error> {
@@ -118,6 +180,7 @@ fn setup_buffers(
     let indices = [0, 1, 2, 0, 3, 1];
 
     Ok(TerminalBuffers {
+        vao: vao,
         vertices: create_buffer_f32(gl, GL::ARRAY_BUFFER, &vertices, GL::STATIC_DRAW)?,
         instances: create_buffer_for_instances(gl, cell_data)?,
         indices: create_buffer_u8(gl, GL::ELEMENT_ARRAY_BUFFER, &indices, GL::STATIC_DRAW)?,
@@ -135,7 +198,7 @@ fn create_buffer_u8(
     gl.bind_buffer(target, Some(&index_buf));
 
     gl.buffer_data_with_u8_array(target, data, usage);
-    
+
     Ok(index_buf)
 }
 
@@ -170,7 +233,7 @@ fn create_buffer_for_instances<T>(
 ) -> Result<web_sys::WebGlBuffer, Error> {
     let instance_buf = gl.create_buffer()
         .ok_or(Error::BufferCreationError("instance-buffer"))?;
-    
+
     gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
 
     // upload instance data
@@ -178,7 +241,7 @@ fn create_buffer_for_instances<T>(
         let data_ptr = instance_data.as_ptr() as *const u8;
         let size = instance_data.len() * size_of::<T>();
         let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
-        gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
+        gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::DYNAMIC_DRAW);
     }
 
     // setup instance attributes (while VAO is bound)
@@ -188,7 +251,7 @@ fn create_buffer_for_instances<T>(
     enable_vertex_attrib_array(gl, ID::DEPTH_ATTRIB, 1, GL::FLOAT,           4);
     enable_vertex_attrib_array(gl, ID::FG_ATTRIB,    1, GL::UNSIGNED_INT,    8);
     enable_vertex_attrib_array(gl, ID::BG_ATTRIB,    1, GL::UNSIGNED_INT,    12);
-    
+
     Ok(instance_buf)
 }
 
@@ -224,10 +287,10 @@ fn enable_vertex_attrib(
 impl Drawable for TerminalGrid {
     fn prepare(&self, context: &mut RenderContext) {
         let gl = context.gl;
-        
+
         self.shader.use_program(gl);
-        
-        gl.bind_vertex_array(Some(&self.vao));
+
+        gl.bind_vertex_array(Some(&self.buffers.vao));
 
         self.atlas.bind(gl, 0);
         self.ubo.bind(context.gl);
@@ -249,7 +312,18 @@ impl Drawable for TerminalGrid {
     }
 }
 
+#[derive(Debug)]
+pub struct CellData<'a> {
+    pub symbol: &'a str,
+    pub fg: u32,
+    pub bg: u32,
+}
 
+impl<'a> CellData<'a> {
+    pub fn new(symbol: &'a str, fg: u32, bg: u32) -> Self {
+        Self { symbol, fg, bg }
+    }
+}
 
 // todo: split into 2 structs
 #[repr(C, align(4))]

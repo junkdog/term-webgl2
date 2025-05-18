@@ -1,3 +1,4 @@
+use web_sys::HtmlCanvasElement;
 use crate::error::Error;
 use crate::gl::context::GlState;
 use crate::gl::GL;
@@ -20,6 +21,11 @@ pub struct Renderer {
 impl Renderer {
     pub fn create(canvas_id: &str) -> Result<Self, Error> {
         let canvas = js::get_canvas_by_id(canvas_id)?;
+        Self::create_with_canvas(canvas)
+    }
+    
+    pub fn create_with_canvas(canvas: HtmlCanvasElement) -> Result<Self, Error> {
+        // let canvas = js::get_canvas_by_id(canvas_id)?;
         let (width, height) = (canvas.width(), canvas.height());
 
         // initialize WebGL context

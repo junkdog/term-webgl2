@@ -1,3 +1,4 @@
+use webgl2::{BITMAP_FONT_IMAGE, BITMAP_FONT_JSON};
 use crate::font_atlas::FontAtlasConfig;
 use crate::error::Error;
 use crate::gl::{FontAtlas, Renderer, TerminalGrid};
@@ -18,14 +19,12 @@ fn run() -> Result<(), Error> {
     let mut renderer = Renderer::create("canvas")?;
     let gl = renderer.gl();
 
-    const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font.png");
-    const METADATA_JSON: &'static str = include_str!("../../data/bitmap_font.json");
+    let font_config: FontAtlasConfig = FontAtlasConfig::from_json(BITMAP_FONT_JSON)?;
+    let cell_size = font_config.cell_size();
+    let atlas = FontAtlas::load(gl, BITMAP_FONT_IMAGE, font_config)?;
 
-    let font_config: FontAtlasConfig = FontAtlasConfig::from_json(METADATA_JSON)?;
-    let atlas = FontAtlas::load(gl, PIXELS, &font_config)?;
-
-    let (canvas_size, cell_size) = (renderer.canvas_size(), font_config.cell_size());
-    let terminal_grid = TerminalGrid::new(gl, atlas, canvas_size, cell_size)?;
+    let (canvas_size, cell_size) = (renderer.canvas_size(), cell_size);
+    let terminal_grid = TerminalGrid::new(gl, atlas, canvas_size)?;
     terminal_grid.upload_ubo_data(gl, canvas_size, cell_size);
 
     renderer.begin_frame();
@@ -34,3 +33,4 @@ fn run() -> Result<(), Error> {
 
     Ok(())
 }
+

@@ -5,6 +5,7 @@ use compact_str::{CompactString, ToCompactString};
 use image::{GenericImageView, ImageFormat};
 use std::collections::HashMap;
 use web_sys::console;
+use crate::BITMAP_FONT_IMAGE;
 
 pub struct Texture {
     gl_texture: web_sys::WebGlTexture,
@@ -113,20 +114,27 @@ pub struct FontAtlas {
     texture: Texture,
     /// region key to texture 2d array depth index
     depths: HashMap<CompactString, i32>,
+    cell_size: (i32, i32),
 }
 
 
 impl FontAtlas {
+    pub fn load_default(
+        gl: &web_sys::WebGl2RenderingContext,
+    ) -> Result<Self, Error> {
+        let config = FontAtlasConfig::default();
+        Self::load(gl, BITMAP_FONT_IMAGE, config)
+    }
 
     /// Creates a TextureAtlas from a grid of equal-sized cells
     pub fn load(
         gl: &web_sys::WebGl2RenderingContext,
         texture_data: &[u8],
-        config: &FontAtlasConfig,
+        config: FontAtlasConfig,
     ) -> Result<Self, Error> {
         console::log_1(&format!("loading texture, {} bytes", texture_data.len()).into());
-        let texture = Texture::from_image_data(gl, GL::RGBA, texture_data, config)?;
-        
+        let texture = Texture::from_image_data(gl, GL::RGBA, texture_data, &config)?;
+
         console::log_1(&format!("Creating atlas grid with {} regions", config.char_to_uv.len()).into());
         let (cell_width, cell_height) = (config.cell_width, config.cell_height);
         let mut depths = HashMap::new();
@@ -159,9 +167,14 @@ impl FontAtlas {
         Ok(Self {
             texture,
             depths,
+            cell_size: (cell_width, cell_height),
         })
     }
-    
+
+    pub fn cell_size(&self) -> (i32, i32) {
+        self.cell_size
+    }
+
     /// Gets a glyph by name
     pub fn get_glyph_depth(&self, key: &str) -> Option<i32> {
         self.depths.get(key).copied()

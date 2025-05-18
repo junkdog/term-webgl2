@@ -22,7 +22,7 @@ pub struct FontAtlasConfig {
 
 impl FontAtlasConfig {
     pub const PADDING: i32 = 1;
-    
+
     pub fn from_json(json: &str) -> Result<Self, Error> {
         serde_json::from_str(json)
             .map_err(|e| Error::JsonDeserializationError(format!("Failed to deserialize JSON: {}", e)))
@@ -35,8 +35,15 @@ impl FontAtlasConfig {
     ) -> (i32, i32) {
         (viewport_width / self.cell_width, viewport_height / self.cell_height)
     }
-    
+
     pub fn cell_size(&self) -> (i32, i32) {
         (self.cell_width, self.cell_height)
+    }
+}
+
+impl Default for FontAtlasConfig {
+    fn default() -> Self {
+        Self::from_json(include_str!("../../data/bitmap_font.json"))
+            .unwrap()
     }
 }
