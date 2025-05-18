@@ -57,4 +57,7 @@ pub enum Error {
     
     #[error("Failed to creeate element: {0}")]
     UnableToCreateElement(&'static str),
+    
+    #[error("Failed to deserialize JSON: {0}")]
+    JsonDeserializationError(String),
 }

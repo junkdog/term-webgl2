@@ -1,14 +1,21 @@
-use std::slice;
 use crate::error::Error;
 use crate::gl::context::{BoundGlState, GlState};
-use crate::gl::{ShaderProgram, GL};
-use js_sys::wasm_bindgen::JsCast;
+use crate::gl::GL;
 use crate::js;
+use crate::mat4::Mat4;
+use js_sys::wasm_bindgen::JsCast;
+
+pub(crate) struct RenderContext<'a> {
+    pub(crate) gl: &'a web_sys::WebGl2RenderingContext,
+    pub(crate) state: &'a mut GlState,
+    pub(crate) projection: Mat4
+}
 
 pub(crate) struct Renderer {
     gl: web_sys::WebGl2RenderingContext,
     canvas: web_sys::HtmlCanvasElement,
     state: GlState,
+    projection: Mat4
 }
 
 impl Renderer {
@@ -25,16 +32,13 @@ impl Renderer {
 
         // initialize WebGL context
         let gl = js::get_webgl2_context(&canvas)?;
-
         let state = GlState::new(&gl);
+        let projection = Mat4::orthographic_from_size(width as f32, height as f32);
+
         
-        let mut renderer = Self { gl, canvas, state };
+        let mut renderer = Self { gl, projection, canvas, state };
         renderer.resize(width as _, height as _);
         Ok(renderer)
-    }
-
-    pub fn create_shader_program(&self, vert_src: &str, frag_src: &str) -> Result<ShaderProgram, Error> {
-        ShaderProgram::create(&self.gl, vert_src, frag_src)
     }
 
     pub fn resize(&mut self, width: i32, height: i32) {
@@ -47,12 +51,25 @@ impl Renderer {
         self.state.clear_color(&self.gl, r, g, b, 1.0);
         self.gl.clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
     }
+    
+    pub fn begin_frame(&mut self) {
+        self.gl.clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
+    }
 
-    pub fn draw(&self, shader: &ShaderProgram, vertex_array: &impl Drawable) {
-        shader.use_program(&self.gl);
-        vertex_array.bind(&self.gl);
-        vertex_array.draw(&self.gl);
-        vertex_array.unbind(&self.gl);
+    pub fn render<'a>(&'a mut self, drawable: &impl Drawable) {
+        let mut context = RenderContext {
+            gl: &self.gl,
+            state: &mut self.state,
+            projection: self.projection.clone(),
+        };
+
+        drawable.prepare(&mut context);
+        drawable.draw(&mut context);
+        drawable.cleanup(&mut context);
+    }
+    
+    pub fn end_frame(&mut self) {
+        // swap buffers (todo)
     }
 
     // Accessor methods
@@ -74,7 +91,7 @@ impl Renderer {
 }
 
 pub(crate) trait Drawable {
-    fn bind(&self, gl: &web_sys::WebGl2RenderingContext);
-    fn draw(&self, gl: &web_sys::WebGl2RenderingContext);
-    fn unbind(&self, gl: &web_sys::WebGl2RenderingContext);
+    fn prepare(&self, context: &mut RenderContext);
+    fn draw(&self, context: &mut RenderContext);
+    fn cleanup(&self, context: &mut RenderContext);
 }

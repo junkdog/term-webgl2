@@ -1,11 +1,8 @@
-use image::{metadata, DynamicImage, GenericImageView};
-use js_sys::wasm_bindgen::JsCast;
-use serde::Deserialize;
-use web_sys::console;
 use crate::bitmap_font::BitmapFontMetadata;
 use crate::error::Error;
-use crate::gl::{TerminalGrid, TerminalCell, Renderer, Texture, FontAtlas, GL};
+use crate::gl::{CellUbo, FontAtlas, Renderer, TerminalCell, TerminalGrid, Texture, GL};
 use crate::mat4::Mat4;
+use web_sys::console;
 
 mod gl;
 mod error;
@@ -22,7 +19,6 @@ fn main() {
 fn run() -> Result<(), Error> {
     
     let mut renderer = Renderer::create("canvas")?;
-    let shader = renderer.create_shader_program(TerminalGrid::VERTEX_GLSL, TerminalGrid::FRAGMENT_GLSL)?;
 
     let projection = Mat4::orthographic_from_size(
         renderer.canvas_width() as f32,
@@ -32,7 +28,8 @@ fn run() -> Result<(), Error> {
     // create texture
     const PIXELS: &[u8] = include_bytes!("../../data/bitmap_font.png");
     const METADATA_JSON: &'static str = include_str!("../../data/bitmap_font.json");
-    let metadata: BitmapFontMetadata = serde_json::from_str(METADATA_JSON).unwrap();
+    
+    let metadata: BitmapFontMetadata = BitmapFontMetadata::from_json(METADATA_JSON)?;
     let texture = Texture::from_image_data(renderer.gl(), GL::RGBA, PIXELS, &metadata)?;
     let atlas = FontAtlas::from_bitmap_font(renderer.gl(), texture, &metadata)?;
 
@@ -61,22 +58,23 @@ fn run() -> Result<(), Error> {
         0, 3, 1, // second triangle
     ];
 
-    let vertex_array = TerminalGrid::builder()
+    let terminal_grid = TerminalGrid::builder()
         .gl(renderer.gl())
         .model_data(&model_data)
         .indices(&indices)
         .transform_data(&transform_data)
-        .shader(&shader)
         .atlas(atlas)
         .build()?;
+    
+    terminal_grid.upload_ubo_data(renderer.gl(), CellUbo {
+        projection: projection.data,
+        cell_size: [cell_width as f32, cell_height as f32],
+    });
     
     renderer.clear(0.2, 0.2, 0.2);
     renderer.state()
         .blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
-    shader.set_uniform_mat4(renderer.gl(), "u_projection", &projection)?;
-    shader.set_uniform_vec2(renderer.gl(), "u_cell_size", metadata.cell_width as f32, metadata.cell_height as f32)?;
-    renderer.gl().vertex_attrib1f(2, region as f32);
-    renderer.draw(&shader, &vertex_array);
+    renderer.render(&terminal_grid);
 
     Ok(())
 }

@@ -35,40 +35,6 @@ impl ShaderProgram {
         })
     }
 
-    pub fn set_uniform_mat4(
-        &self,
-        gl: &WebGl2RenderingContext,
-        name: &'static str,
-        matrix: &Mat4
-    ) -> Result<(), Error> {
-        self.use_program(gl);
-        let location = gl.get_uniform_location(&self.program, name)
-            .ok_or(Error::UnableToRetrieveUniformLocation(name))?;
-
-        gl.uniform_matrix4fv_with_f32_array(
-            Some(&location),
-            false,  // don't transpose
-            matrix.as_slice()
-        );
-
-        Ok(())
-    }
-
-    pub(crate) fn set_uniform_vec2(
-        &self, gl: &GL,
-        name: &'static str,
-        x: f32,
-        y: f32
-    )  -> Result<(), Error> {
-        self.use_program(gl);
-        let location = gl.get_uniform_location(&self.program, name)
-            .ok_or(Error::UnableToRetrieveUniformLocation(name))?;
-
-        gl.uniform2f(Some(&location), x, y);
-
-        Ok(())
-    }
-
     /// Use the shader program.
     pub(crate) fn use_program(&self, gl: &WebGl2RenderingContext) {
         gl.use_program(Some(&self.program));

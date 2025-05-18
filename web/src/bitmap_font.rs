@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use serde::Deserialize;
+use crate::error::Error;
 
 #[derive(Debug, Deserialize)]
 pub struct BitmapFontMetadata {
@@ -21,4 +22,17 @@ pub struct BitmapFontMetadata {
 
 impl BitmapFontMetadata {
     pub const PADDING: i32 = 1;
+    
+    pub fn from_json(json: &str) -> Result<Self, Error> {
+        serde_json::from_str(json)
+            .map_err(|e| Error::JsonDeserializationError(format!("Failed to deserialize JSON: {}", e)))
+    }
+
+    pub fn terminal_size(
+        &self,
+        viewport_width: i32,
+        viewport_height: i32
+    ) -> (i32, i32) {
+        (viewport_width / self.cell_width, viewport_height / self.cell_height)
+    }
 }

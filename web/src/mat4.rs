@@ -1,4 +1,5 @@
 // Add this to your project, perhaps in a new file src/math.rs
+#[derive(Debug, Clone)]
 pub struct Mat4 {
     pub data: [f32; 16],
 }

@@ -25,13 +25,3 @@ pub(crate) fn get_webgl2_context(
         .dyn_into::<web_sys::WebGl2RenderingContext>()
         .map_err(|_| Error::FailedToRetrieveWebGl2RenderingContext)
 }
-
-pub(crate) fn get_2d_context(
-    canvas: &HtmlCanvasElement,
-) -> Result<web_sys::CanvasRenderingContext2d, Error> {
-    canvas.get_context("2d")
-        .map_err(|_| Error::FailedToRetrieveCanvasRenderingContext2d)?
-        .ok_or(Error::FailedToRetrieveCanvasRenderingContext2d)?
-        .dyn_into::<web_sys::CanvasRenderingContext2d>()
-        .map_err(|_| Error::FailedToRetrieveWebGl2RenderingContext)
-}

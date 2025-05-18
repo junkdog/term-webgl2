@@ -11,8 +11,11 @@ layout(location = 3) in float a_depth;
 layout(location = 4) in uint a_fg_color;
 layout(location = 5) in uint a_bg_color;
 
-uniform mat4 u_projection;
-uniform vec2 u_cell_size;
+// uniforms
+layout(std140) uniform CellUniforms {
+    mat4 u_projection;
+    vec2 u_cell_size;
+};
 
 out vec2 v_tex_coord;
 out vec4 v_fg_color;
