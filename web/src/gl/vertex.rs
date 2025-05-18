@@ -14,21 +14,24 @@ pub struct TerminalGrid {
     shader: ShaderProgram,
     /// Terminal cell instance data
     cells: Vec<TerminalCell>,
+    /// Buffers for the terminal grid
+    buffers: TerminalBuffers,
     /// shared state for the shader program
     ubo: UniformBufferObject,
     /// Vertex Array Object. Stores the per-vertex state of the model data.
     vao: web_sys::WebGlVertexArrayObject,
-    /// Vertex Buffer Object. Stores the vertex data (model data).
-    vbo: web_sys::WebGlBuffer,
-    /// Instance Buffer Object. Stores the instance data (transform data).
-    vbo_instance: web_sys::WebGlBuffer,
-    /// Index Buffer Object. Stores the indices for the vertex data.
-    index_buf: web_sys::WebGlBuffer,
     /// Font atlas for rendering text.
     atlas: FontAtlas,
     /// Uniform location for the texture sampler.
     sampler_loc: web_sys::WebGlUniformLocation,
 }
+
+struct TerminalBuffers {
+    vertices: web_sys::WebGlBuffer,
+    instances: web_sys::WebGlBuffer,
+    indices: web_sys::WebGlBuffer,
+}
+
 
 #[bon]
 impl TerminalGrid {
@@ -44,76 +47,18 @@ impl TerminalGrid {
         gl: &WebGl2RenderingContext,
         atlas: FontAtlas,
         font_config: &FontAtlasConfig,
-        // transform_data: &[TerminalCell],
         screen_size: (i32, i32),
-        // indices: &[u8],
     ) -> Result<Self, Error> {
-        let (w, h) = (font_config.cell_width as f32, font_config.cell_height as f32);
-        let model_data: [f32; 16] = [
-            //  x      y     u     v
-            w,   0.0,  1.0,  0.0,  // top-right
-            0.0,   h,  0.0,  1.0,  // bottom-left
-            w,     h,  1.0,  1.0,  // bottom-right
-            0.0, 0.0,  0.0,  0.0,  // top-left
-        ];
-        
         let shader = ShaderProgram::create(gl, Self::VERTEX_GLSL, Self::FRAGMENT_GLSL)?;
+        shader.use_program(gl);
         
-        // create Vertex Array Object for storing the 
-        let vao = gl.create_vertex_array()
-            .ok_or(Error::VertexArrayCreationError)?;
+        // create and setup the Vertex Array Object
+        let vao = create_vao(gl)?;
         gl.bind_vertex_array(Some(&vao));
 
-        // create and bind VBO
-        let vbo = gl.create_buffer()
-            .ok_or(Error::BufferCreationError("vbo"))?;
-        gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&vbo));
-
-        unsafe {
-            let view = js_sys::Float32Array::view(&model_data);
-            gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
-        }
-
-        // setup vertex attributes (while VAO is bound)
-        const STRIDE: i32 = (2 + 2) * 4; // 4 floats per vertex
-        
-        // vertex shader in_* vars    attribute  count   type  offset
-        enable_vertex_attrib(gl, Self::POS_ATTRIB, 2, GL::FLOAT, 0, STRIDE);
-        enable_vertex_attrib(gl, Self::UV_ATTRIB,  2, GL::FLOAT, 8, STRIDE);
-
-        // create and bind instance buffer
-        let instance_buf = gl.create_buffer()
-            .ok_or(Error::BufferCreationError("instance buffer"))?;
-        gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
-
-        // upload instance data
+        // prepare vertex, index and instance buffers
         let cell_data = create_terminal_cell_data(screen_size, font_config);
-        unsafe {
-            let data_ptr = cell_data.as_ptr() as *const u8;
-            let size = cell_data.len() * size_of::<TerminalCell>();
-            let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
-            gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
-        }
-
-        // setup instance attributes (while VAO is bound)
-        use TerminalCell as ID;
-        // vertex shader in_* vars        attribute    count      type         offset
-        enable_vertex_attrib_array(gl, ID::POS_ATTRIB,   2, GL::UNSIGNED_SHORT,  0);
-        enable_vertex_attrib_array(gl, ID::DEPTH_ATTRIB, 1, GL::FLOAT,           4);
-        enable_vertex_attrib_array(gl, ID::FG_ATTRIB,    1, GL::UNSIGNED_INT,    8);
-        enable_vertex_attrib_array(gl, ID::BG_ATTRIB,    1, GL::UNSIGNED_INT,    12);
-
-        // create and bind index buffer (still part of VAO state)
-        let index_buf = gl.create_buffer()
-            .ok_or(Error::BufferCreationError("index buffer"))?;
-        gl.bind_buffer(WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, Some(&index_buf));
-
-        // upload index data
-        let indices = [
-            0, 1, 2, // first triangle
-            0, 3, 1, // second triangle
-        ];
-        gl.buffer_data_with_u8_array(GL::ELEMENT_ARRAY_BUFFER, &indices, GL::STATIC_DRAW);
+        let buffers = setup_buffers(gl, &cell_data, font_config)?;
 
         // unbind VAO to prevent accidental modification
         gl.bind_vertex_array(None);
@@ -130,14 +75,11 @@ impl TerminalGrid {
         Ok(Self {
             shader,
             cells: cell_data,
+            buffers,
             ubo,
             vao,
-            vbo,
-            index_buf,
-            vbo_instance: instance_buf,
             atlas,
             sampler_loc,
-            // projection_loc,
         })
     }
     
@@ -145,6 +87,102 @@ impl TerminalGrid {
         self.ubo.upload_data(gl, &data);
     }
 }
+
+fn create_vao(gl: &WebGl2RenderingContext) -> Result<web_sys::WebGlVertexArrayObject, Error> {
+    gl.create_vertex_array()
+        .ok_or(Error::VertexArrayCreationError)
+}
+
+fn setup_buffers(
+    gl: &WebGl2RenderingContext,
+    cell_data: &[TerminalCell],
+    font_config: &FontAtlasConfig,
+) -> Result<TerminalBuffers, Error> {
+    let (w, h) = (font_config.cell_width as f32, font_config.cell_height as f32);
+    let vertices = [
+        // x, y, u, v
+          w, 0.0, 1.0, 0.0, // top-right
+        0.0,   h, 0.0, 1.0, // bottom-left
+          w,   h, 1.0, 1.0, // bottom-right
+        0.0, 0.0, 0.0, 0.0  // top-left
+    ];
+    let indices = [0, 1, 2, 0, 3, 1];
+
+    Ok(TerminalBuffers {
+        vertices: create_buffer_f32(gl, GL::ARRAY_BUFFER, &vertices, GL::STATIC_DRAW)?,
+        instances: create_buffer_for_instances(gl, cell_data)?,
+        indices: create_buffer_u8(gl, GL::ELEMENT_ARRAY_BUFFER, &indices, GL::STATIC_DRAW)?,
+    })
+}
+
+fn create_buffer_u8(
+    gl: &WebGl2RenderingContext,
+    target: u32,
+    data: &[u8],
+    usage: u32
+) -> Result<web_sys::WebGlBuffer, Error> {
+    let index_buf = gl.create_buffer()
+        .ok_or(Error::BufferCreationError("vbo-u8"))?;
+    gl.bind_buffer(target, Some(&index_buf));
+
+    gl.buffer_data_with_u8_array(target, data, usage);
+    
+    Ok(index_buf)
+}
+
+fn create_buffer_f32(
+    gl: &WebGl2RenderingContext,
+    target: u32,
+    data: &[f32],
+    usage: u32
+) -> Result<web_sys::WebGlBuffer, Error> {
+    let buffer = gl.create_buffer()
+        .ok_or(Error::BufferCreationError("vbo-f32"))?;
+
+    gl.bind_buffer(target, Some(&buffer));
+
+    unsafe {
+        let view = js_sys::Float32Array::view(data);
+        gl.buffer_data_with_array_buffer_view(target, &view, usage);
+    }
+
+    // vertex attributes \\
+    const STRIDE: i32 = (2 + 2) * 4; // 4 floats per vertex
+    enable_vertex_attrib(gl, TerminalGrid::POS_ATTRIB, 2, GL::FLOAT, 0, STRIDE);
+    enable_vertex_attrib(gl, TerminalGrid::UV_ATTRIB,  2, GL::FLOAT, 8, STRIDE);
+
+    Ok(buffer)
+}
+
+
+fn create_buffer_for_instances<T>(
+    gl: &WebGl2RenderingContext,
+    instance_data: &[T],
+) -> Result<web_sys::WebGlBuffer, Error> {
+    let instance_buf = gl.create_buffer()
+        .ok_or(Error::BufferCreationError("instance-buffer"))?;
+    
+    gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
+
+    // upload instance data
+    unsafe {
+        let data_ptr = instance_data.as_ptr() as *const u8;
+        let size = instance_data.len() * size_of::<T>();
+        let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
+        gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
+    }
+
+    // setup instance attributes (while VAO is bound)
+    use TerminalCell as ID;
+    // vertex shader in_* vars        attribute    count      type         offset
+    enable_vertex_attrib_array(gl, ID::POS_ATTRIB,   2, GL::UNSIGNED_SHORT,  0);
+    enable_vertex_attrib_array(gl, ID::DEPTH_ATTRIB, 1, GL::FLOAT,           4);
+    enable_vertex_attrib_array(gl, ID::FG_ATTRIB,    1, GL::UNSIGNED_INT,    8);
+    enable_vertex_attrib_array(gl, ID::BG_ATTRIB,    1, GL::UNSIGNED_INT,    12);
+    
+    Ok(instance_buf)
+}
+
 
 fn enable_vertex_attrib_array(
     gl: &WebGl2RenderingContext,

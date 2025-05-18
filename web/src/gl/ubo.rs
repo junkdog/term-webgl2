@@ -1,7 +1,6 @@
 use crate::error::Error;
 use crate::gl::{ShaderProgram, GL};
 use std::slice;
-use crate::mat4::Mat4;
 
 pub struct UniformBufferObject {
     buffer: web_sys::WebGlBuffer,

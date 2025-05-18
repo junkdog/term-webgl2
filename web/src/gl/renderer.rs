@@ -26,7 +26,7 @@ impl Renderer {
         let gl = js::get_webgl2_context(&canvas)?;
         let state = GlState::new(&gl);
         let projection = Mat4::orthographic_from_size(width as f32, height as f32);
-        
+
         let mut renderer = Self { gl, projection, canvas, state };
         renderer.resize(width as _, height as _);
         Ok(renderer)
@@ -42,7 +42,7 @@ impl Renderer {
         self.state.clear_color(&self.gl, r, g, b, 1.0);
         self.gl.clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
     }
-    
+
     pub fn begin_frame(&mut self) {
         self.clear(0.0, 0.0, 0.0);
     }
@@ -58,7 +58,7 @@ impl Renderer {
         drawable.draw(&mut context);
         drawable.cleanup(&mut context);
     }
-    
+
     pub fn end_frame(&mut self) {
         // swap buffers (todo)
     }
@@ -75,7 +75,7 @@ impl Renderer {
     pub fn canvas_width(&self) -> i32 {
         self.canvas.width() as i32
     }
-    
+
     pub fn canvas_size(&self) -> (i32, i32) {
         (self.canvas.width() as i32, self.canvas.height() as i32)
     }
