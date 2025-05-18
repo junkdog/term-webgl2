@@ -1,16 +1,16 @@
 use crate::error::Error;
 use crate::gl::context::GlState;
 use crate::gl::GL;
-use crate::js;
 use crate::mat4::Mat4;
+use crate::js;
 
-pub(crate) struct RenderContext<'a> {
-    pub(crate) gl: &'a web_sys::WebGl2RenderingContext,
-    pub(crate) state: &'a mut GlState,
-    pub(crate) projection: Mat4
+pub struct RenderContext<'a> {
+    pub gl: &'a web_sys::WebGl2RenderingContext,
+    pub state: &'a mut GlState,
+    pub projection: Mat4
 }
 
-pub(crate) struct Renderer {
+pub struct Renderer {
     gl: web_sys::WebGl2RenderingContext,
     canvas: web_sys::HtmlCanvasElement,
     state: GlState,
@@ -86,3 +86,5 @@ pub(crate) trait Drawable {
     fn draw(&self, context: &mut RenderContext);
     fn cleanup(&self, context: &mut RenderContext);
 }
+
+

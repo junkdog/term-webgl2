@@ -1,9 +1,7 @@
-use crate::font_atlas::FontAtlasConfig;
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
 use crate::gl::{Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
 use crate::mat4::Mat4;
-use crate::SimpleRng;
 use std::slice;
 use web_sys::{console, WebGl2RenderingContext};
 
@@ -82,7 +80,7 @@ impl TerminalGrid {
         Ok(grid)
     }
     
-    pub(crate) fn upload_ubo_data(
+    pub fn upload_ubo_data(
         &self, 
         gl: &WebGl2RenderingContext,
         screen_size: (i32, i32),
@@ -322,4 +320,35 @@ fn create_terminal_cell_data(
     }
 
     cells
+}
+
+
+#[derive(Clone, Copy, Debug)]
+pub struct SimpleRng {
+    state: u32,
+}
+
+impl SimpleRng {
+    const A: u32 = 1664525;
+    const C: u32 = 1013904223;
+
+    pub fn new(seed: u32) -> Self {
+        SimpleRng { state: seed }
+    }
+
+    pub fn gen(&mut self) -> u32 {
+        self.state = self.state.wrapping_mul(Self::A).wrapping_add(Self::C);
+        self.state
+    }
+}
+
+impl Default for SimpleRng {
+    fn default() -> Self {
+        let seed = web_time::SystemTime::now()
+            .duration_since(web_time::SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u32;
+
+        SimpleRng::new(seed)
+    }
 }

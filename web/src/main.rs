@@ -34,33 +34,3 @@ fn run() -> Result<(), Error> {
 
     Ok(())
 }
-
-#[derive(Clone, Copy, Debug)]
-pub struct SimpleRng {
-    state: u32,
-}
-
-impl SimpleRng {
-    const A: u32 = 1664525;
-    const C: u32 = 1013904223;
-
-    pub fn new(seed: u32) -> Self {
-        SimpleRng { state: seed }
-    }
-
-    pub fn gen(&mut self) -> u32 {
-        self.state = self.state.wrapping_mul(Self::A).wrapping_add(Self::C);
-        self.state
-    }
-}
-
-impl Default for SimpleRng {
-    fn default() -> Self {
-        let seed = web_time::SystemTime::now()
-            .duration_since(web_time::SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as u32;
-
-        SimpleRng::new(seed)
-    }
-}

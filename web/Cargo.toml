@@ -38,6 +38,6 @@ serde_json = { workspace = true }
 serde = { version = "1.0.219", features = ["derive"] }
 
 [[bin]]
-name = "webgl2"
+name = "webgl2-demo"
 path = "src/main.rs"
 
