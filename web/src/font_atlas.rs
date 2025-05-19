@@ -1,6 +1,15 @@
-use std::collections::HashMap;
 use serde::Deserialize;
 use crate::error::Error;
+
+#[derive(Debug, Deserialize)]
+pub struct Glyph {
+    /// The glyph ID; used as z-offset in the resulting texture array
+    pub id: u16,
+    /// The character
+    pub symbol: String,
+    /// The pixel coordinates of the glyph in the texture
+    pub pixel_coords: (i32, i32),
+}
 
 #[derive(Debug, Deserialize)]
 pub struct FontAtlasConfig {
@@ -14,11 +23,10 @@ pub struct FontAtlasConfig {
     pub cell_width: i32,
     /// Height of each character cell
     pub cell_height: i32,
-    /// Mapping from characters to UV coordinates (u1, v1, u2, v2)
-    pub char_to_uv: HashMap<char, (f32, f32, f32, f32)>,
-    /// Mapping from characters to pixel coordinates (x, y)
-    pub char_to_px: HashMap<char, (i32, i32)>,
+    /// The glyphs in the font
+    pub glyphs: Vec<Glyph>,
 }
+
 
 impl FontAtlasConfig {
     pub const PADDING: i32 = 1;

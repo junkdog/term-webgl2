@@ -1,6 +1,6 @@
 use cosmic_text::{Attrs, BorrowedWithFontSystem, Buffer, Color, Family, FontSystem, Metrics, SwashCache, Weight};
 use image::{ImageBuffer, Rgba};
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bitmap_font = BitmapFont::generate(
         &mut font_system,
         GLYPHS,
-        24.0,
+        16.0,
         60, // grid columns
         6,  // grid rows
     );
@@ -51,6 +51,16 @@ pub struct BitmapFont {
 }
 
 #[derive(Debug)]
+pub struct Glyph {
+    /// The glyph ID; used as z-offset in the resulting texture array
+    pub id: u16,
+    /// The character
+    pub symbol: String,
+    /// The pixel coordinates of the glyph in the texture
+    pub pixel_coords: (i32, i32),
+}
+
+#[derive(Debug)]
 pub struct FontAtlasConfig {
     /// The font size in points
     pub font_size: f32,
@@ -62,10 +72,21 @@ pub struct FontAtlasConfig {
     pub cell_width: i32,
     /// Height of each character cell
     pub cell_height: i32,
-    /// Mapping from characters to UV coordinates (u1, v1, u2, v2)
-    pub char_to_uv: HashMap<char, (f32, f32, f32, f32)>,
-    /// Mapping from characters to pixel coordinates (x, y)
-    pub char_to_px: HashMap<char, (i32, i32)>,
+    /// The glyphs in the font
+    pub glyphs: Vec<Glyph>,
+}
+
+impl Glyph {
+    pub fn new(symbol: char, pixel_coords: (i32, i32)) -> Self {
+        // Use a different ID for non-ASCII characters (extended ASCII)
+        let id = if symbol as u32 <= 0xff { symbol as u16 } else { 0xFFFF };
+
+        Self {
+            id,
+            symbol: symbol.to_string(),
+            pixel_coords,
+        }
+    }
 }
 
 impl BitmapFont {
@@ -84,13 +105,13 @@ impl BitmapFont {
         let mut swash_cache = SwashCache::new();
 
         // calculate cell dimensions based on the largest glyph
-        let (cell_width, cell_height) = calculate_cell_dimensions(font_system, &mut swash_cache, chars, metrics);
-        println!("Cell width: {}", cell_width);
-        println!("Cell height: {}", cell_height);
+        let (cell_w, cell_h) = calculate_cell_dimensions(font_system, &mut swash_cache, chars, metrics);
+        println!("Cell width: {}", cell_w);
+        println!("Cell height: {}", cell_h);
 
         // calculate the raw texture dimensions based on the grid
-        let raw_width = grid_cols * cell_width as usize;
-        let raw_height = grid_rows * cell_height as usize;
+        let raw_width = grid_cols * cell_w as usize;
+        let raw_height = grid_rows * cell_h as usize;
 
         // pad to power-of-2 dimensions
         let texture_width = next_pow2(raw_width);
@@ -99,40 +120,27 @@ impl BitmapFont {
         // create the texture data (RGBA)
         let mut texture_data = vec![0; texture_width * texture_height];
 
-        // create a mapping of characters to UV and pixel coordinates
-        let mut char_to_uv = HashMap::new();
-        let mut char_to_px = HashMap::new();
-
-        // for convenience, convert to f32
-        let pad = PADDING as f32;
-        let (texture_w, texture_h) = (texture_width as f32, texture_height as f32);
-        let (cell_w, cell_h) = (cell_width as f32, cell_height as f32);
+        let mut glyphs = Vec::new();
 
         // rasterize each character and place it in the grid
         for (i, c) in chars.chars().enumerate() {
             if i >= grid_cols * grid_rows { break; }
 
-            let grid_x = i % grid_cols;
-            let grid_y = i / grid_cols;
+            let grid_x = (i % grid_cols) as i32;
+            let grid_y = (i / grid_cols) as i32;
 
             // calculate pixel positions for this cell
-            let pixel_x = grid_x as f32 * cell_w;
-            let pixel_y = grid_y as f32 * cell_h;
+            let pixel_x = grid_x * cell_w;
+            let pixel_y = grid_y * cell_h;
 
-            // calculate normalized UV coordinates
-            let u1 = (pixel_x + pad) / texture_w;
-            let v1 = (pixel_y + pad) / texture_h;
-            let u2 = (pixel_x + cell_w - pad) / texture_w;
-            let v2 = (pixel_y + cell_h - pad) / texture_h;
 
-            // store UV and pixel coordinates for this character
-            char_to_uv.insert(c, (u1, v1, u2, v2));
-            char_to_px.insert(c, ((pixel_x + pad) as i32, (pixel_y + pad) as i32));
+            // store id and pixel coordinates for this glyph
+            glyphs.push(Glyph::new(c, (pixel_x + PADDING, pixel_y + PADDING)));
 
             // create a single-character buffer for rasterization
             let mut buffer = Buffer::new(font_system, metrics);
             let mut buffer = buffer.borrow_with(font_system);
-            buffer.set_size(2.0 * cell_w, 2.0 * cell_h);
+            buffer.set_size(2.0 * cell_w as f32, 2.0 * cell_h as f32);
 
             // add the character to the buffer
             buffer.set_text(&c.to_string(), attrs(), cosmic_text::Shaping::Advanced);
@@ -144,12 +152,14 @@ impl BitmapFont {
                 &mut buffer,
                 &mut texture_data,
                 texture_width,
-                pixel_x as i32,
-                pixel_y as i32,
-                cell_w as i32,
-                cell_h as i32,
+                pixel_x,
+                pixel_y,
+                cell_w,
+                cell_h,
             );
         }
+
+        assign_missing_glyph_ids(&mut glyphs);
 
         Self {
             texture_data,
@@ -157,10 +167,9 @@ impl BitmapFont {
                 font_size,
                 texture_width,
                 texture_height,
-                cell_width: cell_width,
-                cell_height: cell_height,
-                char_to_uv,
-                char_to_px,
+                cell_width: cell_w,
+                cell_height: cell_h,
+                glyphs
             },
         }
     }
@@ -203,8 +212,13 @@ impl BitmapFont {
             "texture_height": metadata.texture_height,
             "cell_width": metadata.cell_width,
             "cell_height": metadata.cell_height,
-            "char_to_uv": metadata.char_to_uv,
-            "char_to_px": metadata.char_to_px,
+            "glyphs": metadata.glyphs.iter().map(|g| {
+                serde_json::json!({
+                    "id": g.id,
+                    "symbol": g.symbol,
+                    "pixel_coords": g.pixel_coords
+                })
+            }).collect::<Vec<_>>()
         });
 
         let mut file = File::create(path)?;
@@ -212,6 +226,34 @@ impl BitmapFont {
 
         Ok(())
     }
+}
+
+fn assign_missing_glyph_ids(glyphs: &mut [Glyph]) {
+    // pre-assigned glyphs (in the range 0x0000-0x00FF)
+    let mut used_ids = HashSet::new();
+    glyphs.iter()
+        .filter(|g| g.id != 0xFFFF)
+        .for_each(|g| {
+            used_ids.insert(g.id);
+        });
+
+    let mut next_id: i32 = -1; // initial value to -1
+    let mut next_glyph_id = || {
+        let mut id = next_id;
+        while id == -1 || used_ids.contains(&(id as u16)) {
+            id += 1;
+        }
+
+        next_id = id + 1;
+        id as u16
+    };
+
+    for g in glyphs.iter_mut().filter(|g| g.id == 0xFFFF) {
+        g.id = next_glyph_id();
+    }
+
+    // sort the glyphs by their ID
+    glyphs.sort_by(|a, b| a.id.cmp(&b.id));
 }
 
 /// Places a single glyph into the texture at the specified position

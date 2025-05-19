@@ -50,7 +50,7 @@ impl Texture {
     ) -> Result<Self, Error> {
         console::log_1(&format!("Creating texture with format: {}", format).into());
         console::log_1(&format!("image={texture_width}x{texture_height}, grid={}x{}, glyps={}",
-            metadata.cell_width, metadata.cell_height, metadata.char_to_uv.len()).into());
+            metadata.cell_width, metadata.cell_height, metadata.glyphs.len()).into());
         console::log_1(&format!("Data length: {}kb", data.len() / 1024).into());
 
         // expected data length for error checking
@@ -65,7 +65,7 @@ impl Texture {
         let gl_texture = gl.create_texture()
             .ok_or(Error::TextureCreationError)?;
         gl.bind_texture(GL::TEXTURE_2D_ARRAY, Some(&gl_texture));
-        gl.tex_storage_3d(GL::TEXTURE_2D_ARRAY, 1, GL::RGBA8, cell_width, cell_height, metadata.char_to_px.len() as i32);
+        gl.tex_storage_3d(GL::TEXTURE_2D_ARRAY, 1, GL::RGBA8, cell_width, cell_height, metadata.glyphs.len() as i32);
 
         // prepare a pbo for the the atlas, it will upload the texture data,
         // and then we will use gl.tex_sub_image_3d to upload the subregions
@@ -135,20 +135,20 @@ impl FontAtlas {
         console::log_1(&format!("loading texture, {} bytes", texture_data.len()).into());
         let texture = Texture::from_image_data(gl, GL::RGBA, texture_data, &config)?;
 
-        console::log_1(&format!("Creating atlas grid with {} regions", config.char_to_uv.len()).into());
+        console::log_1(&format!("Creating atlas grid with {} regions", config.glyphs.len()).into());
         let (cell_width, cell_height) = (config.cell_width, config.cell_height);
         let mut depths = HashMap::new();
 
-        for (depth, (symbol, (x, y))) in config.char_to_px.iter().enumerate() {
-            gl.pixel_storei(GL::UNPACK_SKIP_PIXELS, *x);
-            gl.pixel_storei(GL::UNPACK_SKIP_ROWS, *y);
+        for glyph in config.glyphs.iter() {
+            gl.pixel_storei(GL::UNPACK_SKIP_PIXELS, glyph.pixel_coords.0);
+            gl.pixel_storei(GL::UNPACK_SKIP_ROWS, glyph.pixel_coords.1);
 
             gl.tex_sub_image_3d_with_i32(
                 GL::TEXTURE_2D_ARRAY,
                 0,
                 FontAtlasConfig::PADDING,
                 FontAtlasConfig::PADDING,
-                depth as i32,
+                glyph.id as i32, 
                 cell_width - FontAtlasConfig::PADDING * 2,
                 cell_height - FontAtlasConfig::PADDING * 2,
                 1, // only one layer
@@ -160,7 +160,7 @@ impl FontAtlas {
                 Error::TextureCreationError
             })?;
 
-            depths.insert(symbol.to_compact_string(), depth as i32);
+            depths.insert(glyph.symbol.to_compact_string(), glyph.id as i32);
         }
 
 
@@ -177,6 +177,12 @@ impl FontAtlas {
 
     /// Gets a glyph by name
     pub fn get_glyph_depth(&self, key: &str) -> Option<i32> {
+        if key.len() == 1 {
+            let ch = key.chars().next().unwrap() as u32;
+            if ch <= 0xff { // 0x00..0xff double as depths
+                return Some(ch as i32); 
+            }
+        }
         self.depths.get(key).copied()
     }
 
