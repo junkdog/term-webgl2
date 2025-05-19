@@ -3,6 +3,7 @@ use image::{ImageBuffer, Rgba};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
+use font_atlas::*;
 
 const PADDING: i32 = 1;
 const WHITE: Color = Color::rgb(0xff, 0xff, 0xff);
@@ -48,45 +49,6 @@ pub struct BitmapFont {
     pub texture_data: Vec<u32>,
     /// The properties of the font
     metadata: FontAtlasConfig,
-}
-
-#[derive(Debug)]
-pub struct Glyph {
-    /// The glyph ID; used as z-offset in the resulting texture array
-    pub id: u16,
-    /// The character
-    pub symbol: String,
-    /// The pixel coordinates of the glyph in the texture
-    pub pixel_coords: (i32, i32),
-}
-
-#[derive(Debug)]
-pub struct FontAtlasConfig {
-    /// The font size in points
-    pub font_size: f32,
-    /// Width of the texture in pixels
-    pub texture_width: usize,
-    /// Height of the texture in pixels
-    pub texture_height: usize,
-    /// Width of each character cell
-    pub cell_width: i32,
-    /// Height of each character cell
-    pub cell_height: i32,
-    /// The glyphs in the font
-    pub glyphs: Vec<Glyph>,
-}
-
-impl Glyph {
-    pub fn new(symbol: char, pixel_coords: (i32, i32)) -> Self {
-        // Use a different ID for non-ASCII characters (extended ASCII)
-        let id = if symbol as u32 <= 0xff { symbol as u16 } else { 0xFFFF };
-
-        Self {
-            id,
-            symbol: symbol.to_string(),
-            pixel_coords,
-        }
-    }
 }
 
 impl BitmapFont {

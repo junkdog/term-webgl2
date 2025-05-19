@@ -1,4 +1,3 @@
-use std::fmt::format;
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
 use crate::gl::{Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
@@ -354,13 +353,6 @@ struct CellUbo {
 
 impl CellUbo {
     pub const BINDING_POINT: u32 = 0;
-
-    pub fn new(projection: &Mat4, cell_width: i32, cell_height: i32) -> Self {
-        Self {
-            projection: projection.data,
-            cell_size: [cell_width as f32, cell_height as f32],
-        }
-    }
 }
 
 fn create_terminal_cell_data(

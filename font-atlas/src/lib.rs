@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use crate::error::Error;
 
 #[derive(Debug, Deserialize)]
 pub struct Glyph {
@@ -27,13 +26,11 @@ pub struct FontAtlasConfig {
     pub glyphs: Vec<Glyph>,
 }
 
-
 impl FontAtlasConfig {
     pub const PADDING: i32 = 1;
 
-    pub fn from_json(json: &str) -> Result<Self, Error> {
+    pub fn from_json(json: &str) -> serde_json::Result<FontAtlasConfig> {
         serde_json::from_str(json)
-            .map_err(|e| Error::JsonDeserializationError(format!("Failed to deserialize JSON: {}", e)))
     }
 
     pub fn terminal_size(
@@ -46,6 +43,19 @@ impl FontAtlasConfig {
 
     pub fn cell_size(&self) -> (i32, i32) {
         (self.cell_width, self.cell_height)
+    }
+}
+
+impl Glyph {
+    pub fn new(symbol: char, pixel_coords: (i32, i32)) -> Self {
+        // Use a different ID for non-ASCII characters (extended ASCII)
+        let id = if symbol as u32 <= 0xff { symbol as u16 } else { 0xFFFF };
+
+        Self {
+            id,
+            symbol: symbol.to_string(),
+            pixel_coords,
+        }
     }
 }
 

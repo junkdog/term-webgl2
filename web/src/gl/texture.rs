@@ -1,10 +1,10 @@
-use crate::font_atlas::FontAtlasConfig;
 use crate::error::Error;
 use crate::gl::GL;
 use compact_str::{CompactString, ToCompactString};
 use image::{GenericImageView, ImageFormat};
 use std::collections::HashMap;
 use web_sys::console;
+use font_atlas::FontAtlasConfig;
 use crate::BITMAP_FONT_IMAGE;
 
 pub struct Texture {

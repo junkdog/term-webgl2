@@ -1,8 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "web",
     "bitmap-font",
+    "font-atlas",
+    "web",
 ]
 
 # Shared dependencies can be defined here to ensure version consistency

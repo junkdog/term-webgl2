@@ -1,7 +1,5 @@
 use crate::error::Error;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
-use crate::gl::GL;
-use crate::mat4::Mat4;
 
 pub(crate) struct ShaderProgram {
     pub(crate) program: WebGlProgram

@@ -1,0 +1,11 @@
+[package]
+name = "font-atlas"
+version = "0.1.0"
+edition = "2021"
+description = "shared font-related types"
+
+[dependencies]
+serde_json = { workspace = true }
+serde = { version = "1.0.219", features = ["derive"] }
+
+

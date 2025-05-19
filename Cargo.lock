@@ -120,10 +120,9 @@ version = "0.1.0"
 dependencies = [
  "color-eyre",
  "cosmic-text",
+ "font-atlas",
  "image",
- "serde",
  "serde_json",
- "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -380,6 +379,14 @@ checksum = "7ced92e76e966ca2fd84c8f7aa01a4aea65b0eb6648d72f7c8f3e2764a67fece"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
+]
+
+[[package]]
+name = "font-atlas"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1523,10 +1530,9 @@ version = "0.1.0"
 dependencies = [
  "compact_str",
  "console_error_panic_hook",
+ "font-atlas",
  "image",
  "js-sys",
- "serde",
- "serde_json",
  "thiserror 2.0.12",
  "web-sys",
  "web-time",
