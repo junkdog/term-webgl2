@@ -4,7 +4,6 @@ use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderP
 use crate::mat4::Mat4;
 use web_sys::{console, WebGl2RenderingContext};
 
-// todo: split vbo_instance into STATIC_DRAW vbo_cell(x, y) and STREAM vbo_data(depth, fg, bg)
 pub struct TerminalGrid {
     /// Shader program for rendering the terminal cells.
     shader: ShaderProgram,
