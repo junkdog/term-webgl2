@@ -1,10 +1,8 @@
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
-use crate::gl::{buffer_upload_array, buffer_upload_struct, Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
+use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
 use crate::mat4::Mat4;
-use std::slice;
 use web_sys::{console, WebGl2RenderingContext};
-use crate::gl::vbo::VertexBufferObject;
 
 // todo: split vbo_instance into STATIC_DRAW vbo_cell(x, y) and STREAM vbo_data(depth, fg, bg)
 pub struct TerminalGrid {
@@ -143,9 +141,7 @@ impl TerminalGrid {
         self.cells.iter_mut()
             .zip(cells)
             .for_each(|(cell, data)| {
-                cell.fg = data.fg;
-                cell.bg = data.bg;
-                cell.depth = atlas.get_glyph_depth(data.symbol).map(|d| d as f32).unwrap_or(0.0);
+                *cell = CellDynamic::new(atlas.get_glyph_depth(data.symbol), data.fg, data.bg);
             });
 
         gl.bind_vertex_array(Some(&self.buffers.vao));
@@ -259,9 +255,7 @@ fn create_dynamic_instance_buffer(
     let stride = size_of::<CellDynamic>() as i32;
 
     // setup instance attributes (while VAO is bound)
-    enable_vertex_attrib_array(gl, attrib::DEPTH, 1, GL::FLOAT,           0, stride);
-    enable_vertex_attrib_array(gl, attrib::FG,    1, GL::UNSIGNED_INT,    4, stride);
-    enable_vertex_attrib_array(gl, attrib::BG,    1, GL::UNSIGNED_INT,    8, stride);
+    enable_vertex_attrib_array(gl, attrib::PACKED_DEPTH_FG_BG, 2, GL::UNSIGNED_INT, 0, stride);
 
     Ok(instance_buf)
 }
@@ -343,11 +337,7 @@ struct CellStatic {
 
 #[repr(C, align(4))]
 struct CellDynamic {
-    // pub data: [u8; 8], // 2b depth, fg:rgb, bg:rgb
-
-    pub depth: f32,
-    pub fg: u32,
-    pub bg: u32,
+    pub data: [u8; 8], // 2b depth, fg:rgb, bg:rgb
 }
 
 impl CellStatic {
@@ -369,8 +359,22 @@ impl CellDynamic {
     pub(crate) const FG_ATTRIB: u32 = 4;
     pub(crate) const BG_ATTRIB: u32 = 5;
 
-    pub(crate) fn new(depth: u16, fg: u32, bg: u32) -> Self {
-        Self { depth: depth as f32, fg, bg }
+    pub(crate) fn new(depth: Option<i32>, fg: u32, bg: u32) -> Self {
+        let depth = depth.unwrap_or(0) as u32;
+        let mut data = [0; 8];
+
+        data[0] = (depth & 0xFF) as u8;
+        data[1] = ((depth >> 8) & 0xFF) as u8;
+
+        data[2] = ((fg >> 24) & 0xFF) as u8; // R
+        data[3] = ((fg >> 16) & 0xFF) as u8; // G
+        data[4] = ((fg >> 8) & 0xFF) as u8;  // B
+
+        data[5] = ((bg >> 24) & 0xFF) as u8; // R
+        data[6] = ((bg >> 16) & 0xFF) as u8; // G
+        data[7] = ((bg >> 8) & 0xFF) as u8;  // B
+
+        Self { data }
     }
 }
 
@@ -388,7 +392,7 @@ impl CellUbo {
 fn create_terminal_cell_data(cols: i32, rows: i32) -> Vec<CellDynamic> {
     let mut rng = SimpleRng::default();
     (0..cols * rows)
-        .map(|_| CellDynamic::new(0, rng.gen(), rng.gen()))
+        .map(|_| CellDynamic::new(Some(0), rng.gen(), rng.gen()))
         .collect()
 }
 
@@ -427,7 +431,8 @@ mod attrib {
     pub const UV: u32 = 1;
 
     pub const GRID_XY: u32 = 2;
-    pub const DEPTH: u32 = 3;
-    pub const FG: u32 = 4;
-    pub const BG: u32 = 5;
+    pub const PACKED_DEPTH_FG_BG: u32 = 3;
+    // pub const DEPTH: u32 = 3;
+    // pub const FG: u32 = 4;
+    // pub const BG: u32 = 5;
 }

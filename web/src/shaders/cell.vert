@@ -7,9 +7,7 @@ layout(location = 1) in vec2 a_tex_coord;
 
 // instance attributes
 layout(location = 2) in uvec2 a_instance_pos;
-layout(location = 3) in float a_depth;
-layout(location = 4) in uint a_fg_color;
-layout(location = 5) in uint a_bg_color;
+layout(location = 3) in uvec2 a_packed_data;
 
 // uniforms
 layout(std140) uniform CellUniforms {
@@ -22,19 +20,26 @@ out vec4 v_fg_color;
 out vec4 v_bg_color;
 out float v_depth;
 
-vec4 unpack_color(uint color) {
-    float r = float((color >> 24) & 0xFFu) / 255.0;
-    float g = float((color >> 16) & 0xFFu) / 255.0;
-    float b = float((color >> 8) & 0xFFu) / 255.0;
-    float a = float(color & 0xFFu) / 255.0;
-    return vec4(r, g, b, a);
+float normalize_lsb(uint value) {
+    return (float(value & 0xFFu)) / 255.0;
 }
 
 void main() {
     v_tex_coord = a_tex_coord;
-    v_depth = a_depth;
-    v_fg_color = unpack_color(a_fg_color);
-    v_bg_color = unpack_color(a_bg_color);
+
+    v_depth = float(a_packed_data.x & 0xFFFFu);
+    v_fg_color = vec4(
+        normalize_lsb(a_packed_data.x >> 16),
+        normalize_lsb(a_packed_data.x >> 24),
+        normalize_lsb(a_packed_data.y) / 255.0,
+        1.0
+    );
+    v_bg_color = vec4(
+        normalize_lsb(a_packed_data.y >> 8),
+        normalize_lsb(a_packed_data.y >> 16),
+        normalize_lsb(a_packed_data.y >> 24),
+        1.0
+    );
 
     vec2 offset = vec2(
         float(a_instance_pos.x) * u_cell_size.x,
