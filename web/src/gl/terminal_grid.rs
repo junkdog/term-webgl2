@@ -36,8 +36,8 @@ impl TerminalBuffers {
         cell_data: &[T],
     ) {
         gl.bind_vertex_array(Some(&self.vao));
-
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.instance_cell));
+        
         buffer_upload_array(gl, GL::ARRAY_BUFFER, cell_data, GL::DYNAMIC_DRAW);
 
         gl.bind_vertex_array(None);
@@ -61,6 +61,7 @@ impl TerminalGrid {
         // prepare vertex, index and instance buffers
         let cell_size = atlas.cell_size();
         let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
+        
         let cell_data = create_terminal_cell_data(cols, rows);
         let cell_pos = CellStatic::create_grid(cols, rows);
         let buffers = setup_buffers(gl, vao, &cell_pos, &cell_data, cell_size)?;
@@ -143,10 +144,7 @@ impl TerminalGrid {
                 *cell = CellDynamic::new(atlas.get_glyph_depth(data.symbol), data.fg, data.bg);
             });
 
-        gl.bind_vertex_array(Some(&self.buffers.vao));
-        gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.buffers.instance_cell));
         self.buffers.upload_instance_data(gl, &self.cells);
-        gl.bind_vertex_array(None);
 
         Ok(())
     }
@@ -177,7 +175,6 @@ fn setup_buffers(
     Ok(TerminalBuffers {
         vao,
         vertices: create_buffer_f32(gl, GL::ARRAY_BUFFER, &vertices, GL::STATIC_DRAW)?,
-        // instances: create_buffer_for_instances(gl, cell_data)?,
         instance_pos: create_static_instance_buffer(gl, cell_pos)?,
         instance_cell: create_dynamic_instance_buffer(gl, cell_data)?,
         indices: create_buffer_u8(gl, GL::ELEMENT_ARRAY_BUFFER, &indices, GL::STATIC_DRAW)?,

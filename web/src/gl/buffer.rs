@@ -18,7 +18,7 @@ use crate::gl::GL;
 /// - Has a stable memory layout (use #[repr(C)] or #[repr(transparent)])
 /// - Contains only copy types
 /// - Has no padding issues that would cause UB
-pub(crate) fn buffer_upload_struct<T: Copy>(
+pub(crate) fn buffer_upload_struct<T>(
     gl: &GL,
     target: u32,
     data: &T,
@@ -45,7 +45,7 @@ pub(crate) fn buffer_upload_struct<T: Copy>(
 /// - Has a stable memory layout (use #[repr(C)] or #[repr(transparent)])
 /// - Contains only copy types
 /// - Has no padding issues that would cause UB
-pub(crate) fn buffer_upload_array<T: Copy>(
+pub(crate) fn buffer_upload_array<T>(
     gl: &GL,
     target: u32,
     data: &[T],
