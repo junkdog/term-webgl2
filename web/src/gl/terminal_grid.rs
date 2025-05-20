@@ -1,16 +1,18 @@
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
-use crate::gl::{Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
+use crate::gl::{buffer_upload_array, buffer_upload_struct, Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
 use crate::mat4::Mat4;
 use std::slice;
 use web_sys::{console, WebGl2RenderingContext};
+use crate::gl::vbo::VertexBufferObject;
 
 // todo: split vbo_instance into STATIC_DRAW vbo_cell(x, y) and STREAM vbo_data(depth, fg, bg)
 pub struct TerminalGrid {
     /// Shader program for rendering the terminal cells.
     shader: ShaderProgram,
     /// Terminal cell instance data
-    cells: Vec<TerminalCell>,
+    cells: Vec<CellDynamic>,
+    /// Terminal size in cells
     terminal_size: (u16, u16),
     /// Buffers for the terminal grid
     buffers: TerminalBuffers,
@@ -25,7 +27,8 @@ pub struct TerminalGrid {
 struct TerminalBuffers {
     vao: web_sys::WebGlVertexArrayObject,
     vertices: web_sys::WebGlBuffer,
-    instances: web_sys::WebGlBuffer,
+    instance_pos: web_sys::WebGlBuffer,
+    instance_cell: web_sys::WebGlBuffer,
     indices: web_sys::WebGlBuffer,
 }
 
@@ -33,16 +36,12 @@ impl TerminalBuffers {
     fn upload_instance_data<T>(
         &self,
         gl: &WebGl2RenderingContext,
-        instance_data: &[T],
+        cell_data: &[T],
     ) {
         gl.bind_vertex_array(Some(&self.vao));
-        gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.instances));
-        unsafe {
-            let data_ptr = instance_data.as_ptr() as *const u8;
-            let size = instance_data.len() * size_of::<T>();
-            let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
-            gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::DYNAMIC_DRAW);
-        }
+
+        gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.instance_cell));
+        buffer_upload_array(gl, GL::ARRAY_BUFFER, cell_data, GL::DYNAMIC_DRAW);
 
         gl.bind_vertex_array(None);
     }
@@ -52,10 +51,6 @@ impl TerminalBuffers {
 impl TerminalGrid {
     const FRAGMENT_GLSL: &'static str = include_str!("../shaders/cell.frag");
     const VERTEX_GLSL: &'static str = include_str!("../shaders/cell.vert");
-
-    // locations set in vertex shader
-    const POS_ATTRIB: u32 = 0;
-    const UV_ATTRIB: u32 = 1;
 
     pub fn new(
         gl: &WebGl2RenderingContext,
@@ -68,8 +63,10 @@ impl TerminalGrid {
 
         // prepare vertex, index and instance buffers
         let cell_size = atlas.cell_size();
-        let cell_data = create_terminal_cell_data(screen_size, cell_size);
-        let buffers = setup_buffers(gl, vao, &cell_data, cell_size)?;
+        let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
+        let cell_data = create_terminal_cell_data(cols, rows);
+        let cell_pos = CellStatic::create_grid(cols, rows);
+        let buffers = setup_buffers(gl, vao, &cell_pos, &cell_data, cell_size)?;
 
         // unbind VAO to prevent accidental modification
         gl.bind_vertex_array(None);
@@ -151,7 +148,10 @@ impl TerminalGrid {
                 cell.depth = atlas.get_glyph_depth(data.symbol).map(|d| d as f32).unwrap_or(0.0);
             });
 
+        gl.bind_vertex_array(Some(&self.buffers.vao));
+        gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.buffers.instance_cell));
         self.buffers.upload_instance_data(gl, &self.cells);
+        gl.bind_vertex_array(None);
 
         Ok(())
     }
@@ -165,7 +165,8 @@ fn create_vao(gl: &WebGl2RenderingContext) -> Result<web_sys::WebGlVertexArrayOb
 fn setup_buffers(
     gl: &WebGl2RenderingContext,
     vao: web_sys::WebGlVertexArrayObject,
-    cell_data: &[TerminalCell],
+    cell_pos: &[CellStatic],
+    cell_data: &[CellDynamic],
     cell_size: (i32, i32),
 ) -> Result<TerminalBuffers, Error> {
     let (w, h) = (cell_size.0 as f32, cell_size.1 as f32);
@@ -179,9 +180,11 @@ fn setup_buffers(
     let indices = [0, 1, 2, 0, 3, 1];
 
     Ok(TerminalBuffers {
-        vao: vao,
+        vao,
         vertices: create_buffer_f32(gl, GL::ARRAY_BUFFER, &vertices, GL::STATIC_DRAW)?,
-        instances: create_buffer_for_instances(gl, cell_data)?,
+        // instances: create_buffer_for_instances(gl, cell_data)?,
+        instance_pos: create_static_instance_buffer(gl, cell_pos)?,
+        instance_cell: create_dynamic_instance_buffer(gl, cell_data)?,
         indices: create_buffer_u8(gl, GL::ELEMENT_ARRAY_BUFFER, &indices, GL::STATIC_DRAW)?,
     })
 }
@@ -219,41 +222,49 @@ fn create_buffer_f32(
 
     // vertex attributes \\
     const STRIDE: i32 = (2 + 2) * 4; // 4 floats per vertex
-    enable_vertex_attrib(gl, TerminalGrid::POS_ATTRIB, 2, GL::FLOAT, 0, STRIDE);
-    enable_vertex_attrib(gl, TerminalGrid::UV_ATTRIB,  2, GL::FLOAT, 8, STRIDE);
+    enable_vertex_attrib(gl, attrib::POS, 2, GL::FLOAT, 0, STRIDE);
+    enable_vertex_attrib(gl, attrib::UV,  2, GL::FLOAT, 8, STRIDE);
 
     Ok(buffer)
 }
 
 
-fn create_buffer_for_instances<T>(
+fn create_static_instance_buffer(
     gl: &WebGl2RenderingContext,
-    instance_data: &[T],
+    instance_data: &[CellStatic],
 ) -> Result<web_sys::WebGlBuffer, Error> {
     let instance_buf = gl.create_buffer()
-        .ok_or(Error::BufferCreationError("instance-buffer"))?;
+        .ok_or(Error::BufferCreationError("static-instance-buffer"))?;
+
 
     gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
+    buffer_upload_array(gl, GL::ARRAY_BUFFER, instance_data, GL::STATIC_DRAW);
 
-    // upload instance data
-    unsafe {
-        let data_ptr = instance_data.as_ptr() as *const u8;
-        let size = instance_data.len() * size_of::<T>();
-        let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
-        gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::DYNAMIC_DRAW);
-    }
-
-    // setup instance attributes (while VAO is bound)
-    use TerminalCell as ID;
-    // vertex shader in_* vars        attribute    count      type         offset
-    enable_vertex_attrib_array(gl, ID::POS_ATTRIB,   2, GL::UNSIGNED_SHORT,  0);
-    enable_vertex_attrib_array(gl, ID::DEPTH_ATTRIB, 1, GL::FLOAT,           4);
-    enable_vertex_attrib_array(gl, ID::FG_ATTRIB,    1, GL::UNSIGNED_INT,    8);
-    enable_vertex_attrib_array(gl, ID::BG_ATTRIB,    1, GL::UNSIGNED_INT,    12);
+    let stride = size_of::<CellStatic>() as i32;
+    enable_vertex_attrib_array(gl, attrib::GRID_XY, 2, GL::UNSIGNED_SHORT, 0, stride);
 
     Ok(instance_buf)
 }
 
+fn create_dynamic_instance_buffer(
+    gl: &WebGl2RenderingContext,
+    instance_data: &[CellDynamic],
+) -> Result<web_sys::WebGlBuffer, Error> {
+    let instance_buf = gl.create_buffer()
+        .ok_or(Error::BufferCreationError("dynamic-instance-buffer"))?;
+    
+    gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
+    buffer_upload_array(gl, GL::ARRAY_BUFFER, instance_data, GL::DYNAMIC_DRAW);
+    
+    let stride = size_of::<CellDynamic>() as i32;
+
+    // setup instance attributes (while VAO is bound)
+    enable_vertex_attrib_array(gl, attrib::DEPTH, 1, GL::FLOAT,           0, stride);
+    enable_vertex_attrib_array(gl, attrib::FG,    1, GL::UNSIGNED_INT,    4, stride);
+    enable_vertex_attrib_array(gl, attrib::BG,    1, GL::UNSIGNED_INT,    8, stride);
+
+    Ok(instance_buf)
+}
 
 fn enable_vertex_attrib_array(
     gl: &WebGl2RenderingContext,
@@ -261,8 +272,9 @@ fn enable_vertex_attrib_array(
     size: i32,
     type_: u32,
     offset: i32,
+    stride: i32,
 ) {
-    enable_vertex_attrib(gl, index, size, type_, offset, size_of::<TerminalCell>() as i32);
+    enable_vertex_attrib(gl, index, size, type_, offset, stride);
     gl.vertex_attrib_divisor(index, 1);
 }
 
@@ -305,7 +317,7 @@ impl Drawable for TerminalGrid {
     fn cleanup(&self, context: &mut RenderContext) {
         let gl = context.gl;
         gl.bind_vertex_array(None);
-        gl.bind_texture(GL::TEXTURE_2D, None); // todo confirm: not TEXTURE_2D_ARRAY?
+        gl.bind_texture(GL::TEXTURE_2D_ARRAY, None);
 
         self.ubo.unbind(gl)
     }
@@ -324,23 +336,41 @@ impl<'a> CellData<'a> {
     }
 }
 
-// todo: split into 2 structs
 #[repr(C, align(4))]
-struct TerminalCell {
-    pub position: [u16; 2],
+struct CellStatic {
+    pub grid_xy: [u16; 2],
+}
+
+#[repr(C, align(4))]
+struct CellDynamic {
+    // pub data: [u8; 8], // 2b depth, fg:rgb, bg:rgb
+
     pub depth: f32,
     pub fg: u32,
     pub bg: u32,
 }
 
-impl TerminalCell {
+impl CellStatic {
     pub(crate) const POS_ATTRIB: u32 = 2;
+
+    fn create_grid(cols: i32, rows: i32) -> Vec<Self> {
+        debug_assert!(cols > 0 && cols < u16::MAX as i32, "cols: {cols}");
+        debug_assert!(rows > 0 && rows < u16::MAX as i32, "rows: {rows}");
+        
+        (0..rows)
+            .flat_map(|row| (0..cols).map(move |col| (col, row)))
+            .map(|(col, row)| Self { grid_xy: [col as u16, row as u16] })
+            .collect()
+    }
+}
+
+impl CellDynamic {
     pub(crate) const DEPTH_ATTRIB: u32 = 3;
     pub(crate) const FG_ATTRIB: u32 = 4;
     pub(crate) const BG_ATTRIB: u32 = 5;
 
-    pub(crate) fn new(xy: (u16, u16), depth: u16, fg: u32, bg: u32) -> Self {
-        Self { position: [xy.0, xy.1], depth: depth as f32, fg, bg }
+    pub(crate) fn new(depth: u16, fg: u32, bg: u32) -> Self {
+        Self { depth: depth as f32, fg, bg }
     }
 }
 
@@ -355,39 +385,12 @@ impl CellUbo {
     pub const BINDING_POINT: u32 = 0;
 }
 
-fn create_terminal_cell_data(
-    screen_size: (i32, i32),
-    cell_size: (i32, i32),
-) -> Vec<TerminalCell> {
-    let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
-
-    let mut cells = Vec::new();
-
+fn create_terminal_cell_data(cols: i32, rows: i32) -> Vec<CellDynamic> {
     let mut rng = SimpleRng::default();
-
-
-    for row in 0..rows {
-        for col in 0..cols {
-            // let depth = (row * cols + col) % metadata.char_to_uv.len() as i32;
-            // let (a, b) = ((col as usize) % s.len(), (col as usize + 1) % s.len());
-            // let (a, b) = if a > b {
-            //     (0, 1)
-            // } else {
-            //     (a, b)
-            // };
-
-            let fg = rng.gen() | 0xff;
-            let bg = rng.gen() | 0xff;
-            let fg = 0xffffffff;
-            // let bg = 0x000000ff;
-            let depth = 0;
-            cells.push(TerminalCell::new((col as u16, row as u16), depth as u16, fg, bg));
-        }
-    }
-
-    cells
+    (0..cols * rows)
+        .map(|_| CellDynamic::new(0, rng.gen(), rng.gen()))
+        .collect()
 }
-
 
 #[derive(Clone, Copy, Debug)]
 pub struct SimpleRng {
@@ -417,4 +420,14 @@ impl Default for SimpleRng {
 
         SimpleRng::new(seed)
     }
+}
+
+mod attrib {
+    pub const POS: u32 = 0;
+    pub const UV: u32 = 1;
+
+    pub const GRID_XY: u32 = 2;
+    pub const DEPTH: u32 = 3;
+    pub const FG: u32 = 4;
+    pub const BG: u32 = 5;
 }

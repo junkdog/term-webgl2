@@ -53,13 +53,8 @@ impl Texture {
             metadata.cell_width, metadata.cell_height, metadata.glyphs.len()).into());
         console::log_1(&format!("Data length: {}kb", data.len() / 1024).into());
 
-        // expected data length for error checking
         let cell_width = metadata.cell_width;
         let cell_height = metadata.cell_height;
-        let expected_length = (cell_width * cell_height * 4) as usize; // 4 bytes per pixel for RGBA
-        if data.len() != expected_length && format == GL::RGBA {
-            console::warn_1(&format!("Data length mismatch: got {}, expected {}", data.len(), expected_length).into());
-        }
 
         // prepare texture
         let gl_texture = gl.create_texture()
@@ -175,12 +170,12 @@ impl FontAtlas {
         self.cell_size
     }
 
-    /// Gets a glyph by name
+    /// Returns the texture array z-offset for the given key
     pub fn get_glyph_depth(&self, key: &str) -> Option<i32> {
         if key.len() == 1 {
-            let ch = key.chars().next().unwrap() as u32;
+            let ch = key.chars().next().unwrap() as i32;
             if ch <= 0xff { // 0x00..0xff double as depths
-                return Some(ch as i32); 
+                return Some(ch); 
             }
         }
         self.depths.get(key).copied()

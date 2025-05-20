@@ -1,6 +1,5 @@
 use crate::error::Error;
-use crate::gl::{ShaderProgram, GL};
-use std::slice;
+use crate::gl::{buffer_upload_struct, ShaderProgram, GL};
 
 pub struct UniformBufferObject {
     buffer: web_sys::WebGlBuffer,
@@ -45,12 +44,7 @@ impl UniformBufferObject {
 
     pub fn upload_data<T>(&self, gl: &GL, data: &T) {
         self.bind(gl);
-        unsafe {
-            let data_ptr = data as *const T as *const u8;
-            let size = size_of::<T>();
-            let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
-            gl.buffer_data_with_array_buffer_view(GL::UNIFORM_BUFFER, &view, GL::DYNAMIC_DRAW);
-        }
+        buffer_upload_struct(gl, GL::UNIFORM_BUFFER, data, GL::DYNAMIC_DRAW);
         self.unbind(gl);
     }
 }
