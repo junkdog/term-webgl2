@@ -12,7 +12,13 @@ use crate::gl::GL;
 /// # Safety
 /// Assumes the struct is aligned and has a memory layout compatible with WebGL.
 /// No padding/alignment checks are performed.
-pub(crate) fn buffer_upload_struct<T>(
+/// 
+/// # Safety
+/// Requires that T:
+/// - Has a stable memory layout (use #[repr(C)] or #[repr(transparent)])
+/// - Contains only copy types
+/// - Has no padding issues that would cause UB
+pub(crate) fn buffer_upload_struct<T: Copy>(
     gl: &GL,
     target: u32,
     data: &T,
@@ -35,9 +41,11 @@ pub(crate) fn buffer_upload_struct<T>(
 /// * `usage` - Usage hint (e.g., GL::STATIC_DRAW)
 ///
 /// # Safety
-/// Assumes the elements are aligned and has a memory layout compatible with WebGL.
-/// No padding/alignment checks are performed.
-pub(crate) fn buffer_upload_array<T>(
+/// Requires that T:
+/// - Has a stable memory layout (use #[repr(C)] or #[repr(transparent)])
+/// - Contains only copy types
+/// - Has no padding issues that would cause UB
+pub(crate) fn buffer_upload_array<T: Copy>(
     gl: &GL,
     target: u32,
     data: &[T],
