@@ -11,6 +11,7 @@ pub struct RenderContext<'a> {
     pub projection: Mat4
 }
 
+#[derive(Debug)]
 pub struct Renderer {
     gl: web_sys::WebGl2RenderingContext,
     canvas: web_sys::HtmlCanvasElement,

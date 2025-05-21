@@ -1,6 +1,8 @@
+use std::fmt::{Debug, Formatter};
 use crate::error::Error;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
+#[derive(Debug)]
 pub(crate) struct ShaderProgram {
     pub(crate) program: WebGlProgram
 }

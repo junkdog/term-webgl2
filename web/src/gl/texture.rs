@@ -7,6 +7,7 @@ use image::{GenericImageView, ImageFormat};
 use std::collections::HashMap;
 use web_sys::console;
 
+#[derive(Debug)]
 pub struct Texture {
     gl_texture: web_sys::WebGlTexture,
     pbo: web_sys::WebGlBuffer,
@@ -104,6 +105,7 @@ impl Texture {
 }
 
 /// A texture atlas that contains multiple sprites packed into a single texture
+#[derive(Debug)]
 pub struct FontAtlas {
     /// The underlying texture
     texture: Texture,

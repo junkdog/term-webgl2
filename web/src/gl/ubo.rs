@@ -1,6 +1,8 @@
+use std::fmt::{Debug, Formatter};
 use crate::error::Error;
 use crate::gl::{buffer_upload_struct, ShaderProgram, GL};
 
+#[derive(Debug)]
 pub struct UniformBufferObject {
     buffer: web_sys::WebGlBuffer,
     binding_point: u32,

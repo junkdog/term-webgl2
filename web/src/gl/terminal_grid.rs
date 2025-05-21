@@ -1,9 +1,11 @@
+use std::fmt::{Debug, Formatter};
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
 use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
 use crate::mat4::Mat4;
 use web_sys::{console, WebGl2RenderingContext};
 
+#[derive(Debug)]
 pub struct TerminalGrid {
     /// Shader program for rendering the terminal cells.
     shader: ShaderProgram,
@@ -21,6 +23,7 @@ pub struct TerminalGrid {
     sampler_loc: web_sys::WebGlUniformLocation,
 }
 
+#[derive(Debug)]
 struct TerminalBuffers {
     vao: web_sys::WebGlVertexArrayObject,
     vertices: web_sys::WebGlBuffer,
@@ -331,6 +334,7 @@ struct CellStatic {
     pub grid_xy: [u16; 2],
 }
 
+#[derive(Debug)]
 #[repr(C, align(4))]
 struct CellDynamic {
     pub data: [u8; 8], // 2b depth, fg:rgb, bg:rgb
