@@ -15,31 +15,13 @@ layout(std140) uniform CellUniforms {
     vec2 u_cell_size;
 };
 
+// packs 8b: 2b depth, 3b fg.rgb, 3b bg.rgb
+flat out uvec2 v_packed_data;
 out vec2 v_tex_coord;
-out vec4 v_fg_color;
-out vec4 v_bg_color;
-out float v_depth;
-
-float normalize_lsb(uint value) {
-    return (float(value & 0xFFu)) / 255.0;
-}
 
 void main() {
     v_tex_coord = a_tex_coord;
-
-    v_depth = float(a_packed_data.x & 0xFFFFu);
-    v_fg_color = vec4(
-        normalize_lsb(a_packed_data.x >> 16),
-        normalize_lsb(a_packed_data.x >> 24),
-        normalize_lsb(a_packed_data.y) / 255.0,
-        1.0
-    );
-    v_bg_color = vec4(
-        normalize_lsb(a_packed_data.y >> 8),
-        normalize_lsb(a_packed_data.y >> 16),
-        normalize_lsb(a_packed_data.y >> 24),
-        1.0
-    );
+    v_packed_data = a_packed_data;
 
     vec2 offset = vec2(
         float(a_instance_pos.x) * u_cell_size.x,

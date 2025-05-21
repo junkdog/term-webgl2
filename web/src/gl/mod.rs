@@ -4,7 +4,6 @@ mod renderer;
 mod texture;
 mod context;
 mod ubo;
-mod vbo;
 mod buffer;
 
 use std::slice;

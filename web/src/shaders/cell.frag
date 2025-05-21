@@ -4,18 +4,29 @@ precision mediump float;
 
 uniform mediump sampler2DArray u_sampler;
 
+// packs 8b: 2b depth, 3b fg.rgb, 3b bg.rgb
+flat in uvec2 v_packed_data;
 in vec2 v_tex_coord;
-in float v_depth;
-in vec4 v_fg_color;
-in vec4 v_bg_color;
 
 out vec4 FragColor;
 
-void main() {
-    vec4 color = texture(u_sampler, vec3(v_tex_coord, v_depth));
-    float a = 1.0 - color.a;
+float normalize_lsb(uint value) {
+    return (float(value & 0xFFu)) / 255.0;
+}
 
-    vec4 c = mix(v_fg_color, v_bg_color, a);
-//    FragColor = vec4(color.rgb * color.a, a);
-    FragColor = vec4(c.rgb, 1.0);
+void main() {
+    float depth = float(v_packed_data.x & 0xFFFFu);
+    vec3 fg = vec3(
+        normalize_lsb(v_packed_data.x >> 16),
+        normalize_lsb(v_packed_data.x >> 24),
+        normalize_lsb(v_packed_data.y)
+    );
+    vec3 bg = vec3(
+        normalize_lsb(v_packed_data.y >> 8),
+        normalize_lsb(v_packed_data.y >> 16),
+        normalize_lsb(v_packed_data.y >> 24)
+    );
+
+    float a = 1.0 - texture(u_sampler, vec3(v_tex_coord, depth)).a;
+    FragColor = vec4(mix(fg, bg, a), 1.0);
 }

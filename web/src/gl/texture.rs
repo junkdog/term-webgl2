@@ -1,11 +1,11 @@
 use crate::error::Error;
 use crate::gl::GL;
+use crate::BITMAP_FONT_IMAGE;
 use compact_str::{CompactString, ToCompactString};
+use font_atlas::FontAtlasConfig;
 use image::{GenericImageView, ImageFormat};
 use std::collections::HashMap;
 use web_sys::console;
-use font_atlas::FontAtlasConfig;
-use crate::BITMAP_FONT_IMAGE;
 
 pub struct Texture {
     gl_texture: web_sys::WebGlTexture,
