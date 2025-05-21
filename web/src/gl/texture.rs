@@ -180,6 +180,7 @@ impl FontAtlas {
                 return Some(ch); 
             }
         }
+        
         self.depths.get(key).copied()
     }
 

@@ -1,8 +1,8 @@
-use std::fmt::{Debug, Formatter};
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
 use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
 use crate::mat4::Mat4;
+use std::fmt::Debug;
 use web_sys::{console, WebGl2RenderingContext};
 
 #[derive(Debug)]
@@ -113,6 +113,8 @@ impl TerminalGrid {
         screen_size: (i32, i32),
         cell_size: (i32, i32),
     ) {
+        // let cell_size = (cell_size.0 - 2, cell_size.1 - 2);
+        
         // todo: this should reflect on self.cell_size - but needs more wörk
         let data = CellUbo {
             projection: Mat4::orthographic_from_size(
@@ -144,7 +146,8 @@ impl TerminalGrid {
         self.cells.iter_mut()
             .zip(cells)
             .for_each(|(cell, data)| {
-                *cell = CellDynamic::new(atlas.get_glyph_depth(data.symbol), data.fg, data.bg);
+                let depth = atlas.get_glyph_depth(data.symbol).unwrap_or(149);
+                *cell = CellDynamic::new(depth, data.fg, data.bg);
             });
 
         self.buffers.upload_instance_data(gl, &self.cells);
@@ -359,8 +362,8 @@ impl CellDynamic {
     pub(crate) const FG_ATTRIB: u32 = 4;
     pub(crate) const BG_ATTRIB: u32 = 5;
 
-    pub(crate) fn new(depth: Option<i32>, fg: u32, bg: u32) -> Self {
-        let depth = depth.unwrap_or(0) as u32;
+    pub(crate) fn new(depth: i32, fg: u32, bg: u32) -> Self {
+        let depth = depth as u32;
         let mut data = [0; 8];
 
         data[0] = (depth & 0xFF) as u8;
@@ -390,9 +393,8 @@ impl CellUbo {
 }
 
 fn create_terminal_cell_data(cols: i32, rows: i32) -> Vec<CellDynamic> {
-    let mut rng = SimpleRng::default();
     (0..cols * rows)
-        .map(|_| CellDynamic::new(Some(0), rng.gen(), rng.gen()))
+        .map(|_| CellDynamic::new(0, 0xffff_ffff, 0x0000_00ff))
         .collect()
 }
 
@@ -401,38 +403,10 @@ pub struct SimpleRng {
     state: u32,
 }
 
-impl SimpleRng {
-    const A: u32 = 1664525;
-    const C: u32 = 1013904223;
-
-    pub fn new(seed: u32) -> Self {
-        SimpleRng { state: seed }
-    }
-
-    pub fn gen(&mut self) -> u32 {
-        self.state = self.state.wrapping_mul(Self::A).wrapping_add(Self::C);
-        self.state
-    }
-}
-
-impl Default for SimpleRng {
-    fn default() -> Self {
-        let seed = web_time::SystemTime::now()
-            .duration_since(web_time::SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as u32;
-
-        SimpleRng::new(seed)
-    }
-}
-
 mod attrib {
     pub const POS: u32 = 0;
     pub const UV: u32 = 1;
 
     pub const GRID_XY: u32 = 2;
     pub const PACKED_DEPTH_FG_BG: u32 = 3;
-    // pub const DEPTH: u32 = 3;
-    // pub const FG: u32 = 4;
-    // pub const BG: u32 = 5;
 }
