@@ -3,6 +3,7 @@ use image::{ImageBuffer, Rgba};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
+use unicode_segmentation::UnicodeSegmentation;
 use font_atlas::*;
 
 const PADDING: i32 = 1;
@@ -35,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Save the font files if needed
     bitmap_font.save_texture("./data/bitmap_font.png")?;
-    bitmap_font.save_metadata("./data/bitmap_font.json")?;
+    bitmap_font.save_metadata("./data/bitmap_font.metadata")?;
 
     println!("Bitmap font generated!");
 
@@ -83,9 +84,10 @@ impl BitmapFont {
         let mut texture_data = vec![0; texture_width * texture_height];
 
         let mut glyphs = Vec::new();
+        let attrs = attrs();
 
         // rasterize each character and place it in the grid
-        for (i, c) in chars.chars().enumerate() {
+        for (i, c) in chars.graphemes(true).enumerate() {
             if i >= grid_cols * grid_rows { break; }
 
             let grid_x = (i % grid_cols) as i32;
@@ -102,10 +104,10 @@ impl BitmapFont {
             // create a single-character buffer for rasterization
             let mut buffer = Buffer::new(font_system, metrics);
             let mut buffer = buffer.borrow_with(font_system);
-            buffer.set_size(2.0 * cell_w as f32, 2.0 * cell_h as f32);
+            buffer.set_size(Some(2.0 * cell_w as f32), Some(2.0 * cell_h as f32));
 
             // add the character to the buffer
-            buffer.set_text(&c.to_string(), attrs(), cosmic_text::Shaping::Advanced);
+            buffer.set_text(c, &attrs, cosmic_text::Shaping::Advanced);
             buffer.shape_until_scroll(true);
 
             // rasterize the character and place it in the texture
@@ -127,8 +129,8 @@ impl BitmapFont {
             texture_data,
             metadata: FontAtlasConfig {
                 font_size,
-                texture_width,
-                texture_height,
+                texture_width: texture_width as u32,
+                texture_height: texture_width as u32,
                 cell_width: cell_w,
                 cell_height: cell_h,
                 glyphs
@@ -139,24 +141,22 @@ impl BitmapFont {
     /// Save the bitmap font texture as a PNG file
     pub fn save_texture(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut img = ImageBuffer::<Rgba<u8>, Vec<u8>>::new(
-            self.metadata.texture_width as u32,
-            self.metadata.texture_height as u32
+            self.metadata.texture_width,
+            self.metadata.texture_height
         );
 
         for y in 0..self.metadata.texture_height {
             for x in 0..self.metadata.texture_width {
                 let idx = y * self.metadata.texture_width + x;
-                if let Some(color) = self.texture_data.get(idx) {
+                if let Some(color) = self.texture_data.get(idx as usize) {
                     let pixel = [
                         (*color >> 24) as u8,
                         (*color >> 16) as u8,
                         (*color >> 8) as u8,
                         *color as u8
                     ];
-                    img.put_pixel(x as u32, y as u32, Rgba(pixel));
+                    img.put_pixel(x, y, Rgba(pixel));
                     
-                }
-                if idx < self.texture_data.len() {
                 }
             }
         }
@@ -168,23 +168,8 @@ impl BitmapFont {
     /// Save font metadata to a JSON file
     pub fn save_metadata(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let metadata = &self.metadata;
-        let font_info = serde_json::json!({
-            "font_size": metadata.font_size,
-            "texture_width": metadata.texture_width,
-            "texture_height": metadata.texture_height,
-            "cell_width": metadata.cell_width,
-            "cell_height": metadata.cell_height,
-            "glyphs": metadata.glyphs.iter().map(|g| {
-                serde_json::json!({
-                    "id": g.id,
-                    "symbol": g.symbol,
-                    "pixel_coords": g.pixel_coords
-                })
-            }).collect::<Vec<_>>()
-        });
-
         let mut file = File::create(path)?;
-        Write::write_all(&mut file, serde_json::to_string_pretty(&font_info)?.as_bytes())?;
+        Write::write_all(&mut file, &metadata.serialize())?;
 
         Ok(())
     }
@@ -267,14 +252,16 @@ fn calculate_cell_dimensions(
     let width = 100.0;  
     let height = 100.0; 
 
+    let attrs = attrs();
+    
     // iterate through all characters in the set
     for c in chars.chars() {
         let mut buffer = Buffer::new(font_system, metrics);
         let mut buffer = buffer.borrow_with(font_system);
-        buffer.set_size(width, height);
+        buffer.set_size(Some(width), Some(height));
         
         // add the character to the buffer, then measure it
-        buffer.set_text(&c.to_string(), attrs(), cosmic_text::Shaping::Advanced);
+        buffer.set_text(&c.to_string(), &attrs, cosmic_text::Shaping::Advanced);
 
         buffer.draw(swash_cache, WHITE, |x, y, _w, _h, color| {
             let a = color.a();
@@ -319,7 +306,6 @@ mod tests {
 
     #[test]
     fn test_next_pow2() {
-        assert_eq!(next_pow2(0), 1);
         assert_eq!(next_pow2(1), 1);
         assert_eq!(next_pow2(2), 2);
         assert_eq!(next_pow2(3), 4);

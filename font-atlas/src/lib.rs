@@ -1,23 +1,18 @@
-use serde::Deserialize;
+mod serialize;
+mod glyph;
+mod serialization;
 
-#[derive(Debug, Deserialize)]
-pub struct Glyph {
-    /// The glyph ID; used as z-offset in the resulting texture array
-    pub id: u16,
-    /// The character
-    pub symbol: String,
-    /// The pixel coordinates of the glyph in the texture
-    pub pixel_coords: (i32, i32),
-}
+pub use glyph::Glyph;
+pub use serialization::*;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub struct FontAtlasConfig {
     /// The font size in points
     pub font_size: f32,
     /// Width of the texture in pixels
-    pub texture_width: usize,
+    pub texture_width: u32,
     /// Height of the texture in pixels
-    pub texture_height: usize,
+    pub texture_height: u32,
     /// Width of each character cell
     pub cell_width: i32,
     /// Height of each character cell
@@ -26,11 +21,21 @@ pub struct FontAtlasConfig {
     pub glyphs: Vec<Glyph>,
 }
 
+#[derive(Debug)]
+pub struct FontAtlasDeserializationError {
+    pub message: String,
+}
+
+
 impl FontAtlasConfig {
     pub const PADDING: i32 = 1;
 
-    pub fn from_json(json: &str) -> serde_json::Result<FontAtlasConfig> {
-        serde_json::from_str(json)
+    pub fn from_binary(serialized: &[u8]) -> Result<Self, FontAtlasDeserializationError> {
+        let mut deserializer = Deserializer::new(serialized);
+        FontAtlasConfig::deserialize(&mut deserializer)
+            .map_err(|e| FontAtlasDeserializationError {
+                message: format!("Failed to deserialize font atlas: {}", e.message),
+            })
     }
 
     pub fn terminal_size(
@@ -46,22 +51,10 @@ impl FontAtlasConfig {
     }
 }
 
-impl Glyph {
-    pub fn new(symbol: char, pixel_coords: (i32, i32)) -> Self {
-        // Use a different ID for non-ASCII characters (extended ASCII)
-        let id = if symbol as u32 <= 0xff { symbol as u16 } else { 0xFFFF };
-
-        Self {
-            id,
-            symbol: symbol.to_string(),
-            pixel_coords,
-        }
-    }
-}
 
 impl Default for FontAtlasConfig {
     fn default() -> Self {
-        Self::from_json(include_str!("../../data/bitmap_font.json"))
+        Self::from_binary(include_bytes!("../../data/bitmap_font.metadata")) 
             .unwrap()
     }
 }
