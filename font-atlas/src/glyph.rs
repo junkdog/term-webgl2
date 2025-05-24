@@ -8,9 +8,9 @@ use compact_str::{CompactString, ToCompactString};
 /// in the source atlas image.
 ///
 /// # ASCII Optimization
-/// For ASCII characters (0x00-0xFF), the glyph ID directly corresponds to the
-/// character's ASCII value, enabling fast lookups without hash table lookups.
-/// Non-ASCII characters are assigned sequential IDs starting from a base value.
+/// For ASCII characters, the glyph ID directly corresponds to the character's 
+/// ASCII value, enabling fast lookups without hash table lookups. Non-ASCII 
+/// characters are assigned sequential IDs starting from a base value.
 #[derive(Debug)]
 pub struct Glyph {
     /// The glyph ID; used as z-offset in the resulting texture array

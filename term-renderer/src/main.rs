@@ -1,5 +1,5 @@
 use font_atlas::FontAtlasConfig;
-use webgl2::{BITMAP_FONT_IMAGE, BITMAP_FONT_METADATA};
+use term_renderer::{BITMAP_FONT_IMAGE, BITMAP_FONT_METADATA};
 use crate::error::Error;
 use crate::gl::{FontAtlas, Renderer, TerminalGrid};
 
