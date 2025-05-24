@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "bitmap-font",
     "font-atlas",
-    "web",
+    "term-renderer",
 ]
 
 # Shared dependencies can be defined here to ensure version consistency
@@ -11,3 +11,4 @@ members = [
 compact_str = "0.9.0"
 thiserror = "2.0.12"
 image = "0.25.6"
+

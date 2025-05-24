@@ -1,5 +1,5 @@
 [package]
-name = "webgl2"
+name = "term-renderer"
 version = "0.1.0"
 edition = "2021"
 

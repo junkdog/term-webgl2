@@ -1191,6 +1191,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 
 [[package]]
+name = "term-renderer"
+version = "0.1.0"
+dependencies = [
+ "compact_str",
+ "console_error_panic_hook",
+ "font-atlas",
+ "image",
+ "js-sys",
+ "thiserror 2.0.12",
+ "web-sys",
+ "web-time",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1521,20 +1535,6 @@ checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "webgl2"
-version = "0.1.0"
-dependencies = [
- "compact_str",
- "console_error_panic_hook",
- "font-atlas",
- "image",
- "js-sys",
- "thiserror 2.0.12",
- "web-sys",
- "web-time",
 ]
 
 [[package]]
