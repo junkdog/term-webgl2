@@ -1,5 +1,5 @@
-use std::fmt::{Debug, Formatter};
 use crate::error::Error;
+use std::fmt::Debug;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
 #[derive(Debug)]

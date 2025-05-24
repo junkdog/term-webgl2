@@ -5,6 +5,12 @@ use crate::mat4::Mat4;
 use std::fmt::Debug;
 use web_sys::{console, WebGl2RenderingContext};
 
+/// A high-performance terminal grid renderer using instanced rendering.
+///
+/// `TerminalGrid` renders a grid of terminal cells using WebGL2 instanced drawing.
+/// Each cell can display a character from a font atlas with customizable foreground
+/// and background colors. The renderer uses a 2D texture array to efficiently
+/// store glyph data and supports real-time updates of cell content.
 #[derive(Debug)]
 pub struct TerminalGrid {
     /// Shader program for rendering the terminal cells.
@@ -107,13 +113,23 @@ impl TerminalGrid {
         self.terminal_size
     }
 
+    /// Uploads uniform buffer data for screen and cell dimensions.
+    ///
+    /// This method updates the shader uniform buffer with the current screen
+    /// size and cell dimensions. Must be called when the screen size changes
+    /// or when initializing the grid.
+    ///
+    /// # Parameters
+    /// * `gl` - WebGL2 rendering context
+    /// * `screen_size` - Screen dimensions in pixels as (width, height)
     pub fn upload_ubo_data(
         &self,
         gl: &WebGl2RenderingContext,
         screen_size: (i32, i32),
-        cell_size: (i32, i32),
     ) {
         // let cell_size = (cell_size.0 - 2, cell_size.1 - 2);
+        
+        let cell_size = self.cell_size();
         
         // todo: this should reflect on self.cell_size - but needs more wörk
         let data = CellUbo {
@@ -128,10 +144,24 @@ impl TerminalGrid {
         self.ubo.upload_data(gl, &data);
     }
 
+    /// Returns the total number of cells in the terminal grid.
     pub fn cell_count(&self) -> usize {
         self.cells.len()
     }
 
+    /// Updates the content of terminal cells with new data.
+    ///
+    /// This method efficiently updates the dynamic instance buffer with new
+    /// cell data. The iterator must provide exactly the same number of cells
+    /// as the grid contains, in row-major order.
+    ///
+    /// # Parameters
+    /// * `gl` - WebGL2 rendering context
+    /// * `cells` - Iterator providing `CellData` for each cell in the grid
+    ///
+    /// # Returns
+    /// * `Ok(())` - Successfully updated cell data
+    /// * `Err(Error)` - Failed to update buffer or other WebGL error
     pub fn update_cells<'a>(
         &mut self,
         gl: &WebGl2RenderingContext,
@@ -317,6 +347,18 @@ impl Drawable for TerminalGrid {
     }
 }
 
+/// Data for a single terminal cell including character and colors.
+///
+/// `CellData` represents the visual content of one terminal cell, including
+/// the character to display and its foreground and background colors.
+/// Colors are specified as ARGB values packed into 32-bit integers.
+///
+/// # Color Format
+/// Colors use the format 0xAARRGGBB where:
+/// - AA: Alpha channel (transparency)
+/// - RR: Red component
+/// - GG: Green component  
+/// - BB: Blue component
 #[derive(Debug)]
 pub struct CellData<'a> {
     pub symbol: &'a str,
@@ -325,19 +367,90 @@ pub struct CellData<'a> {
 }
 
 impl<'a> CellData<'a> {
+
+    /// Creates new cell data with the specified character and colors.
+    ///
+    /// # Parameters
+    /// * `symbol` - Character to display (should be a single character)
+    /// * `fg` - Foreground color as ARGB value (0xAARRGGBB)
+    /// * `bg` - Background color as ARGB value (0xAARRGGBB)
+    ///
+    /// # Returns
+    /// New `CellData` instance
     pub fn new(symbol: &'a str, fg: u32, bg: u32) -> Self {
         Self { symbol, fg, bg }
     }
 }
 
+
+/// Static instance data for terminal cell positioning.
+///
+/// `CellStatic` represents the unchanging positional data for each terminal cell
+/// in the grid. This data is uploaded once during initialization and remains
+/// constant throughout the lifetime of the terminal grid. Each instance
+/// corresponds to one cell position in the terminal grid.
+///
+/// # Memory Layout
+/// This struct uses `#[repr(C, align(4))]` to ensure:
+/// - C-compatible memory layout for GPU buffer uploads
+/// - 4-byte alignment for efficient GPU access
+/// - Predictable field ordering (grid_xy at offset 0)
+///
+/// # GPU Usage
+/// This data is used as per-instance vertex attributes in the vertex shader,
+/// allowing the same cell geometry to be rendered at different grid positions
+/// using instanced drawing.
+///
+/// # Buffer Upload
+/// Uploaded to GPU using `GL::STATIC_DRAW` since positions don't change.
 #[repr(C, align(4))]
 struct CellStatic {
+    /// Grid position as (x, y) coordinates in cell units.
     pub grid_xy: [u16; 2],
 }
 
+/// Dynamic instance data for terminal cell appearance.
+///
+/// `CellDynamic` contains the frequently-changing visual data for each terminal
+/// cell, including the character glyph and colors. This data is updated whenever
+/// cell content changes and is efficiently uploaded to the GPU using dynamic
+/// buffer updates.
+///
+/// # Memory Layout
+/// The 8-byte data array is packed as follows:
+/// - Bytes 0-1: Glyph depth/layer index (u16, little-endian)
+/// - Bytes 2-4: Foreground color RGB (3 bytes)
+/// - Bytes 5-7: Background color RGB (3 bytes)
+///
+/// This compact layout minimizes GPU memory usage and allows efficient
+/// instanced rendering of the entire terminal grid.
+///
+/// # Color Format
+/// Colors are stored as RGB bytes (no alpha channel in the instance data).
+/// The alpha channel is handled separately in the shader based on glyph
+/// transparency from the texture atlas.
+///
+/// # GPU Usage
+/// Uploaded as instance attributes and accessed in both vertex and fragment
+/// shaders for character selection and color application.
+///
+/// # Buffer Upload
+/// Uploaded to GPU using `GL::DYNAMIC_DRAW` for efficient updates.
 #[derive(Debug)]
 #[repr(C, align(4))]
 struct CellDynamic {
+    
+    /// Packed cell data:
+    /// 
+    /// # Byte Layout
+    /// - `data[0]`: Lower 8 bits of glyph depth/layer index
+    /// - `data[1]`: Upper 8 bits of glyph depth/layer index  
+    /// - `data[2]`: Foreground red component (0-255)
+    /// - `data[3]`: Foreground green component (0-255)
+    /// - `data[4]`: Foreground blue component (0-255)
+    /// - `data[5]`: Background red component (0-255)
+    /// - `data[6]`: Background green component (0-255)
+    /// - `data[7]`: Background blue component (0-255)
     pub data: [u8; 8], // 2b layer, fg:rgb, bg:rgb
 }
 
