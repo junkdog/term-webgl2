@@ -140,11 +140,7 @@ impl TerminalGrid {
         // update instance buffer with new cell data
         let atlas = &self.atlas;
 
-        let cells = cells.collect::<Vec<_>>();
-        assert_eq!(cells.len(), self.cells.len());
-        
         let fallback_glyph = atlas.get_glyph_layer(" ").unwrap_or(0);
-        
         self.cells.iter_mut()
             .zip(cells)
             .for_each(|(cell, data)| {

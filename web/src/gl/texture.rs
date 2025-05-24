@@ -157,7 +157,10 @@ impl FontAtlas {
                 Error::TextureCreationError
             })?;
 
-            layers.insert(glyph.symbol.to_compact_string(), glyph.id as i32);
+            // ascii characters do not require a lookup table
+            if !glyph.is_ascii() {
+                layers.insert(glyph.symbol.to_compact_string(), glyph.id as i32);
+            }
         }
 
 
@@ -175,9 +178,9 @@ impl FontAtlas {
     /// Returns the texture array z-offset for the given key
     pub fn get_glyph_layer(&self, key: &str) -> Option<i32> {
         if key.len() == 1 {
-            let ch = key.chars().next().unwrap() as i32;
-            if ch <= 0xff { // 0x00..0xff double as layer
-                return Some(ch); 
+            let ch = key.chars().next().unwrap();
+            if ch.is_ascii() { // 0x00..0xff double as layer
+                return Some(ch as _); 
             }
         }
         

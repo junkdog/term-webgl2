@@ -26,6 +26,11 @@ impl Glyph {
             pixel_coords,
         }
     }
+    
+    pub fn is_ascii(&self) -> bool {
+        self.symbol.len() == 1
+            && self.symbol.chars().next().unwrap().is_ascii()
+    }
 }
 
 
