@@ -1,7 +1,16 @@
-use compact_str::CompactString;
+use compact_str::{format_compact, CompactString};
 use crate::{FontAtlasConfig, Glyph};
 
-pub trait Serializable {
+
+const ATLAS_HEADER: [u8; 4] = [0xBA, 0xB1, 0xF0, 0xA5];
+const ATLAS_VERSION: u8 = 0x01; // dictates the format of the serialized data
+
+#[derive(Debug)]
+pub struct SerializationError {
+    pub message: CompactString,
+}
+
+pub(crate) trait Serializable {
     fn serialize(&self) -> Vec<u8>;
 
     fn deserialize(
@@ -9,17 +18,12 @@ pub trait Serializable {
     ) -> Result<Self, SerializationError> where Self: Sized;
 }
 
-#[derive(Debug)]
-pub struct SerializationError {
-    pub message: CompactString,
-}
-
-pub struct Deserializer<'a> {
+pub(crate) struct Deserializer<'a> {
     data: &'a [u8],
     position: usize,
 }
 
-pub(crate) struct Serializer {
+struct Serializer {
     data: Vec<u8>,
 }
 
@@ -164,13 +168,20 @@ impl Serializable for Glyph {
 impl Serializable for FontAtlasConfig {
     fn serialize(&self) -> Vec<u8> {
         let mut ser = Serializer::new();
+        ser.write_u8(ATLAS_HEADER[0]);
+        ser.write_u8(ATLAS_HEADER[1]);
+        ser.write_u8(ATLAS_HEADER[2]);
+        ser.write_u8(ATLAS_HEADER[3]);
+        
+        ser.write_u8(ATLAS_VERSION);
+        
         ser.write_f32(self.font_size);
         ser.write_u32(self.texture_width);
         ser.write_u32(self.texture_height);
         ser.write_i32(self.cell_width);
         ser.write_i32(self.cell_height);
 
-        // Serialize the glyphs
+        // serialize the glyphs
         ser.write_u16(self.glyphs.len() as u16);
         ser.data.extend(self.glyphs.iter().flat_map(Glyph::serialize));
 
@@ -178,13 +189,32 @@ impl Serializable for FontAtlasConfig {
     }
 
     fn deserialize(deser: &mut Deserializer) -> Result<Self, SerializationError> {
+        let header = [
+            deser.read_u8()?,
+            deser.read_u8()?,
+            deser.read_u8()?,
+            deser.read_u8()?,
+        ];
+        if header != ATLAS_HEADER {
+            return Err(SerializationError {
+                message: CompactString::const_new("Invalid font atlas header (wrong file format?)"),
+            });
+        }
+        
+        let version = deser.read_u8()?;
+        if version != ATLAS_VERSION {
+            return Err(SerializationError {
+                message: format_compact!("Unsupported font atlas version 0x{:02x}", version),
+            });
+        }
+        
         let font_size = deser.read_f32()?;
         let texture_width = deser.read_u32()?;
         let texture_height = deser.read_u32()?;
         let cell_width = deser.read_i32()?;
         let cell_height = deser.read_i32()?;
 
-        // Deserialize the glyphs
+        // deserialize the glyphs
         let glyph_count = deser.read_u16()? as usize;
         let mut glyphs = Vec::with_capacity(glyph_count);
         for _ in 0..glyph_count {

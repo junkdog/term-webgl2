@@ -29,16 +29,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bitmap_font = BitmapFont::generate(
         &mut font_system,
         GLYPHS,
-        16.0,
-        60, // grid columns
-        6,  // grid rows
+        13.0, // or 14.0
+        1024
     );
 
     // Save the font files if needed
     bitmap_font.save_texture("./data/bitmap_font.png")?;
-    bitmap_font.save_metadata("./data/bitmap_font.metadata")?;
-
+    bitmap_font.save_metadata("./data/bitmap_font.atlas")?;
+    
     println!("Bitmap font generated!");
+    println!("Texture size: {}x{}", bitmap_font.metadata.texture_width, bitmap_font.metadata.texture_height);
+    println!("Cell size: {}x{}", bitmap_font.metadata.cell_width, bitmap_font.metadata.cell_height);
+    println!("Glyph count: {}", bitmap_font.metadata.glyphs.len());
+    
 
     Ok(())
 }
@@ -58,8 +61,7 @@ impl BitmapFont {
         font_system: &mut FontSystem,
         chars: &str,
         font_size: f32,
-        grid_cols: usize,
-        grid_rows: usize
+        texture_width: usize,
     ) -> Self {
         // set up a metrics object for text layout
         let metrics = Metrics::new(font_size, font_size * 1.2);
@@ -72,12 +74,17 @@ impl BitmapFont {
         println!("Cell width: {}", cell_w);
         println!("Cell height: {}", cell_h);
 
+        let glyph_count = chars.graphemes(true).count();
+        let grid_cols = texture_width / cell_w as usize;
+        let grid_rows = glyph_count / grid_cols + 1; // assume it's not a perfect fit
+        
+        println!("Generating bitmap with {grid_cols}x{grid_rows} glyphs");
+        
         // calculate the raw texture dimensions based on the grid
-        let raw_width = grid_cols * cell_w as usize;
         let raw_height = grid_rows * cell_h as usize;
 
         // pad to power-of-2 dimensions
-        let texture_width = next_pow2(raw_width);
+        // let texture_width = next_pow2(raw_width);
         let texture_height = next_pow2(raw_height);
 
         // create the texture data (RGBA)
@@ -130,7 +137,7 @@ impl BitmapFont {
             metadata: FontAtlasConfig {
                 font_size,
                 texture_width: texture_width as u32,
-                texture_height: texture_width as u32,
+                texture_height: texture_height as u32,
                 cell_width: cell_w,
                 cell_height: cell_h,
                 glyphs
@@ -169,7 +176,7 @@ impl BitmapFont {
     pub fn save_metadata(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let metadata = &self.metadata;
         let mut file = File::create(path)?;
-        Write::write_all(&mut file, &metadata.serialize())?;
+        Write::write_all(&mut file, &metadata.to_binary())?;
 
         Ok(())
     }
