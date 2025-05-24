@@ -15,7 +15,7 @@ layout(std140) uniform CellUniforms {
     vec2 u_cell_size;
 };
 
-// packs 8b: 2b depth, 3b fg.rgb, 3b bg.rgb
+// packs 8b: 2b layer, 3b fg.rgb, 3b bg.rgb
 flat out uvec2 v_packed_data;
 out vec2 v_tex_coord;
 

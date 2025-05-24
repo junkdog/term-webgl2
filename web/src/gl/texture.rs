@@ -109,8 +109,8 @@ impl Texture {
 pub struct FontAtlas {
     /// The underlying texture
     texture: Texture,
-    /// region key to texture 2d array depth index
-    depths: HashMap<CompactString, i32>,
+    /// region key to texture 2d array layer
+    layers: HashMap<CompactString, i32>,
     cell_size: (i32, i32),
 }
 
@@ -134,7 +134,7 @@ impl FontAtlas {
 
         console::log_1(&format!("Creating atlas grid with {} regions", config.glyphs.len()).into());
         let (cell_width, cell_height) = (config.cell_width, config.cell_height);
-        let mut depths = HashMap::new();
+        let mut layers = HashMap::new();
 
         for glyph in config.glyphs.iter() {
             gl.pixel_storei(GL::UNPACK_SKIP_PIXELS, glyph.pixel_coords.0);
@@ -157,13 +157,13 @@ impl FontAtlas {
                 Error::TextureCreationError
             })?;
 
-            depths.insert(glyph.symbol.to_compact_string(), glyph.id as i32);
+            layers.insert(glyph.symbol.to_compact_string(), glyph.id as i32);
         }
 
 
         Ok(Self {
             texture,
-            depths,
+            layers,
             cell_size: (cell_width, cell_height),
         })
     }
@@ -173,15 +173,15 @@ impl FontAtlas {
     }
 
     /// Returns the texture array z-offset for the given key
-    pub fn get_glyph_depth(&self, key: &str) -> Option<i32> {
+    pub fn get_glyph_layer(&self, key: &str) -> Option<i32> {
         if key.len() == 1 {
             let ch = key.chars().next().unwrap() as i32;
-            if ch <= 0xff { // 0x00..0xff double as depths
+            if ch <= 0xff { // 0x00..0xff double as layer
                 return Some(ch); 
             }
         }
         
-        self.depths.get(key).copied()
+        self.layers.get(key).copied()
     }
 
     /// Binds the atlas texture to the specified texture unit

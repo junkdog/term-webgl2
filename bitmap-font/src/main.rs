@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bitmap_font = BitmapFont::generate(
         &mut font_system,
         GLYPHS,
-        13.0, // or 14.0
+        10.0, // or 14.0
         1024
     );
 
@@ -172,7 +172,7 @@ impl BitmapFont {
         Ok(())
     }
 
-    /// Save font metadata to a JSON file
+    /// Save font metadata to a file
     pub fn save_metadata(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let metadata = &self.metadata;
         let mut file = File::create(path)?;

@@ -142,12 +142,14 @@ impl TerminalGrid {
 
         let cells = cells.collect::<Vec<_>>();
         assert_eq!(cells.len(), self.cells.len());
-
+        
+        let fallback_glyph = atlas.get_glyph_layer(" ").unwrap_or(0);
+        
         self.cells.iter_mut()
             .zip(cells)
             .for_each(|(cell, data)| {
-                let depth = atlas.get_glyph_depth(data.symbol).unwrap_or(149);
-                *cell = CellDynamic::new(depth, data.fg, data.bg);
+                let layer = atlas.get_glyph_layer(data.symbol).unwrap_or(fallback_glyph);
+                *cell = CellDynamic::new(layer, data.fg, data.bg);
             });
 
         self.buffers.upload_instance_data(gl, &self.cells);
@@ -340,7 +342,7 @@ struct CellStatic {
 #[derive(Debug)]
 #[repr(C, align(4))]
 struct CellDynamic {
-    pub data: [u8; 8], // 2b depth, fg:rgb, bg:rgb
+    pub data: [u8; 8], // 2b layer, fg:rgb, bg:rgb
 }
 
 impl CellStatic {
@@ -362,12 +364,12 @@ impl CellDynamic {
     pub(crate) const FG_ATTRIB: u32 = 4;
     pub(crate) const BG_ATTRIB: u32 = 5;
 
-    pub(crate) fn new(depth: i32, fg: u32, bg: u32) -> Self {
-        let depth = depth as u32;
+    pub(crate) fn new(layer: i32, fg: u32, bg: u32) -> Self {
+        let layer = layer as u32;
         let mut data = [0; 8];
 
-        data[0] = (depth & 0xFF) as u8;
-        data[1] = ((depth >> 8) & 0xFF) as u8;
+        data[0] = (layer & 0xFF) as u8;
+        data[1] = ((layer >> 8) & 0xFF) as u8;
 
         data[2] = ((fg >> 24) & 0xFF) as u8; // R
         data[3] = ((fg >> 16) & 0xFF) as u8; // G

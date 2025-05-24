@@ -33,9 +33,9 @@ Terminal Data → WebGL2 Renderer → GPU Instanced Rendering → Browser Canvas
 ## Key Features
 
 ### 🚀 High Performance Rendering
-- **GPU Instancing**: Renders entire terminal grids in a single draw call
+- **GPU Instancing**: Renders entire terminal in a single draw call
 - **Texture Arrays**: Uses WebGL2 texture arrays for efficient glyph storage
-- **Optimized ASCII rendering**: Extended ASCII set maps to texture layer without lookup
+- **Optimized ASCII rendering**: ASCII set maps to texture layer without lookup
 - **Uniform Buffer Objects**: Minimizes CPU-GPU communication overhead
 
 ### 📝 Advanced Text Support
@@ -61,7 +61,7 @@ Terminal Data → WebGL2 Renderer → GPU Instanced Rendering → Browser Canvas
 // packed into 8 bytes per cell, GPU-optimized layout
 #[repr(C, align(4))]
 struct CellDynamic {
-    pub data: [u8; 8], // 2b depth, fg:rgb, bg:rgb
+    pub data: [u8; 8], // 2b layer, fg:rgb, bg:rgb
 }
 ```
 
