@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Formatter};
 use crate::error::Error;
 use crate::gl::{buffer_upload_struct, ShaderProgram, GL};
+use std::fmt::Debug;
 
 #[derive(Debug)]
 pub struct UniformBufferObject {
@@ -11,7 +11,7 @@ pub struct UniformBufferObject {
 impl UniformBufferObject {
     pub fn new(gl: &GL, binding_point: u32) -> Result<Self, Error> {
         let buffer = gl.create_buffer()
-            .ok_or(Error::BufferCreationError("UBO"))?;
+            .ok_or(Error::buffer_creation_failed("ubo"))?;
 
         Ok(Self {
             buffer,
@@ -35,7 +35,7 @@ impl UniformBufferObject {
     ) -> Result<(), Error> {
         let block_index = gl.get_uniform_block_index(&shader.program, block_name);
         if block_index == GL::INVALID_INDEX {
-            return Err(Error::UnableToRetrieveUniformLocation(block_name));
+            return Err(Error::uniform_location_failed(block_name));
         }
 
         gl.uniform_block_binding(&shader.program, block_index, self.binding_point);

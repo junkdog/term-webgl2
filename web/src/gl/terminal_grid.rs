@@ -86,7 +86,7 @@ impl TerminalGrid {
         ubo.bind_to_shader(gl, &shader, "CellUniforms")?;
 
         let sampler_loc = gl.get_uniform_location(&shader.program, "u_sampler")
-            .ok_or(Error::UnableToRetrieveUniformLocation("u_sampler"))?;
+            .ok_or(Error::uniform_location_failed("u_sampler"))?;
 
         console::log_2(&"terminal cells".into(), &cell_data.len().into());
         
@@ -186,7 +186,7 @@ impl TerminalGrid {
 
 fn create_vao(gl: &WebGl2RenderingContext) -> Result<web_sys::WebGlVertexArrayObject, Error> {
     gl.create_vertex_array()
-        .ok_or(Error::VertexArrayCreationError)
+        .ok_or(Error::vertex_array_creation_failed())
 }
 
 fn setup_buffers(
@@ -222,7 +222,7 @@ fn create_buffer_u8(
     usage: u32
 ) -> Result<web_sys::WebGlBuffer, Error> {
     let index_buf = gl.create_buffer()
-        .ok_or(Error::BufferCreationError("vbo-u8"))?;
+        .ok_or(Error::buffer_creation_failed("vbo-u8"))?;
     gl.bind_buffer(target, Some(&index_buf));
 
     gl.buffer_data_with_u8_array(target, data, usage);
@@ -237,7 +237,7 @@ fn create_buffer_f32(
     usage: u32
 ) -> Result<web_sys::WebGlBuffer, Error> {
     let buffer = gl.create_buffer()
-        .ok_or(Error::BufferCreationError("vbo-f32"))?;
+        .ok_or(Error::buffer_creation_failed("vbo-f32"))?;
 
     gl.bind_buffer(target, Some(&buffer));
 
@@ -260,7 +260,7 @@ fn create_static_instance_buffer(
     instance_data: &[CellStatic],
 ) -> Result<web_sys::WebGlBuffer, Error> {
     let instance_buf = gl.create_buffer()
-        .ok_or(Error::BufferCreationError("static-instance-buffer"))?;
+        .ok_or(Error::buffer_creation_failed("static-instance-buffer"))?;
 
 
     gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
@@ -277,7 +277,7 @@ fn create_dynamic_instance_buffer(
     instance_data: &[CellDynamic],
 ) -> Result<web_sys::WebGlBuffer, Error> {
     let instance_buf = gl.create_buffer()
-        .ok_or(Error::BufferCreationError("dynamic-instance-buffer"))?;
+        .ok_or(Error::buffer_creation_failed("dynamic-instance-buffer"))?;
     
     gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
     buffer_upload_array(gl, GL::ARRAY_BUFFER, instance_data, GL::DYNAMIC_DRAW);

@@ -14,7 +14,7 @@ impl ShaderProgram {
         fragment_source: &str,
     ) -> Result<Self, Error> {
         let program = gl.create_program()
-            .ok_or(Error::ShaderProgramCreationError)?;
+            .ok_or(Error::shader_program_creation_failed())?;
     
         // compile shaders
         let vertex_shader = compile_shader(gl, ShaderType::Vertex, vertex_source)?;
@@ -47,7 +47,7 @@ fn compile_shader(
     source: &str,
 ) -> Result<WebGlShader, Error> {
     let shader = gl.create_shader(shader_type.into())
-        .ok_or(Error::ShaderCreationError("failed creating shader"))?;
+        .ok_or(Error::shader_creation_failed("unknown error"))?;
 
     gl.shader_source(&shader, source);
     gl.compile_shader(&shader);
@@ -62,8 +62,8 @@ fn check_link_status(
     let status = gl.get_program_parameter(program, WebGl2RenderingContext::LINK_STATUS);
     if !status.as_bool().unwrap() {
         gl.get_program_info_log(program)
-            .map(Error::ShaderLinkError)
-            .ok_or(Error::ShaderProgramCreationError)?;
+            .map(Error::shader_link_failed)
+            .ok_or(Error::shader_program_creation_failed())?;
     }
 
     Ok(())

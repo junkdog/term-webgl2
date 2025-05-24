@@ -19,7 +19,7 @@ fn run() -> Result<(), Error> {
     let gl = renderer.gl();
 
     let font_config: FontAtlasConfig = FontAtlasConfig::from_binary(BITMAP_FONT_METADATA)
-        .map_err(|e| Error::JsonDeserializationError(e.message))?;
+        .map_err(|e| Error::deserialization_failed(e.message))?;
     
     let atlas = FontAtlas::load(gl, BITMAP_FONT_IMAGE, font_config)?;
 

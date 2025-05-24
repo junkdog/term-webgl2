@@ -6,7 +6,6 @@ mod context;
 mod ubo;
 mod buffer;
 
-use std::slice;
 pub(crate) use program::*;
 pub use terminal_grid::*;
 pub use renderer::*;

@@ -27,7 +27,7 @@ impl Texture {
         let img = image::load_from_memory_with_format(image_data, ImageFormat::Png)
             .map_err(|e| {
                 console::error_1(&format!("Failed to load image: {:?}", e).into());
-                Error::ImageLoadError("failed to load image data")
+                Error::image_load_failed(&e.to_string())
             })?;
         
         // convert the image to RGBA format
@@ -59,14 +59,14 @@ impl Texture {
 
         // prepare texture
         let gl_texture = gl.create_texture()
-            .ok_or(Error::TextureCreationError)?;
+            .ok_or(Error::texture_creation_failed())?;
         gl.bind_texture(GL::TEXTURE_2D_ARRAY, Some(&gl_texture));
         gl.tex_storage_3d(GL::TEXTURE_2D_ARRAY, 1, GL::RGBA8, cell_width, cell_height, metadata.glyphs.len() as i32);
 
         // prepare a pbo for the the atlas, it will upload the texture data,
         // and then we will use gl.tex_sub_image_3d to upload the subregions
         let pbo = gl.create_buffer()
-            .ok_or(Error::BufferCreationError("pbo"))?;
+            .ok_or(Error::buffer_creation_failed("pbo"))?;
 
         gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, Some(&pbo));
         gl.buffer_data_with_u8_array(GL::PIXEL_UNPACK_BUFFER, data, GL::STATIC_DRAW);
@@ -154,7 +154,7 @@ impl FontAtlas {
                 0, // use pbo
             ).map_err(|v| {
                 console::error_2(&"Failed to define subregion for ".into(), &v);
-                Error::TextureCreationError
+                Error::texture_creation_failed()
             })?;
 
             // ascii characters do not require a lookup table
