@@ -22,6 +22,9 @@ pub struct Glyph {
 }
 
 impl Glyph {
+    /// The ID is used as a short-lived placeholder until the actual ID is assigned.
+    pub const UNASSIGNED_ID: u16 = 0xFFFF;
+    
     /// Creates a new glyph with the specified symbol and pixel coordinates.
     pub fn new(symbol: &str, pixel_coords: (i32, i32)) -> Self {
         let first_char = symbol.chars().next().unwrap();
@@ -29,7 +32,7 @@ impl Glyph {
             // Use a different ID for non-ASCII characters
             first_char as u32 as u16
         } else {
-            0xffff
+            Self::UNASSIGNED_ID
         };
 
         Self {
