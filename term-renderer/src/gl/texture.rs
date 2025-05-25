@@ -1,25 +1,22 @@
 use crate::error::Error;
 use crate::gl::GL;
-use crate::BITMAP_FONT_IMAGE;
-use compact_str::{CompactString, ToCompactString};
 use font_atlas::FontAtlasConfig;
 use image::{GenericImageView, ImageFormat};
-use std::collections::HashMap;
-use web_sys::console;
+use web_sys::{console, WebGlBuffer};
 
 #[derive(Debug)]
 pub(super) struct Texture {
     gl_texture: web_sys::WebGlTexture,
-    pbo: Option<web_sys::WebGlBuffer>,
     pub(super) format: u32,
     width: i32,
     height: i32,
 }
 
 impl Texture {
-    pub fn from_image_data(
+    pub(super) fn from_image_data(
         gl: &web_sys::WebGl2RenderingContext,
         format: u32,
+        pbo: Option<&WebGlBuffer>,
         image_data: &[u8],
         metadata: &FontAtlasConfig,
     ) -> Result<Self, Error> {
@@ -38,12 +35,13 @@ impl Texture {
         let raw_data = rgba_image.as_raw();
 
         // create the texture
-        Self::new(gl, format, raw_data, width as i32, height as i32, metadata)
+        Self::new(gl, format, pbo, raw_data, width as i32, height as i32, metadata)
     }
 
-    pub fn new(
+    pub(super) fn new(
         gl: &web_sys::WebGl2RenderingContext,
         format: u32,
+        _pbo: Option<&WebGlBuffer>,
         data: &[u8],
         texture_width: i32,
         texture_height: i32,
@@ -64,12 +62,7 @@ impl Texture {
         let texture_array_len = metadata.glyphs.iter().map(|g| g.id()).max().unwrap_or(0) + 1;
         gl.tex_storage_3d(GL::TEXTURE_2D_ARRAY, 1, GL::RGBA8, cell_width, cell_height, texture_array_len);
 
-        // prepare a pbo for the the atlas, it will upload the texture data,
-        // and then we will use gl.tex_sub_image_3d to upload the subregions
-        let pbo = gl.create_buffer()
-            .ok_or(Error::buffer_creation_failed("pbo"))?;
-
-        gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, Some(&pbo));
+        // pbo is already bound
         gl.buffer_data_with_u8_array(GL::PIXEL_UNPACK_BUFFER, data, GL::STATIC_DRAW);
 
         gl.pixel_storei(GL::UNPACK_ROW_LENGTH, texture_width);
@@ -77,7 +70,7 @@ impl Texture {
 
         Self::setup_mipmap(gl);
 
-        Ok(Self { gl_texture, pbo: Some(pbo), format, width: cell_width, height: cell_height })
+        Ok(Self { gl_texture, format, width: cell_width, height: cell_height })
     }
 
     pub fn bind(&self, gl: &web_sys::WebGl2RenderingContext, texture_unit: u32) {
@@ -88,13 +81,6 @@ impl Texture {
 
     pub fn delete(&self, gl: &web_sys::WebGl2RenderingContext) {
         gl.delete_texture(Some(&self.gl_texture));
-        gl.delete_buffer(self.pbo.as_ref());
-    }
-    
-    pub(super) fn delete_pbo(&mut self, gl: &web_sys::WebGl2RenderingContext) {
-        gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, None);
-        gl.delete_buffer(self.pbo.as_ref());
-        self.pbo = None;
     }
 
     pub fn gl_texture(&self) -> &web_sys::WebGlTexture {

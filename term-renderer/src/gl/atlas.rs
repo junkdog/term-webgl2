@@ -45,7 +45,12 @@ impl FontAtlas {
         config: FontAtlasConfig,
     ) -> Result<Self, Error> {
         console::log_1(&format!("loading texture, {} bytes", texture_data.len()).into());
-        let texture = crate::gl::texture::Texture::from_image_data(gl, GL::RGBA, texture_data, &config)?;
+
+        let pbo = gl.create_buffer()
+            .ok_or(Error::buffer_creation_failed("pbo"))?;
+        gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, Some(&pbo));
+        
+        let texture = crate::gl::texture::Texture::from_image_data(gl, GL::RGBA, Some(&pbo), texture_data, &config)?;
 
         console::log_1(&format!("Creating atlas grid with {} regions", config.glyphs.len()).into());
         let (cell_width, cell_height) = (config.cell_width, config.cell_height);
@@ -83,9 +88,9 @@ impl FontAtlas {
                 layers.insert(glyph.symbol.to_compact_string(), glyph.id as i32);
             }
         }
-        
-        let mut texture = texture;
-        texture.delete_pbo(gl);
+
+        gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, None);
+        gl.delete_buffer(Some(&pbo));
 
         Ok(Self {
             texture,

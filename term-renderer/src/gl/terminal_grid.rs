@@ -460,8 +460,6 @@ struct CellDynamic {
 }
 
 impl CellStatic {
-    pub(crate) const POS_ATTRIB: u32 = 2;
-
     fn create_grid(cols: i32, rows: i32) -> Vec<Self> {
         debug_assert!(cols > 0 && cols < u16::MAX as i32, "cols: {cols}");
         debug_assert!(rows > 0 && rows < u16::MAX as i32, "rows: {rows}");
@@ -512,11 +510,6 @@ fn create_terminal_cell_data(cols: i32, rows: i32) -> Vec<CellDynamic> {
     (0..cols * rows)
         .map(|_| CellDynamic::new(0, 0xffff_ffff, 0x0000_00ff))
         .collect()
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct SimpleRng {
-    state: u32,
 }
 
 mod attrib {
