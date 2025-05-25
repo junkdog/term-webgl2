@@ -8,6 +8,7 @@ pub use ::font_atlas::FontAtlasConfig;
 pub use crate::error::Error;
 pub use crate::gl::{CellData, FontAtlas, Renderer, TerminalGrid};
 pub use mat4::Mat4;
+pub use font_atlas::FontStyle;
 
 pub const BITMAP_FONT_IMAGE: &[u8] = include_bytes!("../../data/bitmap_font.png");
 pub const BITMAP_FONT_METADATA: &[u8] = include_bytes!("../../data/bitmap_font.atlas");

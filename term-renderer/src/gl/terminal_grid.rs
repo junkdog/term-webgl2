@@ -4,6 +4,7 @@ use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderP
 use crate::mat4::Mat4;
 use std::fmt::Debug;
 use web_sys::{console, WebGl2RenderingContext};
+use font_atlas::FontStyle;
 
 /// A high-performance terminal grid renderer using instanced rendering.
 ///
@@ -170,11 +171,13 @@ impl TerminalGrid {
         // update instance buffer with new cell data
         let atlas = &self.atlas;
 
-        let fallback_glyph = atlas.get_glyph_layer(" ").unwrap_or(0);
+        let fallback_glyph = atlas.get_glyph_layer(" ", FontStyle::Normal).unwrap_or(0);
         self.cells.iter_mut()
             .zip(cells)
             .for_each(|(cell, data)| {
-                let layer = atlas.get_glyph_layer(data.symbol).unwrap_or(fallback_glyph);
+                let layer = atlas.get_glyph_layer(data.symbol, data.style)
+                    .unwrap_or(fallback_glyph);
+                
                 *cell = CellDynamic::new(layer, data.fg, data.bg);
             });
 
@@ -362,6 +365,7 @@ impl Drawable for TerminalGrid {
 #[derive(Debug)]
 pub struct CellData<'a> {
     pub symbol: &'a str,
+    pub style: FontStyle,
     pub fg: u32,
     pub bg: u32,
 }
@@ -372,13 +376,14 @@ impl<'a> CellData<'a> {
     ///
     /// # Parameters
     /// * `symbol` - Character to display (should be a single character)
+    /// * `style` - Font style for the character (e.g. bold, italic)
     /// * `fg` - Foreground color as ARGB value (0xAARRGGBB)
     /// * `bg` - Background color as ARGB value (0xAARRGGBB)
     ///
     /// # Returns
     /// New `CellData` instance
-    pub fn new(symbol: &'a str, fg: u32, bg: u32) -> Self {
-        Self { symbol, fg, bg }
+    pub fn new(symbol: &'a str, style: FontStyle, fg: u32, bg: u32) -> Self {
+        Self { symbol, style, fg, bg }
     }
 }
 

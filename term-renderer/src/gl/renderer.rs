@@ -59,7 +59,6 @@ impl Renderer {
     /// * `Ok(Renderer)` - Successfully created renderer
     /// * `Err(Error)` - Failed to create WebGL context or initialize renderer
     pub fn create_with_canvas(canvas: HtmlCanvasElement) -> Result<Self, Error> {
-        // let canvas = js::get_canvas_by_id(canvas_id)?;
         let (width, height) = (canvas.width(), canvas.height());
 
         // initialize WebGL context

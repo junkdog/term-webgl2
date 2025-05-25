@@ -1,7 +1,7 @@
 use std::collections::HashSet;
-use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, SwashCache, Weight};
+use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
 use unicode_segmentation::UnicodeSegmentation;
-use font_atlas::{FontAtlasConfig, Glyph};
+use font_atlas::{FontAtlasConfig, FontStyle, Glyph};
 use crate::{BitmapFont, PADDING};
 
 const WHITE: Color = Color::rgb(0xff, 0xff, 0xff);
@@ -14,6 +14,38 @@ pub(super) struct BitmapFontGenerator {
     texture_width: usize,
 }
 
+struct MultiGlyph {
+    normal: Glyph,
+    bold: Glyph,
+    italic: Glyph,
+    bold_italic: Glyph,
+}
+
+impl MultiGlyph {
+    
+    pub fn id(&self) -> u16 {
+        self.normal.id
+    }
+    
+    pub fn set_id(&mut self, id: u16) {
+        assert_eq!(id & Glyph::GLYPH_ID_MASK, id);
+        
+        self.normal.id = id;
+        self.bold.id = id | FontStyle::Bold.id_mask(); 
+        self.italic.id = id | FontStyle::Italic.id_mask();
+        self.bold_italic.id = id | FontStyle::BoldItalic.id_mask();
+    }
+    
+    pub fn flatten(self) -> [Glyph; 4] {
+        [
+            self.normal,
+            self.bold,
+            self.italic,
+            self.bold_italic,
+        ]
+    }
+}
+
 impl BitmapFontGenerator {
     pub fn new(
         font_size: f32,
@@ -22,8 +54,11 @@ impl BitmapFontGenerator {
         let mut font_system = FontSystem::new();
         let font_db = font_system.db_mut();
 
-        // load the font file
+        // load the font files
         font_db.load_font_file("./data/NimbusMonoPS-Regular.otf").unwrap();
+        font_db.load_font_file("./data/NimbusMonoPS-Bold.otf").unwrap();
+        font_db.load_font_file("./data/NimbusMonoPS-Italic.otf").unwrap();
+        font_db.load_font_file("./data/NimbusMonoPS-BoldItalic.otf").unwrap();
 
         let metrics = Metrics::new(font_size, font_size * 1.2);
         let cache = SwashCache::new();
@@ -38,41 +73,42 @@ impl BitmapFontGenerator {
     }
 
     pub fn generate(&mut self, chars: &str) -> BitmapFont {
-        let glyphs = chars.graphemes(true).collect::<Vec<&str>>();
-
-        let (cell_w, cell_h) = self.calculate_cell_dimensions(&glyphs);
+        let graphemes = chars.graphemes(true).collect::<Vec<&str>>();
+        let (cell_w, cell_h) = self.calculate_cell_dimensions(&graphemes);
+        
         let grid_cols = self.texture_width as i32 / cell_w;
-        let grid_rows = glyphs.len() as i32 / grid_cols + 1; // assume it's not a perfect fit
+        let grid_rows = (FontStyle::ALL.len() * graphemes.len()) as i32 / grid_cols + 1; // assume it's not a perfect fit
 
         // pad to power-of-2 dimensions
         let texture_height = next_pow2(grid_rows * cell_h);
 
         let mut texture_data = vec![0; self.texture_width * texture_height as usize];
 
+        let styles = FontStyle::ALL.len();
+        
         let mut glyphs = Vec::new();
-        for (i, c) in chars.graphemes(true).enumerate() {
-            let i = i as i32;
+        for (i, c) in graphemes.iter().enumerate() {
+            let mut generate_glyph = |style: FontStyle| {
+                let i = (styles * i + style.ordinal()) as i32;
 
-            if i >= grid_cols * grid_rows { break; }
+                let grid_x = i % grid_cols;
+                let grid_y = i / grid_cols;
 
-            let grid_x = i % grid_cols;
-            let grid_y = i / grid_cols;
+                // calculate pixel positions for this cell
+                let x = grid_x * cell_w;
+                let y = grid_y * cell_h;
 
-            // calculate pixel positions for this cell
-            let pixel_x = grid_x * cell_w;
-            let pixel_y = grid_y * cell_h;
-
-            // store id and pixel coordinates for this glyph
-            glyphs.push(Glyph::new(c, (pixel_x + PADDING, pixel_y + PADDING)));
-
-            self.place_glyph_in_texture(
-                c,
-                &mut texture_data,
-                pixel_x,
-                pixel_y,
-                cell_w,
-                cell_h,
-            );
+                self.place_glyph_in_texture(c, style, &mut texture_data, x, y, cell_w, cell_h,);
+                
+                Glyph::new(c, style, (x + PADDING, y + PADDING))
+            };
+        
+            glyphs.push(MultiGlyph {
+                normal: generate_glyph(FontStyle::Normal),
+                bold: generate_glyph(FontStyle::Bold),
+                italic: generate_glyph(FontStyle::Italic),
+                bold_italic: generate_glyph(FontStyle::BoldItalic),
+            })
         }
 
         assign_missing_glyph_ids(&mut glyphs);
@@ -85,16 +121,18 @@ impl BitmapFontGenerator {
                 texture_height: texture_height as u32,
                 cell_width: cell_w,
                 cell_height: cell_h,
-                glyphs
+                glyphs: glyphs.into_iter()
+                    .flat_map(|g| g.flatten())
+                    .collect(),
             },
         }
     }
-
 
     /// Places a single glyph into the texture at the specified position
     fn place_glyph_in_texture(
         &mut self,
         symbol: &str,
+        style: FontStyle,
         texture: &mut [u32],
         x_offset: i32,
         y_offset: i32,
@@ -102,7 +140,7 @@ impl BitmapFontGenerator {
         height: i32,
     ) {
         
-        let mut buffer = self.rasterize_glyph(symbol, width, height);
+        let mut buffer = self.rasterize_glyph(symbol, style, width, height);
         let mut buffer = buffer.borrow_with(&mut self.font_system);
         
         let texture_width = self.texture_width as i32;
@@ -131,6 +169,7 @@ impl BitmapFontGenerator {
     fn rasterize_glyph(
         &mut self,
         c: &str,
+        style: FontStyle,
         cell_w: i32,
         cell_h: i32,
     ) -> Buffer {
@@ -139,7 +178,7 @@ impl BitmapFontGenerator {
         let mut buffer = Buffer::new(f, self.metrics);
         buffer.set_size(f, Some(2.0 * cell_w as f32), Some(2.0 * cell_h as f32));
 
-        buffer.set_text(f, c, &attrs(), cosmic_text::Shaping::Advanced);
+        buffer.set_text(f, c, &attrs(style), cosmic_text::Shaping::Advanced);
         buffer.shape_until_scroll(f, true);
 
         buffer
@@ -155,7 +194,7 @@ impl BitmapFontGenerator {
         let width = 100.0;
         let height = 100.0;
 
-        let attrs = attrs();
+        let attrs = attrs(FontStyle::Normal);
 
         let font_system = &mut self.font_system;
         let swash_cache = &mut self.cache;
@@ -190,13 +229,13 @@ impl BitmapFontGenerator {
 }
 
 
-fn assign_missing_glyph_ids(glyphs: &mut [Glyph]) {
+fn assign_missing_glyph_ids(glyphs: &mut [MultiGlyph]) {
     // pre-assigned glyphs (in the range 0x0000-0x00FF)
     let mut used_ids = HashSet::new();
     glyphs.iter()
-        .filter(|g| g.id != Glyph::UNASSIGNED_ID)
+        .filter(|g| g.id() != Glyph::UNASSIGNED_ID)
         .for_each(|g| {
-            used_ids.insert(g.id);
+            used_ids.insert(g.id());
         });
 
     let mut next_id: i32 = -1; // initial value to -1
@@ -210,12 +249,12 @@ fn assign_missing_glyph_ids(glyphs: &mut [Glyph]) {
         id as u16
     };
 
-    for g in glyphs.iter_mut().filter(|g| g.id == Glyph::UNASSIGNED_ID) {
-        g.id = next_glyph_id();
+    for g in glyphs.iter_mut().filter(|g| g.id() == Glyph::UNASSIGNED_ID) {
+        g.set_id(next_glyph_id());
     }
 
     // sort the glyphs by their ID
-    glyphs.sort_by(|a, b| a.id.cmp(&b.id));
+    glyphs.sort_by(|a, b| a.id().cmp(&b.id()));
 }
 
 
@@ -232,10 +271,19 @@ fn next_pow2(n: i32) -> i32 {
     v
 }
 
-fn attrs() -> Attrs<'static> {
-    Attrs::new()
+fn attrs(style: FontStyle) -> Attrs<'static> {
+    let attrs = Attrs::new()
+        .style(Style::Normal)
         .family(Family::Monospace)
-        .weight(Weight::NORMAL)
+        .weight(Weight::NORMAL);
+    
+    use FontStyle::*;
+    match style {
+        Normal     => attrs,
+        Bold       => attrs.weight(Weight::BOLD),
+        Italic     => attrs.style(Style::Italic),
+        BoldItalic => attrs.style(Style::Italic).weight(Weight::BOLD),
+    }
 }
 
 #[cfg(test)]

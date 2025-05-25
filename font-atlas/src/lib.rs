@@ -2,7 +2,7 @@ mod glyph;
 mod serialization;
 mod atlas;
 
-pub use glyph::Glyph;
+pub use glyph::{Glyph, FontStyle};
 pub use atlas::FontAtlasConfig;
 use serialization::*;
 

@@ -1,5 +1,5 @@
 use compact_str::{format_compact, CompactString};
-use crate::{FontAtlasConfig, Glyph};
+use crate::{FontAtlasConfig, FontStyle, Glyph};
 
 
 const ATLAS_HEADER: [u8; 4] = [0xBA, 0xB1, 0xF0, 0xA5];
@@ -145,6 +145,7 @@ impl Serializable for Glyph {
     fn serialize(&self) -> Vec<u8> {
         let mut ser = Serializer::new();
         ser.write_u16(self.id);
+        ser.write_u8(self.style.ordinal() as u8);
         ser.write_i32(self.pixel_coords.0);
         ser.write_i32(self.pixel_coords.1);
         ser.write_string(&self.symbol);
@@ -153,12 +154,14 @@ impl Serializable for Glyph {
 
     fn deserialize(serialized: &mut Deserializer) -> Result<Self, SerializationError> {
         let id = serialized.read_u16()?;
+        let style = serialized.read_u8()?;
         let x = serialized.read_i32()?;
         let y = serialized.read_i32()?;
         let symbol = serialized.read_string()?;
 
         Ok(Glyph {
             id,
+            style: FontStyle::from_u8(style),
             pixel_coords: (x, y),
             symbol,
         })
@@ -415,21 +418,25 @@ mod tests {
         let glyphs = vec![
             Glyph {
                 id: 65, // 'A'
+                style: FontStyle::Normal,
                 symbol: CompactString::from("A"),
                 pixel_coords: (0, 0),
             },
             Glyph {
                 id: 66, // 'B'
+                style: FontStyle::Normal,
                 symbol: CompactString::from("B"),
                 pixel_coords: (16, 0),
             },
             Glyph {
                 id: 8364, // '€' (Euro symbol)
+                style: FontStyle::Normal,
                 symbol: CompactString::from("€"),
                 pixel_coords: (32, 0),
             },
             Glyph {
                 id: 10000, // '🚀' (Rocket emoji)
+                style: FontStyle::Normal,
                 symbol: CompactString::from("🚀"),
                 pixel_coords: (48, 0),
             },

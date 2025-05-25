@@ -72,10 +72,11 @@ struct CellDynamic {
 
 ## TODO
 - [ ] **Text Effects**: Underline, strikethrough
-- [ ] **Font Variants**: Bold, italic, and other font weight support
+- [x] **Font Variants**: Bold, italic, and other font weight support
 - [ ] **Complete Glyph Set**: Report (e.g. via logging) when glyphs are missing from the atlas
 - [ ] **Emoji support**: Currently renders with only the foreground color
   
 ## Undecided Features
+- [ ] **Double Buffering**: Are there any benefits to double buffering for terminal rendering?
 - [ ] **Dynamic Atlases**: Runtime glyph addition without regeneration
 - [ ] **Partial Updates**: Only update changed cells instead of full grid

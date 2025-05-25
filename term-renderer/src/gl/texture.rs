@@ -61,7 +61,8 @@ impl Texture {
         let gl_texture = gl.create_texture()
             .ok_or(Error::texture_creation_failed())?;
         gl.bind_texture(GL::TEXTURE_2D_ARRAY, Some(&gl_texture));
-        gl.tex_storage_3d(GL::TEXTURE_2D_ARRAY, 1, GL::RGBA8, cell_width, cell_height, metadata.glyphs.len() as i32);
+        let texture_array_len = metadata.glyphs.iter().map(|g| g.id()).max().unwrap_or(0) + 1;
+        gl.tex_storage_3d(GL::TEXTURE_2D_ARRAY, 1, GL::RGBA8, cell_width, cell_height, texture_array_len);
 
         // prepare a pbo for the the atlas, it will upload the texture data,
         // and then we will use gl.tex_sub_image_3d to upload the subregions

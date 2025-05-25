@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use compact_str::{CompactString, ToCompactString};
 use web_sys::console;
-use font_atlas::FontAtlasConfig;
+use font_atlas::{FontAtlasConfig, FontStyle};
 use crate::BITMAP_FONT_IMAGE;
 use crate::error::Error;
 use crate::gl::GL;
@@ -60,7 +60,7 @@ impl FontAtlas {
                 0,
                 FontAtlasConfig::PADDING,
                 FontAtlasConfig::PADDING,
-                glyph.id as i32,
+                glyph.id(),
                 cell_width - FontAtlasConfig::PADDING * 2,
                 cell_height - FontAtlasConfig::PADDING * 2,
                 1, // only one layer
@@ -71,6 +71,12 @@ impl FontAtlas {
                 console::error_2(&"Failed to define subregion for ".into(), &v);
                 Error::texture_creation_failed()
             })?;
+            
+            // we only store the normal-styled glyphs in the atlas lookup, as the correct
+            // layer id can be derived from the base glyph id plus the font style
+            if glyph.style != FontStyle::Normal {
+                continue;
+            }
 
             // ascii characters do not require a lookup table
             if !glyph.is_ascii() {
@@ -86,24 +92,27 @@ impl FontAtlas {
         })
     }
 
+    /// Binds the atlas texture to the specified texture unit
+    pub fn bind(&self, gl: &web_sys::WebGl2RenderingContext, texture_unit: u32) {
+        self.texture.bind(gl, texture_unit);
+    }
+
     pub fn cell_size(&self) -> (i32, i32) {
         self.cell_size
     }
 
     /// Returns the texture array z-offset for the given key
-    pub fn get_glyph_layer(&self, key: &str) -> Option<i32> {
+    pub(super) fn get_glyph_layer(&self, key: &str, font_style: FontStyle) -> Option<i32> {
         if key.len() == 1 {
             let ch = key.chars().next().unwrap();
             if ch.is_ascii() { // 0x00..0xff double as layer
-                return Some(ch as _);
+                let id = ch as i32 | font_style.layer_mask();
+                return Some(id);
             }
         }
 
-        self.layers.get(key).copied()
-    }
-
-    /// Binds the atlas texture to the specified texture unit
-    pub fn bind(&self, gl: &web_sys::WebGl2RenderingContext, texture_unit: u32) {
-        self.texture.bind(gl, texture_unit);
+        self.layers.get(key)
+            .copied()
+            .map(|id| id | font_style.layer_mask())
     }
 }

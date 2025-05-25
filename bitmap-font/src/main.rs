@@ -28,7 +28,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Bitmap font generated!");
     println!("Texture size: {}x{}", bitmap_font.metadata.texture_width, bitmap_font.metadata.texture_height);
     println!("Cell size: {}x{}", bitmap_font.metadata.cell_width, bitmap_font.metadata.cell_height);
-    println!("Glyph count: {}", bitmap_font.metadata.glyphs.len());
+    println!("Total glyph count: {}", bitmap_font.metadata.glyphs.len());
+    println!("Glyph count per variant: {}/{}", 
+        bitmap_font.metadata.glyphs.len() / FontStyle::ALL.len(),
+        Glyph::GLYPH_ID_MASK + 1 // zero-based id/index
+    );
     
     Ok(())
 }
