@@ -71,7 +71,7 @@ impl FontAtlas {
                 console::error_2(&"Failed to define subregion for ".into(), &v);
                 Error::texture_creation_failed()
             })?;
-            
+
             // we only store the normal-styled glyphs in the atlas lookup, as the correct
             // layer id can be derived from the base glyph id plus the font style
             if glyph.style != FontStyle::Normal {
@@ -83,7 +83,9 @@ impl FontAtlas {
                 layers.insert(glyph.symbol.to_compact_string(), glyph.id as i32);
             }
         }
-
+        
+        let mut texture = texture;
+        texture.delete_pbo(gl);
 
         Ok(Self {
             texture,

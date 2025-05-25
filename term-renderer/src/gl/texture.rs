@@ -10,7 +10,7 @@ use web_sys::console;
 #[derive(Debug)]
 pub(super) struct Texture {
     gl_texture: web_sys::WebGlTexture,
-    pbo: web_sys::WebGlBuffer,
+    pbo: Option<web_sys::WebGlBuffer>,
     pub(super) format: u32,
     width: i32,
     height: i32,
@@ -77,7 +77,7 @@ impl Texture {
 
         Self::setup_mipmap(gl);
 
-        Ok(Self { gl_texture, pbo, format, width: cell_width, height: cell_height })
+        Ok(Self { gl_texture, pbo: Some(pbo), format, width: cell_width, height: cell_height })
     }
 
     pub fn bind(&self, gl: &web_sys::WebGl2RenderingContext, texture_unit: u32) {
@@ -88,7 +88,13 @@ impl Texture {
 
     pub fn delete(&self, gl: &web_sys::WebGl2RenderingContext) {
         gl.delete_texture(Some(&self.gl_texture));
-        gl.delete_buffer(Some(&self.pbo));
+        gl.delete_buffer(self.pbo.as_ref());
+    }
+    
+    pub(super) fn delete_pbo(&mut self, gl: &web_sys::WebGl2RenderingContext) {
+        gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, None);
+        gl.delete_buffer(self.pbo.as_ref());
+        self.pbo = None;
     }
 
     pub fn gl_texture(&self) -> &web_sys::WebGlTexture {
