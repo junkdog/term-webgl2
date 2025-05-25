@@ -73,6 +73,8 @@ struct CellDynamic {
 ## TODO
 - [ ] **Text Effects**: Underline, strikethrough
 - [ ] **Font Variants**: Bold, italic, and other font weight support
+- [ ] **Complete Glyph Set**: Report (e.g. via logging) when glyphs are missing from the atlas
+- [ ] **Emoji support**: Currently renders with only the foreground color
   
 ## Undecided Features
 - [ ] **Dynamic Atlases**: Runtime glyph addition without regeneration
