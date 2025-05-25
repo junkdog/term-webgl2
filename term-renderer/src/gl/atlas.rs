@@ -52,7 +52,9 @@ impl FontAtlas {
         
         let texture = crate::gl::texture::Texture::from_image_data(gl, GL::RGBA, Some(&pbo), texture_data, &config)?;
 
-        console::log_1(&format!("Creating atlas grid with {} regions", config.glyphs.len()).into());
+
+        let texture_layers = config.glyphs.iter().map(|g| g.id()).max().unwrap_or(0) + 1;
+        console::log_1(&format!("Creating atlas grid with {}/{texture_layers} layers", config.glyphs.len()).into());
         let (cell_width, cell_height) = (config.cell_width, config.cell_height);
         let mut layers = HashMap::new();
 
