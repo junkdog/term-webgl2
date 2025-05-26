@@ -7,7 +7,6 @@ rendering of large terminal grids in web browsers.
 - **Sub-millisecond Rendering**: Renders entire terminal in a single draw call
 - **Texture Arrays**: Uses WebGL2 texture arrays for efficient glyph storage
 - **Optimized ASCII rendering**: ASCII set maps to texture layer without lookup
-- **Uniform Buffer Objects**: Minimizes CPU-GPU communication overhead
 - **Unicode Compatibility**: Full support for Unicode characters and graphemes
 - **Zero-Copy Buffer Updates**: Efficient dynamic buffer management for real-time updates
 
