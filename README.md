@@ -9,7 +9,6 @@ rendering of large terminal grids in web browsers.
 - **Optimized ASCII rendering**: ASCII set maps to texture layer without lookup
 - **Uniform Buffer Objects**: Minimizes CPU-GPU communication overhead
 - **Unicode Compatibility**: Full support for Unicode characters and graphemes
-- **Intelligent State Management**: Tracks and minimizes redundant WebGL state changes
 - **Zero-Copy Buffer Updates**: Efficient dynamic buffer management for real-time updates
 
 ## WebGL2 Feature Dependencies
