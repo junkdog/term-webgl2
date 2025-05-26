@@ -49,8 +49,8 @@ atlas configurations.
 
 ### 3. **term-renderer** - WebGL2 Renderer
 High-performance WebGL2 terminal renderer targeting sub-millisecond frame times. Leverages GPU
-instancing, texture arrays, and efficient state management to render entire terminal grids in
-a single draw call.
+instancing, texture arrays, and efficient state management to render the entire terminal in a
+single draw call.
 
 ## Architecture Overview
 
@@ -107,7 +107,7 @@ All regions contain the same glyph layout, where each region can pack up to 512 
 
 #### ASCII Character Mapping (Fast Path)
 
-ASCII characters (0-127) map directly to layer IDs without hash table lookup:
+ASCII characters (0-127) map directly to layer IDs:
 
 ```
 ASCII Value │ Normal │ Bold   │ Italic │ Bold+Italic │ Character
