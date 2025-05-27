@@ -146,6 +146,7 @@ impl Serializable for Glyph {
         let mut ser = Serializer::new();
         ser.write_u16(self.id);
         ser.write_u8(self.style.ordinal() as u8);
+        ser.write_u8(self.is_emoji as u8);
         ser.write_i32(self.pixel_coords.0);
         ser.write_i32(self.pixel_coords.1);
         ser.write_string(&self.symbol);
@@ -155,6 +156,7 @@ impl Serializable for Glyph {
     fn deserialize(serialized: &mut Deserializer) -> Result<Self, SerializationError> {
         let id = serialized.read_u16()?;
         let style = serialized.read_u8()?;
+        let is_emoji = serialized.read_u8()? != 0;
         let x = serialized.read_i32()?;
         let y = serialized.read_i32()?;
         let symbol = serialized.read_string()?;
@@ -162,6 +164,7 @@ impl Serializable for Glyph {
         Ok(Glyph {
             id,
             style: FontStyle::from_u8(style),
+            is_emoji,
             pixel_coords: (x, y),
             symbol,
         })
@@ -421,24 +424,28 @@ mod tests {
                 style: FontStyle::Normal,
                 symbol: CompactString::from("A"),
                 pixel_coords: (0, 0),
+                is_emoji: false,
             },
             Glyph {
                 id: 66, // 'B'
                 style: FontStyle::Normal,
                 symbol: CompactString::from("B"),
                 pixel_coords: (16, 0),
+                is_emoji: false,
             },
             Glyph {
                 id: 8364, // '€' (Euro symbol)
                 style: FontStyle::Normal,
                 symbol: CompactString::from("€"),
                 pixel_coords: (32, 0),
+                is_emoji: false,
             },
             Glyph {
                 id: 10000, // '🚀' (Rocket emoji)
                 style: FontStyle::Normal,
                 symbol: CompactString::from("🚀"),
                 pixel_coords: (48, 0),
+                is_emoji: true,
             },
         ];
 

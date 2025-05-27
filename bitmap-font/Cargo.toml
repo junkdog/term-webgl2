@@ -5,9 +5,10 @@ edition = "2021"
 
 [dependencies]
 font-atlas = { path = "../font-atlas" }
-cosmic-text = "0.14.2"
-image = { workspace = true }
 color-eyre = "0.6.4"
+cosmic-text = "0.14.2"
+emojis = "0.6.4"
+image = { workspace = true }
 unicode-segmentation = "1.12.0"
 
 [[bin]]

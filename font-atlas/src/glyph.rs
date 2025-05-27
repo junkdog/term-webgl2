@@ -15,18 +15,24 @@ use compact_str::{CompactString, ToCompactString};
 pub struct Glyph {
     /// The glyph ID; used as z-offset in the resulting texture array
     pub id: u16,
-    /// The style of the glyph, e.g. bold, italic
+    /// The style of the glyph, e.g., bold, italic
     pub style: FontStyle,
     /// The character
     pub symbol: CompactString,
     /// The pixel coordinates of the glyph in the texture
     pub pixel_coords: (i32, i32),
+    /// Indicates if the glyph is an emoji
+    pub is_emoji: bool,
 }
 
 impl Glyph {
     /// The ID is used as a short-lived placeholder until the actual ID is assigned.
     pub const UNASSIGNED_ID: u16 = 0xFFFF;
+    
+    /// The ID bit for emojis, which is used to distinguish them from regular glyphs.
+    pub const EMOJI_FLAG: u16 = 0x8000; // 0b1000000000000000
     pub const GLYPH_ID_MASK: u16 = FontStyle::Bold.id_mask() - 1; // 0x01FF
+    
 
     /// Creates a new glyph with the specified symbol and pixel coordinates.
     pub fn new(symbol: &str, style: FontStyle, pixel_coords: (i32, i32)) -> Self {
@@ -43,6 +49,18 @@ impl Glyph {
             symbol: symbol.to_compact_string(),
             style,
             pixel_coords,
+            is_emoji: false,
+        }
+    }
+    
+    pub fn new_emoji(symbol: &str, pixel_coords: (i32, i32)) -> Self {
+        let id = Self::UNASSIGNED_ID; // Emojis are not assigned ASCII IDs
+        Self {
+            id,
+            symbol: symbol.to_compact_string(),
+            style: FontStyle::Normal,
+            pixel_coords,
+            is_emoji: true,
         }
     }
 

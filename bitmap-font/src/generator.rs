@@ -14,11 +14,65 @@ pub(super) struct BitmapFontGenerator {
     texture_width: usize,
 }
 
+
+struct GraphemeSet<'a> {
+    ascii: Vec<&'a str>,
+    unicode: Vec<&'a str>,
+    emoji: Vec<&'a str>,
+}
+
+impl<'a> GraphemeSet<'a> {
+    fn new(chars: &'a str) -> Self {
+        let mut graphemes = chars.graphemes(true).collect::<Vec<&str>>();
+        graphemes.sort();
+        graphemes.dedup();
+
+        assert!(graphemes.len() <= 512,"Too many unique graphemes: {}", graphemes.len());
+
+        let mut ascii = vec![];
+        let mut unicode = vec![];
+        let mut emoji = vec![];
+
+        for g in graphemes {
+            if g.len() == 1 && g.chars().all(|c| c.is_ascii()) {
+                ascii.push(g);
+            } else if emojis::get(g).is_some() {
+                emoji.push(g);
+            } else {
+                unicode.push(g);
+            }
+        }
+
+        Self { ascii, unicode, emoji }
+    }
+    
+    fn len(&self) -> usize {
+        self.ascii.len() + self.unicode.len() + self.emoji.len()
+    }
+    
+    fn iter(&self) -> impl Iterator<Item = (GlyphType, &str)> {
+        let normal = self.ascii.iter().copied()
+            .chain(self.unicode.iter().copied())
+            .map(|g| (GlyphType::Normal, g));
+        let emoji = self.emoji.iter().copied()
+            .map(|g| (GlyphType::Emoji, g));
+        
+        normal.chain(emoji)
+    }
+}
+
+
 struct MultiGlyph {
     normal: Glyph,
     bold: Glyph,
     italic: Glyph,
     bold_italic: Glyph,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GlyphType {
+    Normal,
+    Emoji
 }
 
 impl MultiGlyph {
@@ -73,8 +127,9 @@ impl BitmapFontGenerator {
     }
 
     pub fn generate(&mut self, chars: &str) -> BitmapFont {
-        let graphemes = chars.graphemes(true).collect::<Vec<&str>>();
-        let (cell_w, cell_h) = self.calculate_cell_dimensions(&graphemes);
+        let graphemes = GraphemeSet::new(chars);
+        
+        let (cell_w, cell_h) = self.calculate_cell_dimensions(&graphemes.unicode);
         
         let grid_cols = self.texture_width as i32 / cell_w;
         let grid_rows = (FontStyle::ALL.len() * graphemes.len()) as i32 / grid_cols + 1; // assume it's not a perfect fit
@@ -87,7 +142,9 @@ impl BitmapFontGenerator {
         let styles = FontStyle::ALL.len();
         
         let mut glyphs = Vec::new();
-        for (i, c) in graphemes.iter().enumerate() {
+        let mut emojis = Vec::new();
+        
+        for (i, (glyph_type, c)) in graphemes.iter().enumerate() {
             let mut generate_glyph = |style: FontStyle| {
                 let i = (styles * i + style.ordinal()) as i32;
 
@@ -103,15 +160,25 @@ impl BitmapFontGenerator {
                 Glyph::new(c, style, (x + PADDING, y + PADDING))
             };
         
-            glyphs.push(MultiGlyph {
-                normal: generate_glyph(FontStyle::Normal),
-                bold: generate_glyph(FontStyle::Bold),
-                italic: generate_glyph(FontStyle::Italic),
-                bold_italic: generate_glyph(FontStyle::BoldItalic),
-            })
+            match glyph_type {
+                GlyphType::Normal => {
+                    glyphs.push(MultiGlyph {
+                        normal: generate_glyph(FontStyle::Normal),
+                        bold: generate_glyph(FontStyle::Bold),
+                        italic: generate_glyph(FontStyle::Italic),
+                        bold_italic: generate_glyph(FontStyle::BoldItalic),
+                    })
+                }
+                GlyphType::Emoji => {
+                    let mut emoji = generate_glyph(FontStyle::Normal);
+                    emoji.is_emoji = true;
+                    emojis.push(emoji);
+                }
+            }
         }
 
         assign_missing_glyph_ids(&mut glyphs);
+        assign_emoji_glyph_ids(&mut emojis);
 
         BitmapFont {
             texture_data,
@@ -123,6 +190,7 @@ impl BitmapFontGenerator {
                 cell_height: cell_h,
                 glyphs: glyphs.into_iter()
                     .flat_map(|g| g.flatten())
+                    .chain(emojis.into_iter())
                     .collect(),
             },
         }
@@ -228,6 +296,18 @@ impl BitmapFontGenerator {
     }
 }
 
+fn sorted_graphemes(chars: &str) -> Vec<&str> {
+    let mut graphemes = chars.graphemes(true).collect::<Vec<&str>>();
+    graphemes.sort();
+    graphemes.dedup();
+    graphemes
+}
+
+fn assign_emoji_glyph_ids(glyphs: &mut [Glyph]) {
+    for (i, glyph) in glyphs.iter_mut().enumerate() {
+        glyph.id = i as u16 | Glyph::EMOJI_FLAG;
+    }
+}
 
 fn assign_missing_glyph_ids(glyphs: &mut [MultiGlyph]) {
     // pre-assigned glyphs (in the range 0x0000-0x00FF)
