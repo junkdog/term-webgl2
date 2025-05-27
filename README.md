@@ -93,14 +93,12 @@ Texture Array Layer Index (11/16 bits total)
 
 #### Memory Regions by Font Style
 
-```
-Layer Index Range │ Font Style  │ Bit Pattern │ Description
-──────────────────│─────────────│─────────────│──────────────────────
-0x000 - 0x1FF     │ Normal      │ 00xxxxxxxxx │ Base glyphs
-0x200 - 0x3FF     │ Bold        │ 01xxxxxxxxx │ Bold variants  
-0x400 - 0x5FF     │ Italic      │ 10xxxxxxxxx │ Italic variants
-0x600 - 0x7FF     │ Bold+Italic │ 11xxxxxxxxx │ Bold+Italic variants
-```
+| Layer Index Range | Font Style  | Bit Pattern | Description          |
+|-------------------|-------------|-------------|----------------------|
+| 0x000 - 0x1FF     | Normal      | 00xxxxxxxxx | Base glyphs          |
+| 0x200 - 0x3FF     | Bold        | 01xxxxxxxxx | Bold variants        |  
+| 0x400 - 0x5FF     | Italic      | 10xxxxxxxxx | Italic variants      |
+| 0x600 - 0x7FF     | Bold+Italic | 11xxxxxxxxx | Bold+Italic variants |
 
 All regions contain the same glyph layout, where each region can pack up to 512 glyphs.
 
@@ -108,25 +106,21 @@ All regions contain the same glyph layout, where each region can pack up to 512 
 
 ASCII characters (0-127) map directly to layer IDs:
 
-```
-ASCII Value │ Normal │ Bold   │ Italic │ Bold+Italic │ Character
-────────────│────────│────────│────────│─────────────│──────────
-0x20 (32)   │ 0x020  │ 0x220  │ 0x420  │ 0x620       │ ' ' (space)
-0x41 (65)   │ 0x041  │ 0x241  │ 0x441  │ 0x641       │ 'A'
-0x42 (66)   │ 0x042  │ 0x242  │ 0x442  │ 0x642       │ 'B'
-0x61 (97)   │ 0x061  │ 0x261  │ 0x461  │ 0x661       │ 'a'
-0x7E (126)  │ 0x07E  │ 0x27E  │ 0x47E  │ 0x67E       │ '~'
-```
+|  ASCII Value | Normal | Bold  | Italic | Bold+Italic | Character   |
+|--------------|--------|-------|--------|-------------|-------------|
+|  0x20 (32)   | 0x020  | 0x220 | 0x420  | 0x620       | ' ' (space) |
+|  0x41 (65)   | 0x041  | 0x241 | 0x441  | 0x641       | 'A'         |
+|  0x42 (66)   | 0x042  | 0x242 | 0x442  | 0x642       | 'B'         |
+|  0x61 (97)   | 0x061  | 0x261 | 0x461  | 0x661       | 'a'         |
+|  0x7E (126)  | 0x07E  | 0x27E | 0x47E  | 0x67E       | '~'         |
 
 Non-ASCII characters require a HashMap lookup to find their base glyph ID:
 
-```
-Unicode Char │ Base ID │ Normal │ Bold   │ Italic │ Bold+Italic
-─────────────│─────────│────────│────────│────────│─────────────
-'€' (Euro)   │ 0x80    │ 0x080  │ 0x280  │ 0x480  │ 0x680
-'🚀' (Rocket)│ 0x81    │ 0x081  │ 0x281  │ 0x481  │ 0x681
-'∞' (Infinity)│ 0x82   │ 0x082  │ 0x282  │ 0x482  │ 0x682
-```
+| Unicode Char   | Base ID | Normal | Bold  | Italic | Bold+Italic |
+|----------------|---------|--------|-------|--------|-------------|
+| '€' (Euro)     | 0x80    | 0x080  | 0x280 | 0x480  | 0x680       |
+| '🚀' (Rocket)  | 0x81    | 0x081  | 0x281 | 0x481  | 0x681       |
+| '∞' (Infinity) | 0x82    | 0x082  | 0x282 | 0x482  | 0x682       |
 
 In code:
 
@@ -272,8 +266,8 @@ For a 200×80 terminal (16,000 cells):
 | Index Buffer  | —               | 6 bytes    | Static indices     |
 | UBO           | —               | 80 bytes   | Initialization     |
 
-**Total Dynamic Memory**: ~192 KB per terminal update
-**Static Memory**: ~64 KB (allocated once)
+- **Total Dynamic Memory**: ~192 KB per terminal update
+- **Static Memory**: ~64 KB (allocated once)
 
 ### Update Patterns
 
