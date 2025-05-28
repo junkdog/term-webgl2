@@ -105,12 +105,12 @@ vec4 glyph_color = texture(u_sampler, vec3(v_tex_coord, layer));
 
 #### Memory Regions by Font Style
 
-| Layer Index Range | Font Style  | Bit Pattern       | Description          |
-|-------------------|-------------|-------------------|----------------------|
-| `0x000` - `0x1FF` | Normal      | `xx00_xxxx_xxxxx` | Base glyphs          |
-| `0x200` - `0x3FF` | Bold        | `0x01_xxxx_xxxxx` | Bold variants        |  
-| `0x400` - `0x5FF` | Italic      | `0x10_xxxx_xxxxx` | Italic variants      |
-| `0x600` - `0x7FF` | Bold+Italic | `0x11_xxxx_xxxxx` | Bold+Italic variants |
+| Layer Index Range | Font Style  | Description          |
+|-------------------|-------------|----------------------|
+| `0x000` - `0x1FF` | Normal      | Base glyphs          |
+| `0x200` - `0x3FF` | Bold        | Bold variants        |  
+| `0x400` - `0x5FF` | Italic      | Italic variants      |
+| `0x600` - `0x7FF` | Bold+Italic | Bold+Italic variants |
 
 All regions contain the same glyph layout, where each region can pack up to 512 glyphs.
 
