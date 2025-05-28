@@ -5,6 +5,7 @@ use font_atlas::*;
 use image::{ImageBuffer, Rgba};
 use std::fs::File;
 use std::io::Write;
+use std::process::exit;
 
 const PADDING: i32 = 1;
 const GLYPHS: &str = "
@@ -32,6 +33,9 @@ const EMOJI_GLYPHS: &str = "
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // panic hook
     color_eyre::install()?;
+    
+    assert_eq!(0xE7FFu16, 0xffffu16 ^ 0x1800u16);
+    exit(0);
     
     let bitmap_font = BitmapFontGenerator::new(10.0, 1024)
         .generate(GLYPHS);

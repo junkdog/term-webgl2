@@ -11,6 +11,33 @@ use compact_str::{CompactString, ToCompactString};
 /// For ASCII characters, the glyph ID directly corresponds to the character's
 /// ASCII value, enabling fast lookups without hash table lookups. Non-ASCII
 /// characters are assigned sequential IDs starting from a base value.
+///
+/// # Glyph ID Bit Layout (16-bit)
+/// 
+/// | Bit(s) | Flag Name     | Hex Mask | Binary Mask           | Description               |
+/// |--------|---------------|----------|-----------------------|---------------------------|
+/// | 0-8    | GLYPH_ID      | `0x01FF` | `0000_0001_1111_1111` | Base glyph id             |
+/// | 9      | BOLD          | `0x0200` | `0000_0010_0000_0000` | Bold font style           |
+/// | 10     | ITALIC        | `0x0400` | `0000_0100_0000_0000` | Italic font style         |
+/// | 11     | UNDERLINE     | `0x0800` | `0000_1000_0000_0000` | Underline text effect     |
+/// | 12     | STRIKETHROUGH | `0x1000` | `0001_0000_0000_0000` | Strikethrough text effect |
+/// | 13-14  | RESERVED      | `0x6000` | `0110_0000_0000_0000` | Reserved for future use   |
+/// | 15     | EMOJI         | `0x8000` | `1000_0000_0000_0000` | Emoji character           |
+/// 
+/// - The first 9 bits (0-8) represent the base glyph ID, allowing for 512 unique glyphs.
+/// - Underlined and strikethrough styles are mutually exclusive.
+/// - Emoji glyphs implicitly clear any other style bits.
+/// - The full 16-bit glyph ID is the texture array layer index in the WebGL2 shader.
+/// 
+/// ## Glyph ID Encoding Examples
+/// 
+/// | Character   | Style            | Binary Representation | Hex Value | Description         |
+/// |-------------|------------------|-----------------------|-----------|---------------------|
+/// | 'A' (0x41)  | Normal           | `0000_0000_0100_0001` | `0x0041`  | Plain 'A'           |
+/// | 'A' (0x41)  | Bold             | `0000_0010_0100_0001` | `0x0241`  | Bold 'A'            |
+/// | 'A' (0x41)  | Bold + Italic    | `0000_0110_0100_0001` | `0x0641`  | Bold italic 'A'     |
+/// | 'A' (0x41)  | Bold + Underline | `0000_1010_0100_0001` | `0x0A41`  | Bold underlined 'A' |
+/// | '🚀' (0x81) | Emoji            | `1000_0000_1000_0001` | `0x8081`  | "rocket" emoji      |
 #[derive(Debug)]
 pub struct Glyph {
     /// The glyph ID; used as z-offset in the resulting texture array
@@ -28,10 +55,20 @@ pub struct Glyph {
 impl Glyph {
     /// The ID is used as a short-lived placeholder until the actual ID is assigned.
     pub const UNASSIGNED_ID: u16 = 0xFFFF;
-    
-    /// The ID bit for emojis, which is used to distinguish them from regular glyphs.
-    pub const EMOJI_FLAG: u16 = 0x8000; // 0b1000000000000000
-    pub const GLYPH_ID_MASK: u16 = FontStyle::Bold.id_mask() - 1; // 0x01FF
+
+    /// Glyph ID mask - extracts the base glyph identifier (bits 0-8).
+    /// Supports 512 unique base glyphs (0x000 to 0x1FF) in the texture atlas.
+    pub const GLYPH_ID_MASK: u16      = 0b0000_0001_1111_1111; // 0x01FF
+    /// Bold flag - selects the bold variant of the glyph from the texture atlas.
+    pub const BOLD_FLAG: u16          = 0b0000_0010_0000_0000; // 0x0200
+    /// Italic flag - selects the italic variant of the glyph from the texture atlas.
+    pub const ITALIC_FLAG: u16        = 0b0000_0100_0000_0000; // 0x0400
+    /// Underline flag - renders a horizontal line below the character baseline.
+    pub const UNDERLINE_FLAG: u16     = 0b0000_1000_0000_0000; // 0x0800
+    /// Strikethrough flag - renders a horizontal line through the middle of the character.
+    pub const STRIKETHROUGH_FLAG: u16 = 0b0001_0000_0000_0000; // 0x1000
+    /// Emoji flag - indicates this glyph represents an emoji character requiring special handling.
+    pub const EMOJI_FLAG: u16         = 0b1000_0000_0000_0000; // 0x8000
     
 
     /// Creates a new glyph with the specified symbol and pixel coordinates.

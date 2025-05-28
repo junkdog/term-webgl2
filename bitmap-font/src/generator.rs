@@ -27,7 +27,7 @@ impl<'a> GraphemeSet<'a> {
         graphemes.sort();
         graphemes.dedup();
 
-        assert!(graphemes.len() <= 512,"Too many unique graphemes: {}", graphemes.len());
+        assert!(graphemes.len() <= 512, "Too many unique graphemes: {}", graphemes.len());
 
         let mut ascii = vec![];
         let mut unicode = vec![];

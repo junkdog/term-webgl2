@@ -77,50 +77,55 @@ This ensures pixel-perfect rendering without floating-point precision issues tha
 
 #### Overall Structure
 The font atlas uses a WebGL 2D Texture Array where each layer contains a single glyph. The layer index
-encodes both the base glyph ID and the font style.
+encodes both the base glyph ID and the font style. It based on the representation of `Glyph::id`:
 
-```
-Texture Array Layer Index (11/16 bits total)
-┌─────────────┬─────────────────────────────────────┐
-│   Bits 9-10 │           Bits 0-8                  │
-│ Font Style  │         Base Glyph ID               │
-│   (2 bits)  │          (9 bits)                   │
-└─────────────┴─────────────────────────────────────┘
-     │                        │
-     │                        └─ 512 possible glyph slots (0-511)
-     └─ 4 font style variants
+##### Glyph ID Bit Layout (16-bit)
+
+| Bit(s) | Flag Name     | Hex Mask | Binary Mask           | Description               |
+|--------|---------------|----------|-----------------------|---------------------------|
+| 0-8    | GLYPH_ID      | `0x01FF` | `0000_0001_1111_1111` | Base glyph id             |
+| 9      | BOLD          | `0x0200` | `0000_0010_0000_0000` | Bold font style           |
+| 10     | ITALIC        | `0x0400` | `0000_0100_0000_0000` | Italic font style         |
+| 11     | UNDERLINE     | `0x0800` | `0000_1000_0000_0000` | Underline text effect     |
+| 12     | STRIKETHROUGH | `0x1000` | `0001_0000_0000_0000` | Strikethrough text effect |
+| 13-14  | RESERVED      | `0x6000` | `0110_0000_0000_0000` | Reserved for future use   |
+| 15     | EMOJI         | `0x8000` | `1000_0000_0000_0000` | Emoji character           |
+
+- The first 9 bits (0-8) represent the base glyph ID, allowing for 512 unique glyphs.
+- Underlined and strikethrough styles are mutually exclusive.
+- Emoji glyphs implicitly clear any other style bits.
+- The glyph ID is the basis for the texture array layer index in the WebGL2 shader:
+
+```glsl
+// Fragment shader texture array uses the full glyph ID,
+// except UNDERLINE and STRIKETHROUGH bits
+float layer = float(v_packed_data.x & (0xFFFFu ^ 0x1800u));
+vec4 glyph_color = texture(u_sampler, vec3(v_tex_coord, layer));
 ```
 
 #### Memory Regions by Font Style
 
-| Layer Index Range | Font Style  | Bit Pattern | Description          |
-|-------------------|-------------|-------------|----------------------|
-| 0x000 - 0x1FF     | Normal      | 00xxxxxxxxx | Base glyphs          |
-| 0x200 - 0x3FF     | Bold        | 01xxxxxxxxx | Bold variants        |  
-| 0x400 - 0x5FF     | Italic      | 10xxxxxxxxx | Italic variants      |
-| 0x600 - 0x7FF     | Bold+Italic | 11xxxxxxxxx | Bold+Italic variants |
+| Layer Index Range | Font Style  | Bit Pattern    | Description          |
+|-------------------|-------------|----------------|----------------------|
+| `0x000` - `0x1FF` | Normal      | `00xxxx_xxxxx` | Base glyphs          |
+| `0x200` - `0x3FF` | Bold        | `01xxxx_xxxxx` | Bold variants        |  
+| `0x400` - `0x5FF` | Italic      | `10xxxx_xxxxx` | Italic variants      |
+| `0x600` - `0x7FF` | Bold+Italic | `11xxxx_xxxxx` | Bold+Italic variants |
 
 All regions contain the same glyph layout, where each region can pack up to 512 glyphs.
 
-#### ASCII Character Mapping (Fast Path)
+#### Character Mapping
 
-ASCII characters (0-127) map directly to layer IDs:
+| Character   | Style            | Binary Representation | Hex Value | Description         |
+|-------------|------------------|-----------------------|-----------|---------------------|
+| 'A' (0x41)  | Normal           | `0000_0000_0100_0001` | `0x0041`  | Plain 'A'           |
+| 'A' (0x41)  | Bold             | `0000_0010_0100_0001` | `0x0241`  | Bold 'A'            |
+| 'A' (0x41)  | Bold + Italic    | `0000_0110_0100_0001` | `0x0641`  | Bold italic 'A'     |
+| 'A' (0x41)  | Bold + Underline | `0000_1010_0100_0001` | `0x0A41`  | Bold underlined 'A' |
+| '🚀' (0x81) | Emoji            | `1000_0000_1000_0001` | `0x8081`  | "rocket" emoji      |
 
-|  ASCII Value | Normal | Bold  | Italic | Bold+Italic | Character   |
-|--------------|--------|-------|--------|-------------|-------------|
-|  0x20 (32)   | 0x020  | 0x220 | 0x420  | 0x620       | ' ' (space) |
-|  0x41 (65)   | 0x041  | 0x241 | 0x441  | 0x641       | 'A'         |
-|  0x42 (66)   | 0x042  | 0x242 | 0x442  | 0x642       | 'B'         |
-|  0x61 (97)   | 0x061  | 0x261 | 0x461  | 0x661       | 'a'         |
-|  0x7E (126)  | 0x07E  | 0x27E | 0x47E  | 0x67E       | '~'         |
-
-Non-ASCII characters require a HashMap lookup to find their base glyph ID:
-
-| Unicode Char   | Base ID | Normal | Bold  | Italic | Bold+Italic |
-|----------------|---------|--------|-------|--------|-------------|
-| '€' (Euro)     | 0x80    | 0x080  | 0x280 | 0x480  | 0x680       |
-| '🚀' (Rocket)  | 0x81    | 0x081  | 0x281 | 0x481  | 0x681       |
-| '∞' (Infinity) | 0x82    | 0x082  | 0x282 | 0x482  | 0x682       |
+ASCII characters (0-127) map directly to the layer's base ID, allowing for fast rendering without
+a lookup. Non-ASCII characters require a HashMap lookup to find their base glyph ID.
 
 In code:
 
@@ -133,7 +138,6 @@ if ch.is_ascii() {
     layer_id = atlas.lookup(ch) | style.layer_mask();
 }
 ```
-
 
 **Grapheme Clustering**: The font generator uses Unicode segmentation to properly handle complex characters
 
@@ -204,18 +208,6 @@ struct CellDynamic {
     /// Packed as: [layer_lo, layer_hi, fg_r, fg_g, fg_b, bg_r, bg_g, bg_b]
     pub data: [u8; 8],
 }
-```
-
-**Bit-Level Packing Detail:**
-```
-Byte 0-1: Glyph Layer ID (little-endian u16)
-  ┌─────────────┬─────────────────────────────────────┐
-  │   Bits 9-10 │           Bits 0-8                  │
-  │ Font Style  │         Base Glyph ID               │
-  └─────────────┴─────────────────────────────────────┘
-
-Bytes 2-4: Foreground RGB (3 × u8)
-Bytes 5-7: Background RGB (3 × u8)
 ```
 
 **Color Format**: Colors are stored as **24-bit RGB** (no alpha in instance data). Alpha blending is handled in the
