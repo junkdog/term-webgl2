@@ -13,7 +13,7 @@ use compact_str::{CompactString, ToCompactString};
 /// characters are assigned sequential IDs starting from a base value.
 ///
 /// # Glyph ID Bit Layout (16-bit)
-/// 
+///
 /// | Bit(s) | Flag Name     | Hex Mask | Binary Mask           | Description               |
 /// |--------|---------------|----------|-----------------------|---------------------------|
 /// | 0-8    | GLYPH_ID      | `0x01FF` | `0000_0001_1111_1111` | Base glyph id             |
@@ -23,14 +23,14 @@ use compact_str::{CompactString, ToCompactString};
 /// | 12     | STRIKETHROUGH | `0x1000` | `0001_0000_0000_0000` | Strikethrough text effect |
 /// | 13-14  | RESERVED      | `0x6000` | `0110_0000_0000_0000` | Reserved for future use   |
 /// | 15     | EMOJI         | `0x8000` | `1000_0000_0000_0000` | Emoji character           |
-/// 
+///
 /// - The first 9 bits (0-8) represent the base glyph ID, allowing for 512 unique glyphs.
 /// - Underlined and strikethrough styles are mutually exclusive.
 /// - Emoji glyphs implicitly clear any other style bits.
 /// - The full 16-bit glyph ID is the texture array layer index in the WebGL2 shader.
-/// 
+///
 /// ## Glyph ID Encoding Examples
-/// 
+///
 /// | Character   | Style            | Binary Representation | Hex Value | Description         |
 /// |-------------|------------------|-----------------------|-----------|---------------------|
 /// | 'A' (0x41)  | Normal           | `0000_0000_0100_0001` | `0x0041`  | Plain 'A'           |
@@ -38,7 +38,7 @@ use compact_str::{CompactString, ToCompactString};
 /// | 'A' (0x41)  | Bold + Italic    | `0000_0110_0100_0001` | `0x0641`  | Bold italic 'A'     |
 /// | 'A' (0x41)  | Bold + Underline | `0000_1010_0100_0001` | `0x0A41`  | Bold underlined 'A' |
 /// | '🚀' (0x81) | Emoji            | `1000_0000_1000_0001` | `0x8081`  | "rocket" emoji      |
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Glyph {
     /// The glyph ID; used as z-offset in the resulting texture array
     pub id: u16,
@@ -63,13 +63,13 @@ impl Glyph {
     pub const BOLD_FLAG: u16          = 0b0000_0010_0000_0000; // 0x0200
     /// Italic flag - selects the italic variant of the glyph from the texture atlas.
     pub const ITALIC_FLAG: u16        = 0b0000_0100_0000_0000; // 0x0400
-    /// Underline flag - renders a horizontal line below the character baseline.
-    pub const UNDERLINE_FLAG: u16     = 0b0000_1000_0000_0000; // 0x0800
-    /// Strikethrough flag - renders a horizontal line through the middle of the character.
-    pub const STRIKETHROUGH_FLAG: u16 = 0b0001_0000_0000_0000; // 0x1000
     /// Emoji flag - indicates this glyph represents an emoji character requiring special handling.
-    pub const EMOJI_FLAG: u16         = 0b1000_0000_0000_0000; // 0x8000
-    
+    pub const EMOJI_FLAG: u16         = 0b0000_1000_0000_0000; // 0x8000
+    /// Underline flag - renders a horizontal line below the character baseline.
+    pub const UNDERLINE_FLAG: u16     = 0b0001_0000_0000_0000; // 0x0800
+    /// Strikethrough flag - renders a horizontal line through the middle of the character.
+    pub const STRIKETHROUGH_FLAG: u16 = 0b0010_0000_0000_0000; // 0x1000
+
 
     /// Creates a new glyph with the specified symbol and pixel coordinates.
     pub fn new(symbol: &str, style: FontStyle, pixel_coords: (i32, i32)) -> Self {
@@ -90,26 +90,36 @@ impl Glyph {
         }
     }
     
-    pub fn new_emoji(symbol: &str, pixel_coords: (i32, i32)) -> Self {
-        let id = Self::UNASSIGNED_ID; // Emojis are not assigned ASCII IDs
+    pub fn new_with_id(
+        base_id: u16,
+        symbol: &str,
+        style: FontStyle,
+        pixel_coords: (i32, i32),
+    ) -> Self {
         Self {
-            id,
+            id: base_id | style.id_mask(),
             symbol: symbol.to_compact_string(),
-            style: FontStyle::Normal,
+            style,
             pixel_coords,
-            is_emoji: true,
+            is_emoji: false,
         }
     }
-
+    
     /// Returns true if this glyph represents a single ASCII character.
     pub fn is_ascii(&self) -> bool {
         self.symbol.len() == 1
             && self.symbol.chars().next().unwrap().is_ascii()
     }
     
-    pub fn id(&self) -> i32 {
-        self.id as i32 | self.style as i32
-    }
+    // pub fn layer_id(&self) -> i32 {
+    //     debug_assert!(!self.is_emoji || self.style == FontStyle::Normal,
+    //         "Emoji glyphs must have the normal style");
+    // 
+    //     let region_bits = (self.is_emoji as u16 * Self::EMOJI_FLAG)
+    //         | self.style.id_mask();
+    //     
+    //     (self.id | region_bits) as i32
+    // }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

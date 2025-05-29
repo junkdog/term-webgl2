@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
 use unicode_segmentation::UnicodeSegmentation;
-use font_atlas::{FontAtlasConfig, FontStyle, Glyph};
+use font_atlas::{FontAtlasData, FontStyle, Glyph};
 use crate::{BitmapFont, PADDING};
 
 const WHITE: Color = Color::rgb(0xff, 0xff, 0xff);
@@ -11,7 +11,7 @@ pub(super) struct BitmapFontGenerator {
     cache: SwashCache,
     font_size: f32,
     metrics: Metrics,
-    texture_width: usize,
+    texture_width: i32,
 }
 
 
@@ -45,29 +45,36 @@ impl<'a> GraphemeSet<'a> {
 
         Self { ascii, unicode, emoji }
     }
-    
-    fn len(&self) -> usize {
-        self.ascii.len() + self.unicode.len() + self.emoji.len()
-    }
-    
-    fn iter(&self) -> impl Iterator<Item = (GlyphType, &str)> {
-        let normal = self.ascii.iter().copied()
-            .chain(self.unicode.iter().copied())
-            .map(|g| (GlyphType::Normal, g));
-        let emoji = self.emoji.iter().copied()
-            .map(|g| (GlyphType::Emoji, g));
-        
-        normal.chain(emoji)
+
+    pub(super) fn into_glyphs(self) -> Vec<Glyph> {
+        let mut glyphs = Vec::new();
+
+        // pre-assigned glyphs (in the range 0x000-0x07F)
+        let mut used_ids = HashSet::new();
+        for c in self.ascii.iter() {
+            used_ids.insert(c.chars().next().unwrap() as u16);
+            for style in FontStyle::ALL {
+                glyphs.push(Glyph::new(c, style, (0, 0)));
+            }
+        }
+
+        // unicode glyphs fill any gaps in the ASCII range (0x000-0x1FF)
+        glyphs.extend(assign_missing_glyph_ids(used_ids, &self.unicode));
+
+        // emoji glyphs are assigned IDs starting from 0x800
+        for (i, c) in self.emoji.iter().enumerate() {
+            let id = i as u16 | Glyph::EMOJI_FLAG;
+            let mut glyph = Glyph::new_with_id(id, c, FontStyle::Normal, (0, 0));
+            glyph.is_emoji = true;
+            glyphs.push(glyph);
+        }
+
+        glyphs.sort_by_key(|g| g.id);
+
+        glyphs
     }
 }
 
-
-struct MultiGlyph {
-    normal: Glyph,
-    bold: Glyph,
-    italic: Glyph,
-    bold_italic: Glyph,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GlyphType {
@@ -75,32 +82,79 @@ enum GlyphType {
     Emoji
 }
 
-impl MultiGlyph {
-    
-    pub fn id(&self) -> u16 {
-        self.normal.id
-    }
-    
-    pub fn set_id(&mut self, id: u16) {
-        assert_eq!(id & Glyph::GLYPH_ID_MASK, id);
+
+#[derive(Debug)]
+struct RasterizationConfig {
+    texture_width: i32,
+    texture_height: i32,
+    texture_depth: i32, // slices
+    cell_width: i32,
+    cell_height: i32,
+}
+
+impl RasterizationConfig {
+    const GLYPHS_PER_SLICE: i32 = 16; // 4x4 grid
+    const GRID_SIZE: i32 = 4;
+
+    fn new(
+        cell_width: i32,
+        cell_height: i32,
+        glyphs: &[Glyph],
+    ) -> Self {
+        let slice_width = Self::GRID_SIZE * cell_width;
+        let slice_height = Self::GRID_SIZE * cell_height;
+
+        let max_id = glyphs.iter().map(|g| g.id).max().unwrap_or(0) as i32;
+        let depth = (max_id + Self::GLYPHS_PER_SLICE - 1) / Self::GLYPHS_PER_SLICE;
         
-        self.normal.id = id;
-        self.bold.id = id | FontStyle::Bold.id_mask(); 
-        self.italic.id = id | FontStyle::Italic.id_mask();
-        self.bold_italic.id = id | FontStyle::BoldItalic.id_mask();
+        Self {
+            texture_width: next_pow2(slice_width),
+            texture_height: next_pow2(slice_height),
+            texture_depth: next_pow2(depth),
+            cell_width,
+            cell_height,
+        }
+    }
+
+    fn texture_size(&self) -> usize {
+        (self.texture_width * self.texture_height * self.texture_depth) as usize
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct GlyphCoordinate {
+    slice: u16, // Z coordinate in 3D texture
+    grid_x: u8, // X position in 4x4 grid (0-3)
+    grid_y: u8, // Y position in 4x4 grid (0-3)
+}
+
+impl GlyphCoordinate {
+    fn from_glyph_id(id: u16) -> Self {
+        // 16 glyphs per slice (4x4)
+        let slice = id >> 4;
+        let position_in_slice = id & 0xF;
+        let grid_x = (position_in_slice % 4) as u8;
+        let grid_y = (position_in_slice / 4) as u8;
+
+        Self { slice, grid_x, grid_y }
+    }
+
+    fn to_glyph_id(&self) -> u16 {
+        self.slice << 4
+            | (self.grid_y as u16 * 4) + self.grid_x as u16
     }
     
-    pub fn flatten(self) -> [Glyph; 4] {
-        [
-            self.normal,
-            self.bold,
-            self.italic,
-            self.bold_italic,
-        ]
+    fn xy(&self, config: &RasterizationConfig) -> (i32, i32) {
+        let x = self.grid_x as i32 * config.cell_width + PADDING;
+        let y = self.grid_y as i32 * config.cell_height + PADDING;
+        (x, y)
     }
 }
 
 impl BitmapFontGenerator {
+    const GRID_SIZE: usize = 4;
+    const GLYPHS_PER_SLICE: usize = Self::GRID_SIZE * Self::GRID_SIZE;  // 4x4 grid
+
     pub fn new(
         font_size: f32,
         texture_width: usize,
@@ -122,118 +176,104 @@ impl BitmapFontGenerator {
             cache,
             metrics,
             font_size,
-            texture_width,
+            texture_width: texture_width as i32,
         }
     }
 
     pub fn generate(&mut self, chars: &str) -> BitmapFont {
-        let graphemes = GraphemeSet::new(chars);
-        
-        let (cell_w, cell_h) = self.calculate_cell_dimensions(&graphemes.unicode);
-        
-        let grid_cols = self.texture_width as i32 / cell_w;
-        let grid_rows = (FontStyle::ALL.len() * graphemes.len()) as i32 / grid_cols + 1; // assume it's not a perfect fit
+        // categorize and allocate IDs
+        let grapheme_set = GraphemeSet::new(chars);
+        let glyphs = grapheme_set.into_glyphs();
 
-        // pad to power-of-2 dimensions
-        let texture_height = next_pow2(grid_rows * cell_h);
+        // calculate texture dimensions
+        let (cell_w, cell_h) = self.calculate_cell_dimensions(&glyphs);
+        let config = RasterizationConfig::new(cell_w, cell_h, &glyphs);
+        println!("{:?}", &config);
 
-        let mut texture_data = vec![0; self.texture_width * texture_height as usize];
+        // allocate 3d rgba texture data
+        let mut texture_data = vec![0u32; config.texture_size()];
 
-        let styles = FontStyle::ALL.len();
-        
-        let mut glyphs = Vec::new();
-        let mut emojis = Vec::new();
-        
-        for (i, (glyph_type, c)) in graphemes.iter().enumerate() {
-            let mut generate_glyph = |style: FontStyle| {
-                let i = (styles * i + style.ordinal()) as i32;
+        // rasterize glyphs into 3d texture
+        let mut rasterized_glyphs = Vec::with_capacity(glyphs.len());
+        for glyph in glyphs.into_iter() {
+            let coord = GlyphCoordinate::from_glyph_id(glyph.id);
 
-                let grid_x = i % grid_cols;
-                let grid_y = i / grid_cols;
+            self.place_glyph_in_3d_texture(
+                &glyph,
+                &config,
+                &mut texture_data,
+                coord,
+            );
 
-                // calculate pixel positions for this cell
-                let x = grid_x * cell_w;
-                let y = grid_y * cell_h;
-
-                self.place_glyph_in_texture(c, style, &mut texture_data, x, y, cell_w, cell_h,);
-                
-                Glyph::new(c, style, (x + PADDING, y + PADDING))
-            };
-        
-            match glyph_type {
-                GlyphType::Normal => {
-                    glyphs.push(MultiGlyph {
-                        normal: generate_glyph(FontStyle::Normal),
-                        bold: generate_glyph(FontStyle::Bold),
-                        italic: generate_glyph(FontStyle::Italic),
-                        bold_italic: generate_glyph(FontStyle::BoldItalic),
-                    })
-                }
-                GlyphType::Emoji => {
-                    let mut emoji = generate_glyph(FontStyle::Normal);
-                    emoji.is_emoji = true;
-                    emojis.push(emoji);
-                }
-            }
+            // update glyph with actual texture coordinates
+            let mut updated_glyph = glyph;
+            updated_glyph.pixel_coords = coord.xy(&config);
+            rasterized_glyphs.push(updated_glyph);
         }
 
-        assign_missing_glyph_ids(&mut glyphs);
-        assign_emoji_glyph_ids(&mut emojis);
-
         BitmapFont {
-            texture_data,
-            metadata: FontAtlasConfig {
+            atlas_data: FontAtlasData {
                 font_size: self.font_size,
-                texture_width: self.texture_width as u32,
-                texture_height: texture_height as u32,
-                cell_width: cell_w,
-                cell_height: cell_h,
-                glyphs: glyphs.into_iter()
-                    .flat_map(|g| g.flatten())
-                    .chain(emojis.into_iter())
-                    .collect(),
+                texture_width: config.texture_width as u32,
+                texture_height: config.texture_height as u32,
+                texture_depth: config.texture_depth as u32,
+                cell_width: config.cell_width,
+                cell_height: config.cell_height,
+                glyphs: rasterized_glyphs,
+                texture_data,
             },
         }
     }
 
     /// Places a single glyph into the texture at the specified position
-    fn place_glyph_in_texture(
+    fn place_glyph_in_3d_texture(
         &mut self,
-        symbol: &str,
-        style: FontStyle,
+        glyph: &Glyph,
+        config: &RasterizationConfig,
         texture: &mut [u32],
-        x_offset: i32,
-        y_offset: i32,
-        width: i32,
-        height: i32,
+        coord: GlyphCoordinate,
     ) {
-        
-        let mut buffer = self.rasterize_glyph(symbol, style, width, height);
+        // Calculate the buffer for this specific glyph
+        let mut buffer = self.rasterize_glyph(
+            &glyph.symbol,
+            glyph.style,
+            config.cell_width,
+            config.cell_height,
+        );
+
         let mut buffer = buffer.borrow_with(&mut self.font_system);
-        
-        let texture_width = self.texture_width as i32;
         let swash_cache = &mut self.cache;
-        
+
+        // todo: special handling for emoji?
         buffer.draw(swash_cache, WHITE, |x, y, w, h, color| {
-            // alpha is non-zero for the glyph pixels
-            let a = color.a();
-            if a == 0 || x < 0 || x >= width || y < 0 || y >= height || w != 1 || h != 1 {
+            if color.a() == 0 || x < 0 || x >= config.cell_width
+                || y < 0 || y >= config.cell_height || w != 1 || h != 1 {
                 return;
             }
 
-            // calculate the pixel position in the texture
+            let x_offset = coord.grid_x as i32 * config.cell_width;
+            let y_offset = coord.grid_y as i32 * config.cell_height;
+            
+            // calculate position in 3D texture
             let px = x + x_offset + PADDING;
             let py = y + y_offset + PADDING;
-            if px < 0 || py < 0 || px >= texture_width || py >= texture.len() as i32 / texture_width {
+
+            if px >= config.texture_width || py >= config.texture_height {
                 return;
             }
 
-            let idx = (py * texture_width) + px;
-            let [r, g, b, a] = color.as_rgba().map(|c| c as u32);
-            texture[idx as usize] = r << 24 | g << 16 | b << 8 | a;
+            // calculate index in flat array for 3D texture
+            let idx = (coord.slice as i32 * config.texture_width * config.texture_height
+                + py * config.texture_width + px
+            ) as usize;
+
+            if idx < texture.len() {
+                let [r, g, b, a] = color.as_rgba().map(|c| c as u32);
+                texture[idx] = r << 24 | g << 16 | b << 8 | a;
+            }
         });
     }
-    
+
     fn rasterize_glyph(
         &mut self,
         c: &str,
@@ -242,7 +282,7 @@ impl BitmapFontGenerator {
         cell_h: i32,
     ) -> Buffer {
         let f = &mut self.font_system;
-        
+
         let mut buffer = Buffer::new(f, self.metrics);
         buffer.set_size(f, Some(2.0 * cell_w as f32), Some(2.0 * cell_h as f32));
 
@@ -254,7 +294,7 @@ impl BitmapFontGenerator {
 
     /// Calculates the required cell dimensions for a monospaced bitmap font
     /// by finding the maximum width and height of all glyphs in the character set.
-    fn calculate_cell_dimensions(&mut self, chars: &[&str]) -> (i32, i32) {
+    fn calculate_cell_dimensions(&mut self, glyps: &[Glyph]) -> (i32, i32) {
         let mut max_width = 0;
         let mut max_height = 0;
 
@@ -267,9 +307,9 @@ impl BitmapFontGenerator {
         let font_system = &mut self.font_system;
         let swash_cache = &mut self.cache;
         let metrics = self.metrics;
-        
+
         // iterate through all characters in the set
-        for c in chars {
+        for c in glyps.iter().map(|g| &g.symbol) {
             let mut buffer = Buffer::new(font_system, metrics);
             let mut buffer = buffer.borrow_with(font_system);
             buffer.set_size(Some(width), Some(height));
@@ -303,21 +343,10 @@ fn sorted_graphemes(chars: &str) -> Vec<&str> {
     graphemes
 }
 
-fn assign_emoji_glyph_ids(glyphs: &mut [Glyph]) {
-    for (i, glyph) in glyphs.iter_mut().enumerate() {
-        glyph.id = i as u16 | Glyph::EMOJI_FLAG;
-    }
-}
-
-fn assign_missing_glyph_ids(glyphs: &mut [MultiGlyph]) {
-    // pre-assigned glyphs (in the range 0x0000-0x00FF)
-    let mut used_ids = HashSet::new();
-    glyphs.iter()
-        .filter(|g| g.id() != Glyph::UNASSIGNED_ID)
-        .for_each(|g| {
-            used_ids.insert(g.id());
-        });
-
+fn assign_missing_glyph_ids(
+    used_ids: HashSet<u16>,
+    symbols: &[&str]
+) -> Vec<Glyph> {
     let mut next_id: i32 = -1; // initial value to -1
     let mut next_glyph_id = || {
         let mut id = next_id;
@@ -329,12 +358,17 @@ fn assign_missing_glyph_ids(glyphs: &mut [MultiGlyph]) {
         id as u16
     };
 
-    for g in glyphs.iter_mut().filter(|g| g.id() == Glyph::UNASSIGNED_ID) {
-        g.set_id(next_glyph_id());
-    }
-
-    // sort the glyphs by their ID
-    glyphs.sort_by(|a, b| a.id().cmp(&b.id()));
+    symbols.iter()
+        .flat_map(|c| {
+            let base_id = next_glyph_id();
+            [
+                Glyph::new_with_id(base_id, c, FontStyle::Normal, (0, 0)),
+                Glyph::new_with_id(base_id, c, FontStyle::Bold, (0, 0)),
+                Glyph::new_with_id(base_id, c, FontStyle::Italic, (0, 0)),
+                Glyph::new_with_id(base_id, c, FontStyle::BoldItalic, (0, 0)),
+            ]
+        })
+        .collect()
 }
 
 
@@ -356,7 +390,7 @@ fn attrs(style: FontStyle) -> Attrs<'static> {
         .style(Style::Normal)
         .family(Family::Monospace)
         .weight(Weight::NORMAL);
-    
+
     use FontStyle::*;
     match style {
         Normal     => attrs,

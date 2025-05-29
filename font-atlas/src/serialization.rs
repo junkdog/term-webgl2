@@ -1,5 +1,5 @@
 use compact_str::{format_compact, CompactString};
-use crate::{FontAtlasConfig, FontStyle, Glyph};
+use crate::{FontAtlasData, FontStyle, Glyph};
 
 
 const ATLAS_HEADER: [u8; 4] = [0xBA, 0xB1, 0xF0, 0xA5];
@@ -51,6 +51,13 @@ impl Serializer {
     pub fn write_i32(&mut self, value: i32) {
         self.data.extend(&value.to_le_bytes());
     }
+    
+    pub fn write_u32_slice(&mut self, value: &[u32]) {
+        self.write_u32(value.len() as u32);
+        for &v in value {
+            self.write_u32(v);
+        }
+    }
 
     pub fn write_string(&mut self, value: &str) {
         let length = value.len() as u8;
@@ -98,6 +105,18 @@ impl <'a> Deserializer<'a> {
         self.position += 4;
 
         Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
+    }
+    
+    pub fn read_u32_slice(&mut self) -> Result<Vec<u32>, SerializationError> {
+        let length = self.read_u32()? as usize;
+        self.verify_offset_in_bounds(length * 4)?;
+
+        let mut values = Vec::with_capacity(length);
+        for _ in 0..length {
+            values.push(self.read_u32()?);
+        }
+        
+        Ok(values)
     }
 
     pub fn read_i32(&mut self) -> Result<i32, SerializationError> {
@@ -171,10 +190,10 @@ impl Serializable for Glyph {
     }
 }
 
-impl Serializable for FontAtlasConfig {
+impl Serializable for FontAtlasData {
     fn serialize(&self) -> Vec<u8> {
         let mut ser = Serializer::new();
-        ser.write_u8(ATLAS_HEADER[0]);
+            ser.write_u8(ATLAS_HEADER[0]);
         ser.write_u8(ATLAS_HEADER[1]);
         ser.write_u8(ATLAS_HEADER[2]);
         ser.write_u8(ATLAS_HEADER[3]);
@@ -184,6 +203,8 @@ impl Serializable for FontAtlasConfig {
         ser.write_f32(self.font_size);
         ser.write_u32(self.texture_width);
         ser.write_u32(self.texture_height);
+        ser.write_u32(self.texture_depth);
+        
         ser.write_i32(self.cell_width);
         ser.write_i32(self.cell_height);
 
@@ -191,6 +212,9 @@ impl Serializable for FontAtlasConfig {
         ser.write_u16(self.glyphs.len() as u16);
         ser.data.extend(self.glyphs.iter().flat_map(Glyph::serialize));
 
+        // serialize 3d texture data
+        ser.write_u32_slice(&self.texture_data);
+        
         ser.data
     }
 
@@ -217,6 +241,8 @@ impl Serializable for FontAtlasConfig {
         let font_size = deser.read_f32()?;
         let texture_width = deser.read_u32()?;
         let texture_height = deser.read_u32()?;
+        let texture_depth = deser.read_u32()?;
+        
         let cell_width = deser.read_i32()?;
         let cell_height = deser.read_i32()?;
 
@@ -226,14 +252,19 @@ impl Serializable for FontAtlasConfig {
         for _ in 0..glyph_count {
             glyphs.push(Glyph::deserialize(deser)?);
         }
+        
+        // deserialize texture data
+        let texture_data = deser.read_u32_slice()?;
 
-        Ok(FontAtlasConfig {
+        Ok(FontAtlasData {
             font_size,
             texture_width,
             texture_height,
+            texture_depth,
             cell_width,
             cell_height,
             glyphs,
+            texture_data,
         })
     }
 }
@@ -401,11 +432,11 @@ mod tests {
     fn test_mixed_serialization() {
         // Test reading different types in sequence
         let mut data = Vec::new();
-        data.push(42u8);                          // u8
-        data.extend(&100u16.to_le_bytes());       // u16
+        data.push(42u8);                           // u8
+        data.extend(&100u16.to_le_bytes());        // u16
         data.extend(&0x12345678u32.to_le_bytes()); // u32
-        data.push(5);                             // string length
-        data.extend(b"Hello");                    // string data
+        data.push(5);                              // string length
+        data.extend(b"Hello");                     // string data
 
         let mut serialized = Deserializer::new(&data);
 
@@ -450,13 +481,15 @@ mod tests {
         ];
 
         // Create original FontAtlasConfig
-        let original = FontAtlasConfig {
+        let original = FontAtlasData {
             font_size: 16.5,
             texture_width: 512,
             texture_height: 256,
+            texture_depth: 256,
             cell_width: 12,
             cell_height: 18,
             glyphs,
+            texture_data: Vec::new(),
         };
 
         // Serialize
@@ -464,11 +497,12 @@ mod tests {
 
         // Deserialize
         let mut deserializer = Deserializer::new(&serialized);
-        let deserialized = FontAtlasConfig::deserialize(&mut deserializer).unwrap();
+        let deserialized = FontAtlasData::deserialize(&mut deserializer).unwrap();
 
         // Assert all fields match
         assert_eq!(original.font_size, deserialized.font_size);
         assert_eq!(original.texture_width, deserialized.texture_width);
+        assert_eq!(original.texture_height, deserialized.texture_height);
         assert_eq!(original.texture_height, deserialized.texture_height);
         assert_eq!(original.cell_width, deserialized.cell_width);
         assert_eq!(original.cell_height, deserialized.cell_height);

@@ -86,10 +86,10 @@ encodes both the base glyph ID and the font style. It based on the representatio
 | 0-8    | GLYPH_ID      | `0x01FF` | `0000_0001_1111_1111` | Base glyph id             |
 | 9      | BOLD          | `0x0200` | `0000_0010_0000_0000` | Bold font style           |
 | 10     | ITALIC        | `0x0400` | `0000_0100_0000_0000` | Italic font style         |
-| 11     | UNDERLINE     | `0x0800` | `0000_1000_0000_0000` | Underline text effect     |
-| 12     | STRIKETHROUGH | `0x1000` | `0001_0000_0000_0000` | Strikethrough text effect |
-| 13-14  | RESERVED      | `0x6000` | `0110_0000_0000_0000` | Reserved for future use   |
-| 15     | EMOJI         | `0x8000` | `1000_0000_0000_0000` | Emoji character           |
+| 11     | EMOJI         | `0x0800` | `0000_1000_0000_0000` | Emoji character           |
+| 12     | UNDERLINE     | `0x1000` | `0001_0000_0000_0000` | Underline text effect     |
+| 13     | STRIKETHROUGH | `0x2000` | `0010_0000_0000_0000` | Strikethrough text effect |
+| 14-15  | RESERVED      | `0xC000` | `1100_0000_0000_0000` | Reserved for future use   |
 
 - The first 9 bits (0-8) represent the base glyph ID, allowing for 512 unique glyphs.
 - Underlined and strikethrough styles are mutually exclusive.
@@ -105,14 +105,15 @@ vec4 glyph_color = texture(u_sampler, vec3(v_tex_coord, layer));
 
 #### Memory Regions by Font Style
 
-| Layer Index Range | Font Style  | Description          |
-|-------------------|-------------|----------------------|
-| `0x000` - `0x1FF` | Normal      | Base glyphs          |
-| `0x200` - `0x3FF` | Bold        | Bold variants        |  
-| `0x400` - `0x5FF` | Italic      | Italic variants      |
-| `0x600` - `0x7FF` | Bold+Italic | Bold+Italic variants |
+| Layer Slice Index Range | Seq Grid Index | Glyph Type  | Description          |
+|-------------------------|----------------|-------------|----------------------|
+| `0x000` - `0x1FF`       | `0x0` - `0xF`  | Normal      | Base glyphs          |
+| `0x200` - `0x3FF`       | `0x0` - `0xF`  | Bold        | Bold variants        |  
+| `0x400` - `0x5FF`       | `0x0` - `0xF`  | Italic      | Italic variants      |
+| `0x600` - `0x7FF`       | `0x0` - `0xF`  | Bold+Italic | Bold+Italic variants |
+| `0x800` - `0x9FF`       | `0x0` - `0xF`  | Emoji       | Emoji variants       |
 
-All regions contain the same glyph layout, where each region can pack up to 512 glyphs.
+All regions contain the same glyph layout, except for where each region can pack up to 512 glyphs.
 
 #### Character Mapping
 
@@ -121,8 +122,8 @@ All regions contain the same glyph layout, where each region can pack up to 512 
 | 'A' (0x41)  | Normal           | `0000_0000_0100_0001` | `0x0041`  | Plain 'A'           |
 | 'A' (0x41)  | Bold             | `0000_0010_0100_0001` | `0x0241`  | Bold 'A'            |
 | 'A' (0x41)  | Bold + Italic    | `0000_0110_0100_0001` | `0x0641`  | Bold italic 'A'     |
-| 'A' (0x41)  | Bold + Underline | `0000_1010_0100_0001` | `0x0A41`  | Bold underlined 'A' |
-| '🚀' (0x81) | Emoji            | `1000_0000_1000_0001` | `0x8081`  | "rocket" emoji      |
+| 'A' (0x41)  | Bold + Underline | `0001_0010_0100_0001` | `0x0A41`  | Bold underlined 'A' |
+| '🚀' (0x81) | Emoji            | `0000_1000_1000_0001` | `0x8081`  | "rocket" emoji      |
 
 ASCII characters (0-127) map directly to the layer's base ID, allowing for fast rendering without
 a lookup. Non-ASCII characters require a HashMap lookup to find their base glyph ID.
