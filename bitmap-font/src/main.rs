@@ -2,12 +2,13 @@ mod generator;
 
 use crate::generator::BitmapFontGenerator;
 use font_atlas::*;
-use image::{ImageBuffer, Rgba};
 use std::fs::File;
 use std::io::Write;
-use std::process::exit;
 
 const PADDING: i32 = 1;
+// const GLYPHS: &str = "
+//  0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
+// ";
 const GLYPHS: &str = "
 !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop
 qrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãä
@@ -34,12 +35,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // panic hook
     color_eyre::install()?;
     
-    let bitmap_font = BitmapFontGenerator::new(10.0, 1024)
+    // let bitmap_font = BitmapFontGenerator::new(10.0, 1024) // 10.0 is the ref benchmark font size
+    let bitmap_font = BitmapFontGenerator::new(18.0, 1024)
         .generate(GLYPHS);
 
-    // Save the font files if needed
-    // bitmap_font.save_texture("./data/bitmap_font.png")?;
-    // bitmap_font.save_metadata("./data/bitmap_font.atlas")?;
     bitmap_font.save("./data/bitmap_font.atlas")?;
     
     println!("Bitmap font generated!");

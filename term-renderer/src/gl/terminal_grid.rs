@@ -139,6 +139,10 @@ impl TerminalGrid {
                 screen_size.1 as f32
             ).data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
+            // atlas_cell_size: [
+            //     1.0 / self.atlas.cell_size().0 as f32,
+            //     1.0 / self.atlas.cell_size().1 as f32,
+            // ],
         };
         console::log_1(&format!("cell size: {:?}", data.cell_size).into());
         console::log_1(&format!("screen size: {:?}", screen_size).into());
@@ -171,11 +175,11 @@ impl TerminalGrid {
         // update instance buffer with new cell data
         let atlas = &self.atlas;
 
-        let fallback_glyph = atlas.get_glyph_layer(" ", FontStyle::Normal).unwrap_or(0);
+        let fallback_glyph = atlas.get_glyph_coord(" ", FontStyle::Normal).unwrap_or(0);
         self.cells.iter_mut()
             .zip(cells)
             .for_each(|(cell, data)| {
-                let layer = atlas.get_glyph_layer(data.symbol, data.style)
+                let layer = atlas.get_glyph_coord(data.symbol, data.style)
                     .unwrap_or(fallback_glyph);
                 
                 *cell = CellDynamic::new(layer, data.fg, data.bg);
@@ -344,10 +348,20 @@ impl Drawable for TerminalGrid {
     fn cleanup(&self, context: &mut RenderContext) {
         let gl = context.gl;
         gl.bind_vertex_array(None);
-        gl.bind_texture(GL::TEXTURE_2D_ARRAY, None);
+        gl.bind_texture(GL::TEXTURE_3D, None);
 
         self.ubo.unbind(gl)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GlyphEffect {
+    /// No special effect applied to the glyph.
+    None,
+    /// Underline effect applied below the glyph.
+    Underline,
+    /// Strikethrough effect applied through the glyph.
+    Strikethrough,
 }
 
 /// Data for a single terminal cell including character and colors.
@@ -366,6 +380,7 @@ impl Drawable for TerminalGrid {
 pub struct CellData<'a> {
     pub symbol: &'a str,
     pub style: FontStyle,
+    pub effect: GlyphEffect,
     pub fg: u32,
     pub bg: u32,
 }
@@ -377,13 +392,20 @@ impl<'a> CellData<'a> {
     /// # Parameters
     /// * `symbol` - Character to display (should be a single character)
     /// * `style` - Font style for the character (e.g. bold, italic)
+    /// * `effect` - Optional glyph effect (e.g. underline, strikethrough)
     /// * `fg` - Foreground color as ARGB value (0xAARRGGBB)
     /// * `bg` - Background color as ARGB value (0xAARRGGBB)
     ///
     /// # Returns
     /// New `CellData` instance
-    pub fn new(symbol: &'a str, style: FontStyle, fg: u32, bg: u32) -> Self {
-        Self { symbol, style, fg, bg }
+    pub fn new(
+        symbol: &'a str,
+        style: FontStyle,
+        effect: GlyphEffect,
+        fg: u32,
+        bg: u32
+    ) -> Self {
+        Self { symbol, style, effect, fg, bg }
     }
 }
 
@@ -498,8 +520,19 @@ impl CellDynamic {
 
 #[repr(C, align(16))] // std140 layout requires proper alignment
 struct CellUbo {
-    pub projection: [f32; 16], // mat4
-    pub cell_size: [f32; 2],   // vec2
+    pub projection: [f32; 16],     // mat4
+    pub cell_size: [f32; 2],       // vec2 - screen cell size
+    // pub atlas_cell_size: [f32; 2], // vec2 - atlas UV cell size (1.0/4.0 = 0.25)
+}
+
+impl CellUbo {
+    fn new(projection: Mat4, cell_size: (i32, i32)) -> Self {
+        Self {
+            projection: projection.data,
+            cell_size: [cell_size.0 as f32, cell_size.1 as f32],
+            // atlas_cell_size: [0.25, 0.25], // 1/4 for a 4x4 grid per slice
+        }
+    }
 }
 
 impl CellUbo {
@@ -508,7 +541,13 @@ impl CellUbo {
 
 fn create_terminal_cell_data(cols: i32, rows: i32) -> Vec<CellDynamic> {
     (0..cols * rows)
-        .map(|_| CellDynamic::new(0, 0xffff_ffff, 0x0000_00ff))
+        .map(|i| {
+            if i & 1 == 1 {
+                CellDynamic::new(0x12, 0xffff_ffff, 0x0000_00ff)
+            } else {
+                CellDynamic::new(0x62, 0x0000_00ff, 0xffff_ffff)
+            }
+        })
         .collect()
 }
 

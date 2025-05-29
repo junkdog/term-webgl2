@@ -23,6 +23,7 @@ pub struct FontAtlasData {
 
 impl FontAtlasData {
     pub const PADDING: i32 = 1;
+    pub const CELLS_PER_SLICE: i32 = 16;
 
     pub fn from_binary(serialized: &[u8]) -> Result<Self, FontAtlasDeserializationError> {
         let mut deserializer = Deserializer::new(serialized);
@@ -52,8 +53,7 @@ impl FontAtlasData {
 
 impl Default for FontAtlasData {
     fn default() -> Self {
-        unimplemented!();
-        // Self::from_binary(include_bytes!("../../data/bitmap_font.atlas"))
-        //     .unwrap()
+        Self::from_binary(include_bytes!("../../data/bitmap_font.atlas"))
+            .unwrap()
     }
 }

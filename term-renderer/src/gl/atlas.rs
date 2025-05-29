@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use compact_str::{CompactString, ToCompactString};
 use web_sys::console;
-use font_atlas::{FontAtlasConfig, FontStyle};
+use font_atlas::{FontAtlasData, FontStyle};
 use crate::BITMAP_FONT_IMAGE;
 use crate::error::Error;
 use crate::gl::GL;
@@ -22,8 +22,8 @@ use crate::gl::GL;
 pub struct FontAtlas {
     /// The underlying texture
     texture: crate::gl::texture::Texture,
-    /// Symbol to texture 2d array layer
-    layers: HashMap<CompactString, i32>,
+    /// Symbol to 3d texture index
+    glyph_coords: HashMap<CompactString, i32>,
     /// The size of each character cell in pixels
     cell_size: (i32, i32),
 }
@@ -34,69 +34,63 @@ impl FontAtlas {
     pub fn load_default(
         gl: &web_sys::WebGl2RenderingContext,
     ) -> Result<Self, Error> {
-        let config = FontAtlasConfig::default();
-        Self::load(gl, BITMAP_FONT_IMAGE, config)
+        let config = FontAtlasData::default();
+        Self::load(gl, config)
     }
 
     /// Creates a TextureAtlas from a grid of equal-sized cells
     pub fn load(
         gl: &web_sys::WebGl2RenderingContext,
-        texture_data: &[u8],
-        config: FontAtlasConfig,
+        config: FontAtlasData,
     ) -> Result<Self, Error> {
-        console::log_1(&format!("loading texture, {} bytes", texture_data.len()).into());
+        console::log_1(&format!("loading font atlas, {} bytes", size_of::<FontAtlas>()).into());
 
-        let pbo = gl.create_buffer()
-            .ok_or(Error::buffer_creation_failed("pbo"))?;
-        gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, Some(&pbo));
+        // the temporary PBO holds the bitmap font texture (texture_data) to avoid
+        // re-uploading the same data repeatedly to the GPU when creating the atlas
         
-        let texture = crate::gl::texture::Texture::from_image_data(gl, GL::RGBA, Some(&pbo), texture_data, &config)?;
+        let texture = crate::gl::texture::Texture::from_font_atlas_data(gl, GL::RGBA, &config)?;
 
-
-        let texture_layers = config.glyphs.iter().map(|g| g.id()).max().unwrap_or(0) + 1;
+        let texture_layers = config.glyphs.iter().map(|g| g.id as i32).max().unwrap_or(0) + 1;
         console::log_1(&format!("Creating atlas grid with {}/{texture_layers} layers", config.glyphs.len()).into());
         let (cell_width, cell_height) = (config.cell_width, config.cell_height);
         let mut layers = HashMap::new();
 
         for glyph in config.glyphs.iter() {
-            gl.pixel_storei(GL::UNPACK_SKIP_PIXELS, glyph.pixel_coords.0);
-            gl.pixel_storei(GL::UNPACK_SKIP_ROWS, glyph.pixel_coords.1);
+            // gl.pixel_storei(GL::UNPACK_SKIP_PIXELS, glyph.pixel_coords.0);
+            // gl.pixel_storei(GL::UNPACK_SKIP_ROWS, glyph.pixel_coords.1);
+            // 
+            // gl.tex_sub_image_3d_with_i32(
+            //     GL::TEXTURE_3D,
+            //     0,
+            //     FontAtlasData::PADDING,
+            //     FontAtlasData::PADDING,
+            //     glyph.id as i32,
+            //     cell_width - FontAtlasData::PADDING * 2,
+            //     cell_height - FontAtlasData::PADDING * 2,
+            //     1, // only one layer
+            //     texture.format,
+            //     GL::UNSIGNED_BYTE,
+            //     0, // use pbo
+            // ).map_err(|v| {
+            //     console::error_2(&"Failed to define subregion for ".into(), &v);
+            //     Error::texture_creation_failed()
+            // })?;
 
-            gl.tex_sub_image_3d_with_i32(
-                GL::TEXTURE_2D_ARRAY,
-                0,
-                FontAtlasConfig::PADDING,
-                FontAtlasConfig::PADDING,
-                glyph.id(),
-                cell_width - FontAtlasConfig::PADDING * 2,
-                cell_height - FontAtlasConfig::PADDING * 2,
-                1, // only one layer
-                texture.format,
-                GL::UNSIGNED_BYTE,
-                0, // use pbo
-            ).map_err(|v| {
-                console::error_2(&"Failed to define subregion for ".into(), &v);
-                Error::texture_creation_failed()
-            })?;
-
-            // we only store the normal-styled glyphs in the atlas lookup, as the correct
-            // layer id can be derived from the base glyph id plus the font style
+            // we only store the normal-styled glyphs (incl emoji) in the atlas lookup,
+            // as the correct layer id can be derived from the base glyph id plus font style
             if glyph.style != FontStyle::Normal {
                 continue;
             }
 
             // ascii characters do not require a lookup table
             if !glyph.is_ascii() {
-                layers.insert(glyph.symbol.to_compact_string(), glyph.id as i32);
+                layers.insert(glyph.symbol.clone(), glyph.id as i32);
             }
         }
 
-        gl.bind_buffer(GL::PIXEL_UNPACK_BUFFER, None);
-        gl.delete_buffer(Some(&pbo));
-
         Ok(Self {
             texture,
-            layers,
+            glyph_coords: layers,
             cell_size: (cell_width, cell_height),
         })
     }
@@ -111,16 +105,16 @@ impl FontAtlas {
     }
 
     /// Returns the texture array z-offset for the given key
-    pub(super) fn get_glyph_layer(&self, key: &str, font_style: FontStyle) -> Option<i32> {
+    pub(super) fn get_glyph_coord(&self, key: &str, font_style: FontStyle) -> Option<i32> {
         if key.len() == 1 {
             let ch = key.chars().next().unwrap();
-            if ch.is_ascii() { // 0x00..0xff double as layer
+            if ch.is_ascii() { // 0x00..0x7f double as layer
                 let id = ch as i32 | font_style.layer_mask();
                 return Some(id);
             }
         }
 
-        self.layers.get(key)
+        self.glyph_coords.get(key)
             .copied()
             .map(|id| id | font_style.layer_mask())
     }
