@@ -6,9 +6,8 @@ use font_atlas::*;
 use std::fs::File;
 use std::io::Write;
 
-const PADDING: i32 = 1;
-const GLYPHS: &str = "
-!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop
+const GLYPHS: &str = r#"
+!"$#%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop
 qrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãä
 åæçèéêëìíîïðñòóôõö÷øùúûüýþÿıƒ‗•←↑→↓↔↕─│┌┐└┘├┤┬┴┼═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬▀▄█
 ░▒▓ ■□▪▫▲▶▼◀◆◇◈◉○◎●◐◑◒◓◕◖◗◢◣◤◥
@@ -22,12 +21,13 @@ qrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶¸¹º»¼½¾¿ÀÁÂÃ
 ⡀⡁⡂⡃⡄⡅⡆⡇⡈⡉⡊⡋⡌⡍⡎⡏⡐⡑⡒⡓⡔⡕⡖⡗⡘⡙⡚⡛⡜⡝⡞⡟
 ⡠⡡⡢⡣⡤⡥⡦⡧⡨⡩⡪⡫⡬⡭⡮⡯⡰⡱⡲⡳⡴⡵⡶⡷⡸⡹⡺⡻⡼⡽⡾⡿
 ◐◑◒◓◔◕◖◗⊙⏴⏵⏶⏷▶
-";
+€₤
+➰⌚⏰⏱⏲⏳⏸⏹⏺⏯⏮⏭
+"#;
 
 /// ▬▭▮▯
 
 const EMOJI_GLYPHS: &str = "
-➰⌚⏰⏱⏲⏳⏸⏹⏺⏯⏮⏭
 ";
 
 
@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install()?;
     
     // let bitmap_font = BitmapFontGenerator::new(10.0, 1024) // 10.0 is the ref benchmark font size
-    // let bitmap_font = BitmapFontGenerator::new(30.0, 1024)
+    // let bitmap_font = BitmapFontGenerator::new(40.0, 1024)
     let bitmap_font = BitmapFontGenerator::new(15.0, 1024)
         .generate(GLYPHS);
 

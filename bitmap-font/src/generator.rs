@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
 use unicode_segmentation::UnicodeSegmentation;
 use font_atlas::{FontAtlasData, FontStyle, Glyph};
-use crate::{BitmapFont, PADDING};
+use crate::BitmapFont;
 
 const WHITE: Color = Color::rgb(0xff, 0xff, 0xff);
 
@@ -27,7 +27,6 @@ impl<'a> GraphemeSet<'a> {
         graphemes.sort();
         graphemes.dedup();
 
-        assert!(graphemes.len() <= 512, "Too many unique graphemes: {}", graphemes.len());
 
         let mut ascii = vec![];
         let mut unicode = vec![];
@@ -42,6 +41,8 @@ impl<'a> GraphemeSet<'a> {
                 unicode.push(g);
             }
         }
+        let non_emoji_glyphs = ascii.len() + unicode.len();
+        assert!(non_emoji_glyphs <= 512, "Too many unique graphemes: {}", non_emoji_glyphs);
 
         Self { ascii, unicode, emoji }
     }
@@ -87,7 +88,7 @@ struct RasterizationConfig {
 impl RasterizationConfig {
     const GLYPHS_PER_SLICE: i32 = 16; // 4x4 grid
     const GRID_SIZE: i32 = 4;
-
+    
     fn new(
         cell_width: i32,
         cell_height: i32,
@@ -137,8 +138,8 @@ impl GlyphCoordinate {
     }
 
     fn xy(&self, config: &RasterizationConfig) -> (i32, i32) {
-        let x = self.grid_x as i32 * config.cell_width + PADDING;
-        let y = self.grid_y as i32 * config.cell_height + PADDING;
+        let x = self.grid_x as i32 * config.cell_width + FontAtlasData::PADDING;
+        let y = self.grid_y as i32 * config.cell_height + FontAtlasData::PADDING;
         (x, y)
     }
 }
@@ -226,30 +227,32 @@ impl BitmapFontGenerator {
         texture: &mut [u32],
         coord: GlyphCoordinate,
     ) {
-        // Calculate the buffer for this specific glyph
+        // calculate the buffer for this specific glyph
         let mut buffer = self.rasterize_glyph(
             &glyph.symbol,
             glyph.style,
-            config.cell_width,
-            config.cell_height,
+            config.cell_width - FontAtlasData::PADDING * 2,
+            config.cell_height - FontAtlasData::PADDING * 2,
         );
-
+        buffer.set_size(
+            &mut self.font_system,
+            Some(config.cell_width as f32 - FontAtlasData::PADDING as f32 * 2.0),
+            Some(config.cell_height as f32 - FontAtlasData::PADDING as f32 * 2.0),
+        );
         let mut buffer = buffer.borrow_with(&mut self.font_system);
         let swash_cache = &mut self.cache;
 
-        // todo: special handling for emoji?
+        let x_offset_px = coord.grid_x as i32 * config.cell_width;
+        let y_offset_px = coord.grid_y as i32 * config.cell_height;
         buffer.draw(swash_cache, WHITE, |x, y, w, h, color| {
             if color.a() == 0 || x < 0 || x >= config.cell_width
                 || y < 0 || y >= config.cell_height || w != 1 || h != 1 {
                 return;
             }
-
-            let x_offset = coord.grid_x as i32 * config.cell_width;
-            let y_offset = coord.grid_y as i32 * config.cell_height;
-
+            
             // calculate position in 3D texture
-            let px = x + x_offset + PADDING;
-            let py = y + y_offset + PADDING;
+            let px = x + x_offset_px + FontAtlasData::PADDING;
+            let py = y + y_offset_px + FontAtlasData::PADDING;
 
             if px >= config.texture_width || py >= config.texture_height {
                 return;
@@ -271,13 +274,13 @@ impl BitmapFontGenerator {
         &mut self,
         c: &str,
         style: FontStyle,
-        cell_w: i32,
-        cell_h: i32,
+        inner_cell_w: i32,
+        inner_cell_h: i32,
     ) -> Buffer {
         let f = &mut self.font_system;
 
         let mut buffer = Buffer::new(f, self.metrics);
-        buffer.set_size(f, Some(2.0 * cell_w as f32), Some(2.0 * cell_h as f32));
+        buffer.set_size(f, Some(inner_cell_w as f32), Some(inner_cell_h as f32));
 
         buffer.set_text(f, c, &attrs(style), cosmic_text::Shaping::Advanced);
         buffer.shape_until_scroll(f, true);
@@ -322,8 +325,8 @@ impl BitmapFontGenerator {
         }
 
         // add some padding
-        let cell_width = max_width + PADDING * 2;
-        let cell_height = max_height + PADDING * 2;
+        let cell_width = max_width + FontAtlasData::PADDING * 2;
+        let cell_height = max_height + FontAtlasData::PADDING * 2;
 
         (cell_width, cell_height)
     }
