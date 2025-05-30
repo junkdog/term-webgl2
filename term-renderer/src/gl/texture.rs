@@ -24,14 +24,14 @@ impl Texture {
     //     //         console::error_1(&format!("Failed to load image: {:?}", e).into());
     //     //         Error::image_load_failed(&e.to_string())
     //     //     })?;
-    //     
+    //
     //     // convert the image to RGBA format
     //     // let (width, height) = img.dimensions();
     //     // console::log_1(&format!("Image dimensions: {}x{}", width, height).into());
-    //     // 
+    //     //
     //     // let rgba_image = img.to_rgba8();
     //     // let raw_data = rgba_image.as_raw();
-    // 
+    //
     //     // create the texture
     //     Self::new(gl, format, metadata)
     // }
@@ -47,7 +47,7 @@ impl Texture {
         console::log_1(&format!("glyphs={}", atlas.glyphs.len()).into());
         console::log_1(&format!("3d texture layout {}x{}x{}",
             atlas.texture_width, atlas.texture_height, atlas.texture_depth).into());
-        
+
         let data_len = atlas.texture_data.len() * 4;
         console::log_1(&format!("Texture data length: {}kb", data_len / 1024).into());
 
@@ -59,14 +59,14 @@ impl Texture {
             atlas.texture_height as i32,
             atlas.texture_depth as i32
         );
-        
+
         // prepare texture
         let gl_texture = gl.create_texture()
             .ok_or(Error::texture_creation_failed())?;
         gl.bind_texture(GL::TEXTURE_3D, Some(&gl_texture));
         gl.tex_storage_3d(GL::TEXTURE_3D, 1, GL::RGBA8, width, height, depth);
-        
-        
+
+
         // upload the texture data; convert to u8 array
         let texture_data: Vec<u8> = atlas.texture_data.iter()
             .flat_map(|&color| color.to_le_bytes())
@@ -82,7 +82,7 @@ impl Texture {
             Some(&texture_data),
             0 // src offset
         ).map_err(|_| Error::texture_creation_failed())?;
-        
+
         Self::setup_mipmap_3d(gl);
 
         Ok(Self { gl_texture, format, width: cell_width, height: cell_height })
@@ -112,8 +112,8 @@ impl Texture {
     }
 
     fn setup_mipmap_3d(gl: &web_sys::WebGl2RenderingContext) {
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
+        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MIN_FILTER, GL::NEAREST as i32);
+        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MAG_FILTER, GL::NEAREST as i32);
         gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
         gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
         gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_R, GL::CLAMP_TO_EDGE as i32);
