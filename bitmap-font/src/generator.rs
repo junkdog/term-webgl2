@@ -100,8 +100,8 @@ impl RasterizationConfig {
         let depth = (max_id + Self::GLYPHS_PER_SLICE - 1) / Self::GLYPHS_PER_SLICE;
 
         Self {
-            texture_width: next_pow2(slice_width),
-            texture_height: next_pow2(slice_height),
+            texture_width: slice_width,
+            texture_height: slice_height,
             texture_depth: next_pow2(depth),
             cell_width,
             cell_height,
@@ -367,8 +367,6 @@ fn assign_missing_glyph_ids(
 
 // Rounds up to the next power of 2
 fn next_pow2(n: i32) -> i32 {
-    return n;
-    
     let mut v = n;
     v -= 1;
     v |= v >> 1;
