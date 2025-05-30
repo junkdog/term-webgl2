@@ -234,19 +234,20 @@ impl BitmapFontGenerator {
             config.cell_width - FontAtlasData::PADDING * 2,
             config.cell_height - FontAtlasData::PADDING * 2,
         );
-        buffer.set_size(
-            &mut self.font_system,
-            Some(config.cell_width as f32 - FontAtlasData::PADDING as f32 * 2.0),
-            Some(config.cell_height as f32 - FontAtlasData::PADDING as f32 * 2.0),
-        );
         let mut buffer = buffer.borrow_with(&mut self.font_system);
         let swash_cache = &mut self.cache;
 
+        let inner_cell_w = config.cell_width - FontAtlasData::PADDING * 2;
+        let inner_cell_h = config.cell_height - FontAtlasData::PADDING * 2; 
         let x_offset_px = coord.grid_x as i32 * config.cell_width;
         let y_offset_px = coord.grid_y as i32 * config.cell_height;
+        
         buffer.draw(swash_cache, WHITE, |x, y, w, h, color| {
-            if color.a() == 0 || x < 0 || x >= config.cell_width
-                || y < 0 || y >= config.cell_height || w != 1 || h != 1 {
+            if color.a() == 0 
+                || x < 0 || x >= inner_cell_w
+                || y < 0 || y >= inner_cell_h
+                || w != 1 || h != 1
+            {
                 return;
             }
             
