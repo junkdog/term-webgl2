@@ -88,7 +88,7 @@ struct RasterizationConfig {
 impl RasterizationConfig {
     const GLYPHS_PER_SLICE: i32 = 16; // 4x4 grid
     const GRID_SIZE: i32 = 4;
-    
+
     fn new(
         cell_width: i32,
         cell_height: i32,
@@ -141,6 +141,14 @@ impl GlyphCoordinate {
         let x = self.grid_x as i32 * config.cell_width + FontAtlasData::PADDING;
         let y = self.grid_y as i32 * config.cell_height + FontAtlasData::PADDING;
         (x, y)
+    }
+
+    fn cell_offset(&self, config: &RasterizationConfig) -> (i32, i32, i32) {
+        (
+            self.grid_x as i32 * config.cell_width,
+            self.grid_y as i32 * config.cell_height,
+            self.slice as i32,
+        )
     }
 }
 
@@ -227,49 +235,105 @@ impl BitmapFontGenerator {
         texture: &mut [u32],
         coord: GlyphCoordinate,
     ) {
-        // calculate the buffer for this specific glyph
-        let mut buffer = self.rasterize_glyph(
-            &glyph.symbol,
-            glyph.style,
-            config.cell_width - FontAtlasData::PADDING * 2,
-            config.cell_height - FontAtlasData::PADDING * 2,
-        );
-        let mut buffer = buffer.borrow_with(&mut self.font_system);
-        let swash_cache = &mut self.cache;
-
         let inner_cell_w = config.cell_width - FontAtlasData::PADDING * 2;
-        let inner_cell_h = config.cell_height - FontAtlasData::PADDING * 2; 
-        let x_offset_px = coord.grid_x as i32 * config.cell_width;
-        let y_offset_px = coord.grid_y as i32 * config.cell_height;
-        
-        buffer.draw(swash_cache, WHITE, |x, y, w, h, color| {
-            if color.a() == 0 
-                || x < 0 || x >= inner_cell_w
-                || y < 0 || y >= inner_cell_h
-                || w != 1 || h != 1
-            {
-                return;
-            }
-            
-            // calculate position in 3D texture
-            let px = x + x_offset_px + FontAtlasData::PADDING;
-            let py = y + y_offset_px + FontAtlasData::PADDING;
+        let inner_cell_h = config.cell_height - FontAtlasData::PADDING * 2;
 
-            if px >= config.texture_width || py >= config.texture_height {
-                return;
-            }
+        // rasterize the glyph
+        let mut buffer = self.rasterize_glyph_for_atlas(glyph, inner_cell_w, inner_cell_h);
+        let buffer_size = self.get_buffer_size(glyph.is_emoji, inner_cell_w, inner_cell_h);
 
-            // calculate index in flat array for 3D texture
-            let idx = (coord.slice as i32 * config.texture_width * config.texture_height
-                + py * config.texture_width + px
-            ) as usize;
+        buffer.set_size(&mut self.font_system, Some(buffer_size.0), Some(buffer_size.1));
 
-            if idx < texture.len() {
-                let [r, g, b, a] = color.as_rgba().map(|c| c as u32);
-                texture[idx] = r << 24 | g << 16 | b << 8 | a;
+        let mut buffer = buffer.borrow_with(&mut self.font_system);
+        let cell_offset = coord.cell_offset(config);
+
+        // collect pixels and optionally calculate centering
+        let pixels = Self::collect_glyph_pixels(&mut buffer, &mut self.cache, glyph.is_emoji, inner_cell_w, inner_cell_h);
+
+        // render pixels to texture
+        let cell_offset = (cell_offset.0, cell_offset.1);
+        self.render_pixels_to_texture(pixels, cell_offset, coord.slice as i32, config, texture);
+    }
+
+    fn rasterize_glyph_for_atlas(&mut self, glyph: &Glyph, inner_w: i32, inner_h: i32) -> Buffer {
+        if glyph.is_emoji {
+            self.rasterize_emoji(&glyph.symbol, inner_w as f32, inner_h as f32)
+        } else {
+            self.rasterize_glyph(&glyph.symbol, glyph.style, inner_w, inner_h)
+        }
+    }
+
+    fn get_buffer_size(&self, is_emoji: bool, inner_w: i32, inner_h: i32) -> (f32, f32) {
+        if is_emoji {
+            (inner_w as f32 * 2.0, inner_h as f32 * 2.0)
+        } else {
+            (inner_w as f32, inner_h as f32)
+        }
+    }
+
+    fn collect_glyph_pixels(
+        buffer: &mut cosmic_text::BorrowedWithFontSystem<Buffer>,
+        cache: &mut SwashCache,
+        center_emoji: bool,
+        inner_w: i32,
+        inner_h: i32,
+    ) -> Vec<(i32, i32, Color)> {
+        let mut pixels = Vec::new();
+        let mut bounds = GlyphBounds::new();
+
+        buffer.draw(cache, WHITE, |x, y, w, h, color| {
+            if color.a() > 0 && w == 1 && h == 1 {
+                bounds.update(x, y);
+                pixels.push((x, y, color));
             }
         });
+
+        if center_emoji && !pixels.is_empty() {
+            let (offset_x, offset_y) = bounds.centering_offset(inner_w, inner_h);
+            pixels.iter_mut().for_each(|(x, y, _)| {
+                *x += offset_x;
+                *y += offset_y;
+            });
+        }
+
+        pixels
     }
+
+    fn render_pixels_to_texture(
+        &self,
+        pixels: Vec<(i32, i32, Color)>,
+        cell_offset: (i32, i32),
+        slice: i32,
+        config: &RasterizationConfig,
+        texture: &mut [u32],
+    ) {
+        let inner_w = config.cell_width - FontAtlasData::PADDING * 2;
+        let inner_h = config.cell_height - FontAtlasData::PADDING * 2;
+
+        for (x, y, color) in pixels {
+            if x < 0 || x >= inner_w || y < 0 || y >= inner_h {
+                continue;
+            }
+
+            let px = x + cell_offset.0 + FontAtlasData::PADDING;
+            let py = y + cell_offset.1 + FontAtlasData::PADDING;
+
+            if px >= 0 && px < config.texture_width && py >= 0 && py < config.texture_height {
+                let idx = self.texture_index(px, py, slice, config);
+
+                if idx < texture.len() {
+                    let [r, g, b, a] = color.as_rgba().map(|c| c as u32);
+                    texture[idx] = r << 24 | g << 16 | b << 8 | a;
+                }
+            }
+        }
+    }
+
+    fn texture_index(&self, x: i32, y: i32, slice: i32, config: &RasterizationConfig) -> usize {
+        (slice * config.texture_width * config.texture_height + y * config.texture_width + x) as usize
+    }
+
+
 
     fn rasterize_glyph(
         &mut self,
@@ -283,7 +347,70 @@ impl BitmapFontGenerator {
         let mut buffer = Buffer::new(f, self.metrics);
         buffer.set_size(f, Some(inner_cell_w as f32), Some(inner_cell_h as f32));
 
+        buffer.set_monospace_width(f, Some(inner_cell_w as f32));
         buffer.set_text(f, c, &attrs(style), cosmic_text::Shaping::Advanced);
+        buffer.shape_until_scroll(f, true);
+
+        buffer
+    }
+    
+    fn rasterize_emoji(
+        &mut self,
+        emoji: &str,
+        inner_cell_w: f32,
+        inner_cell_h: f32,
+    ) -> Buffer {
+        let f = &mut self.font_system;
+
+        // First pass: measure at default size
+        let measure_size = self.font_size * 2.0; // Start slightly larger
+        let measure_metrics = Metrics::new(measure_size, measure_size * 2.0);
+
+        let mut measure_buffer = Buffer::new(f, measure_metrics);
+        measure_buffer.set_size(f, Some(inner_cell_w * 4.0), Some(inner_cell_h * 4.0));
+        measure_buffer.set_text(f, emoji, &attrs(FontStyle::Normal), cosmic_text::Shaping::Advanced);
+        measure_buffer.shape_until_scroll(f, true);
+
+        // Measure actual bounds
+        let mut min_x = i32::MAX;
+        let mut max_x = i32::MIN;
+        let mut min_y = i32::MAX;
+        let mut max_y = i32::MIN;
+        let mut has_content = false;
+
+        let mut measure_buffer = measure_buffer.borrow_with(f);
+        measure_buffer.draw(&mut self.cache, WHITE, |x, y, _w, _h, color| {
+            if color.a() > 0 {
+                has_content = true;
+                min_x = min_x.min(x);
+                max_x = max_x.max(x);
+                min_y = min_y.min(y);
+                max_y = max_y.max(y);
+            }
+        });
+        drop(measure_buffer);
+
+        if !has_content {
+            // Fallback for emojis that don't render
+            return self.rasterize_glyph(emoji, FontStyle::Normal, inner_cell_w as i32, inner_cell_h as i32);
+        }
+
+        // calculate actual dimensions
+        let actual_width = (max_x - min_x + 1) as f32;
+        let actual_height = (max_y - min_y + 1) as f32;
+
+        // calculate scale factor (with 80% target to leave some padding)
+        let scale_x = (inner_cell_w) / actual_width;
+        let scale_y = (inner_cell_h) / actual_height;
+        let scale = scale_x.min(scale_y).min(1.0); // Don't scale up
+
+        // render at scaled size
+        let scaled_size = measure_size * scale;
+        let scaled_metrics = Metrics::new(scaled_size, scaled_size * 1.2);
+
+        let mut buffer = Buffer::new(f, scaled_metrics);
+        buffer.set_size(f, Some(inner_cell_w), Some(inner_cell_w));
+        buffer.set_text(f, emoji, &attrs(FontStyle::Normal), cosmic_text::Shaping::Advanced);
         buffer.shape_until_scroll(f, true);
 
         buffer
@@ -333,12 +460,6 @@ impl BitmapFontGenerator {
     }
 }
 
-fn sorted_graphemes(chars: &str) -> Vec<&str> {
-    let mut graphemes = chars.graphemes(true).collect::<Vec<&str>>();
-    graphemes.sort();
-    graphemes.dedup();
-    graphemes
-}
 
 fn assign_missing_glyph_ids(
     used_ids: HashSet<u16>,
@@ -396,6 +517,43 @@ fn attrs(style: FontStyle) -> Attrs<'static> {
         BoldItalic => attrs.style(Style::Italic).weight(Weight::BOLD),
     }
 }
+
+struct GlyphBounds {
+    min_x: i32,
+    max_x: i32,
+    min_y: i32,
+    max_y: i32,
+}
+
+impl GlyphBounds {
+    fn new() -> Self {
+        Self {
+            min_x: i32::MAX,
+            max_x: i32::MIN,
+            min_y: i32::MAX,
+            max_y: i32::MIN,
+        }
+    }
+
+    fn update(&mut self, x: i32, y: i32) {
+        self.min_x = self.min_x.min(x);
+        self.max_x = self.max_x.max(x);
+        self.min_y = self.min_y.min(y);
+        self.max_y = self.max_y.max(y);
+    }
+
+    fn centering_offset(&self, cell_w: i32, cell_h: i32) -> (i32, i32) {
+        let content_w = self.max_x - self.min_x + 1;
+        let content_h = self.max_y - self.min_y + 1;
+
+        let offset_x = (cell_w - content_w) / 2 - self.min_x;
+        let offset_y = (cell_h - content_h) / 2 - self.min_y;
+
+        (offset_x, offset_y)
+    }
+}
+
+    
 
 #[cfg(test)]
 mod tests {
