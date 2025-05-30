@@ -7,9 +7,6 @@ use std::fs::File;
 use std::io::Write;
 
 const PADDING: i32 = 1;
-// const GLYPHS: &str = "
-//  0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
-// ";
 const GLYPHS: &str = "
 !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop
 qrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãä
@@ -39,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install()?;
     
     // let bitmap_font = BitmapFontGenerator::new(10.0, 1024) // 10.0 is the ref benchmark font size
-    let bitmap_font = BitmapFontGenerator::new(13.0, 1024)
+    let bitmap_font = BitmapFontGenerator::new(30.0, 1024)
         .generate(GLYPHS);
 
     bitmap_font.save("./data/bitmap_font.atlas")?;
@@ -74,41 +71,6 @@ impl BitmapFont {
         BitmapFontGenerator::new(font_size, texture_width)
             .generate(chars)
     }
-
-    /// Save the bitmap font texture as a PNG file
-    // pub fn save_texture(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    //     let mut img = ImageBuffer::<Rgba<u8>, Vec<u8>>::new(
-    //         self.metadata.texture_width,
-    //         self.metadata.texture_height
-    //     );
-    //
-    //     for y in 0..self.metadata.texture_height {
-    //         for x in 0..self.metadata.texture_width {
-    //             let idx = y * self.metadata.texture_width + x;
-    //             if let Some(color) = self.texture_data.get(idx as usize) {
-    //                 let pixel = [
-    //                     (*color >> 24) as u8,
-    //                     (*color >> 16) as u8,
-    //                     (*color >> 8) as u8,
-    //                     *color as u8
-    //                 ];
-    //                 img.put_pixel(x, y, Rgba(pixel));
-    //
-    //             }
-    //         }
-    //     }
-    //
-    //     img.save(path)?;
-    //     Ok(())
-    // }
-
-    // fn save_metadata(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    //     let metadata = &self.atlas_data;
-    //     let mut file = File::create(path)?;
-    //     Write::write_all(&mut file, &metadata.to_binary())?;
-    //
-    //     Ok(())
-    // }
 
     /// Save bitmap font and metadata to a file
     pub fn save(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {

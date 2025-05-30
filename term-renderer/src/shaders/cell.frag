@@ -2,15 +2,20 @@
 
 precision mediump float;
 
+// uniforms
 uniform mediump sampler3D u_sampler;
+layout(std140) uniform CellUniforms {
+    mat4 u_projection;
+    vec2 u_cell_size;
+    float u_num_slices;
+};
+
 
 // packs 8b: 2b layer, 3b fg.rgb, 3b bg.rgb
 flat in uvec2 v_packed_data;
 in vec2 v_tex_coord;
 
 out vec4 FragColor;
-
-const float u_num_slices = 16.0; // Number of slices in the 3D texture
 
 float normalize_lsb(uint value) {
     return (float(value & 0xFFu)) / 255.0;
@@ -32,8 +37,6 @@ void main() {
         (float(slice) + 0.5) / u_num_slices
     );
 
-    vec4 glyph = texture(u_sampler, tex_coord);
-
     vec3 fg = vec3(
         normalize_lsb(v_packed_data.x >> 16),
         normalize_lsb(v_packed_data.x >> 24),
@@ -45,6 +48,6 @@ void main() {
         normalize_lsb(v_packed_data.y >> 24)
     );
 
-    float a = 1.0 - glyph.a;
+    float a = texture(u_sampler, tex_coord).a;
     FragColor = vec4(mix(fg, bg, a), 1.0);
 }

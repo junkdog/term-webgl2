@@ -56,7 +56,6 @@ impl<'a> GraphemeSet<'a> {
             for style in FontStyle::ALL {
                 glyphs.push(Glyph::new(c, style, (0, 0)));
             }
-                // glyphs.push(Glyph::new(c, FontStyle::Normal, (0, 0)));
         }
 
         // unicode glyphs fill any gaps in the ASCII range (0x000-0x1FF)
@@ -75,14 +74,6 @@ impl<'a> GraphemeSet<'a> {
         glyphs
     }
 }
-
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GlyphType {
-    Normal,
-    Emoji
-}
-
 
 #[derive(Debug)]
 struct RasterizationConfig {
@@ -376,6 +367,8 @@ fn assign_missing_glyph_ids(
 
 // Rounds up to the next power of 2
 fn next_pow2(n: i32) -> i32 {
+    return n;
+    
     let mut v = n;
     v -= 1;
     v |= v >> 1;

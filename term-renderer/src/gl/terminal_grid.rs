@@ -71,7 +71,7 @@ impl TerminalGrid {
         // prepare vertex, index and instance buffers
         let cell_size = atlas.cell_size();
         let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
-        
+
         let cell_data = create_terminal_cell_data(cols, rows);
         let cell_pos = CellStatic::create_grid(cols, rows);
         let buffers = setup_buffers(gl, vao, &cell_pos, &cell_data, cell_size)?;
@@ -127,6 +127,7 @@ impl TerminalGrid {
         &self,
         gl: &WebGl2RenderingContext,
         screen_size: (i32, i32),
+        texture_slices: u32,
     ) {
         // let cell_size = (cell_size.0 - 2, cell_size.1 - 2);
         
@@ -139,6 +140,7 @@ impl TerminalGrid {
                 screen_size.1 as f32
             ).data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
+            num_slices: texture_slices as f32,
             // atlas_cell_size: [
             //     1.0 / self.atlas.cell_size().0 as f32,
             //     1.0 / self.atlas.cell_size().1 as f32,
@@ -522,6 +524,7 @@ impl CellDynamic {
 struct CellUbo {
     pub projection: [f32; 16],     // mat4
     pub cell_size: [f32; 2],       // vec2 - screen cell size
+    pub num_slices: f32,
     // pub atlas_cell_size: [f32; 2], // vec2 - atlas UV cell size (1.0/4.0 = 0.25)
 }
 
@@ -530,6 +533,7 @@ impl CellUbo {
         Self {
             projection: projection.data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
+            num_slices: 1.0, // default to 1 slice, can be updated later
             // atlas_cell_size: [0.25, 0.25], // 1/4 for a 4x4 grid per slice
         }
     }
@@ -539,15 +543,12 @@ impl CellUbo {
     pub const BINDING_POINT: u32 = 0;
 }
 
-fn create_terminal_cell_data(cols: i32, rows: i32) -> Vec<CellDynamic> {
+fn create_terminal_cell_data(
+    cols: i32,
+    rows: i32,
+) -> Vec<CellDynamic> {
     (0..cols * rows)
-        .map(|i| {
-            if i & 1 == 1 {
-                CellDynamic::new('A' as i32, 0xffff_ffff, 0x0000_00ff)
-            } else {
-                CellDynamic::new(' ' as i32, 0x0000_00ff, 0xffff_ffff)
-            }
-        })
+        .map(|i| CellDynamic::new(i, 0xffff_ffff, 0x0000_00ff))
         .collect()
 }
 

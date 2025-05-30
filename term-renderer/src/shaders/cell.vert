@@ -13,6 +13,7 @@ layout(location = 3) in uvec2 a_packed_data;
 layout(std140) uniform CellUniforms {
     mat4 u_projection;
     vec2 u_cell_size;
+    float u_num_slices;
 };
 
 // packs 8b: 2b layer, 3b fg.rgb, 3b bg.rgb
