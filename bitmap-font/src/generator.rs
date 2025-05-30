@@ -1,8 +1,9 @@
-use std::collections::HashSet;
-use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
-use unicode_segmentation::UnicodeSegmentation;
-use font_atlas::{FontAtlasData, FontStyle, Glyph};
+use crate::coordinate::GlyphCoordinate;
+use crate::grapheme::GraphemeSet;
+use crate::raster_config::RasterizationConfig;
 use crate::BitmapFont;
+use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
+use font_atlas::{FontAtlasData, FontStyle, Glyph};
 
 const WHITE: Color = Color::rgb(0xff, 0xff, 0xff);
 
@@ -11,139 +12,6 @@ pub(super) struct BitmapFontGenerator {
     cache: SwashCache,
     font_size: f32,
     metrics: Metrics,
-}
-
-
-struct GraphemeSet<'a> {
-    ascii: Vec<&'a str>,
-    unicode: Vec<&'a str>,
-    emoji: Vec<&'a str>,
-}
-
-impl<'a> GraphemeSet<'a> {
-    fn new(chars: &'a str) -> Self {
-        let mut graphemes = chars.graphemes(true).collect::<Vec<&str>>();
-        graphemes.sort();
-        graphemes.dedup();
-
-
-        let mut ascii = vec![];
-        let mut unicode = vec![];
-        let mut emoji = vec![];
-
-        for g in graphemes {
-            if g.len() == 1 && g.chars().all(|c| c.is_ascii()) {
-                ascii.push(g);
-            } else if emojis::get(g).is_some() {
-                emoji.push(g);
-            } else {
-                unicode.push(g);
-            }
-        }
-        let non_emoji_glyphs = ascii.len() + unicode.len();
-        assert!(non_emoji_glyphs <= 512, "Too many unique graphemes: {}", non_emoji_glyphs);
-
-        Self { ascii, unicode, emoji }
-    }
-
-    pub(super) fn into_glyphs(self) -> Vec<Glyph> {
-        let mut glyphs = Vec::new();
-
-        // pre-assigned glyphs (in the range 0x000-0x07F)
-        let mut used_ids = HashSet::new();
-        for c in self.ascii.iter() {
-            used_ids.insert(c.chars().next().unwrap() as u16);
-            for style in FontStyle::ALL {
-                glyphs.push(Glyph::new(c, style, (0, 0)));
-            }
-        }
-
-        // unicode glyphs fill any gaps in the ASCII range (0x000-0x1FF)
-        glyphs.extend(assign_missing_glyph_ids(used_ids, &self.unicode));
-
-        // emoji glyphs are assigned IDs starting from 0x800
-        for (i, c) in self.emoji.iter().enumerate() {
-            let id = i as u16 | Glyph::EMOJI_FLAG;
-            let mut glyph = Glyph::new_with_id(id, c, FontStyle::Normal, (0, 0));
-            glyph.is_emoji = true;
-            glyphs.push(glyph);
-        }
-
-        glyphs.sort_by_key(|g| g.id);
-
-        glyphs
-    }
-}
-
-#[derive(Debug)]
-struct RasterizationConfig {
-    texture_width: i32,
-    texture_height: i32,
-    texture_depth: i32, // slices
-    cell_width: i32,
-    cell_height: i32,
-}
-
-impl RasterizationConfig {
-    const GLYPHS_PER_SLICE: i32 = 16; // 4x4 grid
-    const GRID_SIZE: i32 = 4;
-
-    fn new(
-        cell_width: i32,
-        cell_height: i32,
-        glyphs: &[Glyph],
-    ) -> Self {
-        let slice_width = Self::GRID_SIZE * cell_width;
-        let slice_height = Self::GRID_SIZE * cell_height;
-
-        let max_id = glyphs.iter().map(|g| g.id).max().unwrap_or(0) as i32;
-        let depth = (max_id + Self::GLYPHS_PER_SLICE - 1) / Self::GLYPHS_PER_SLICE;
-
-        Self {
-            texture_width: slice_width,
-            texture_height: slice_height,
-            texture_depth: next_pow2(depth),
-            cell_width,
-            cell_height,
-        }
-    }
-
-    fn texture_size(&self) -> usize {
-        (self.texture_width * self.texture_height * self.texture_depth) as usize
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct GlyphCoordinate {
-    slice: u16, // Z coordinate in 3D texture
-    grid_x: u8, // X position in 4x4 grid (0-3)
-    grid_y: u8, // Y position in 4x4 grid (0-3)
-}
-
-impl GlyphCoordinate {
-    fn from_glyph_id(id: u16) -> Self {
-        // 16 glyphs per slice (4x4)
-        let slice = id >> 4;
-        let position_in_slice = id & 0xF;
-        let grid_x = (position_in_slice % 4) as u8;
-        let grid_y = (position_in_slice / 4) as u8;
-
-        Self { slice, grid_x, grid_y }
-    }
-
-    fn xy(&self, config: &RasterizationConfig) -> (i32, i32) {
-        let x = self.grid_x as i32 * config.cell_width + FontAtlasData::PADDING;
-        let y = self.grid_y as i32 * config.cell_height + FontAtlasData::PADDING;
-        (x, y)
-    }
-
-    fn cell_offset(&self, config: &RasterizationConfig) -> (i32, i32, i32) {
-        (
-            self.grid_x as i32 * config.cell_width,
-            self.grid_y as i32 * config.cell_height,
-            self.slice as i32,
-        )
-    }
 }
 
 impl BitmapFontGenerator {
@@ -334,8 +202,6 @@ impl BitmapFontGenerator {
         (slice * config.texture_width * config.texture_height + y * config.texture_width + x) as usize
     }
 
-
-
     fn rasterize_glyph(
         &mut self,
         c: &str,
@@ -400,7 +266,7 @@ impl BitmapFontGenerator {
         let actual_width = (max_x - min_x + 1) as f32;
         let actual_height = (max_y - min_y + 1) as f32;
 
-        // calculate scale factor (with 80% target to leave some padding)
+        // calculate scale factor 
         let scale_x = (inner_cell_w) / actual_width;
         let scale_y = (inner_cell_h) / actual_height;
         let scale = scale_x.min(scale_y).min(1.0); // Don't scale up
@@ -462,47 +328,7 @@ impl BitmapFontGenerator {
 }
 
 
-fn assign_missing_glyph_ids(
-    used_ids: HashSet<u16>,
-    symbols: &[&str]
-) -> Vec<Glyph> {
-    let mut next_id: i32 = -1; // initial value to -1
-    let mut next_glyph_id = || {
-        let mut id = next_id;
-        while id == -1 || used_ids.contains(&(id as u16)) {
-            id += 1;
-        }
 
-        next_id = id + 1;
-        id as u16
-    };
-
-    symbols.iter()
-        .flat_map(|c| {
-            let base_id = next_glyph_id();
-            [
-                Glyph::new_with_id(base_id, c, FontStyle::Normal, (0, 0)),
-                Glyph::new_with_id(base_id, c, FontStyle::Bold, (0, 0)),
-                Glyph::new_with_id(base_id, c, FontStyle::Italic, (0, 0)),
-                Glyph::new_with_id(base_id, c, FontStyle::BoldItalic, (0, 0)),
-            ]
-        })
-        .collect()
-}
-
-
-// Rounds up to the next power of 2
-fn next_pow2(n: i32) -> i32 {
-    let mut v = n;
-    v -= 1;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v += 1;
-    v
-}
 
 fn attrs(style: FontStyle) -> Attrs<'static> {
     let attrs = Attrs::new()
@@ -551,25 +377,5 @@ impl GlyphBounds {
         let offset_y = (cell_h - content_h) / 2 - self.min_y;
 
         (offset_x, offset_y)
-    }
-}
-
-    
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_next_pow2() {
-        assert_eq!(next_pow2(1), 1);
-        assert_eq!(next_pow2(2), 2);
-        assert_eq!(next_pow2(3), 4);
-        assert_eq!(next_pow2(4), 4);
-        assert_eq!(next_pow2(5), 8);
-        assert_eq!(next_pow2(15), 16);
-        assert_eq!(next_pow2(16), 16);
-        assert_eq!(next_pow2(17), 32);
-        assert_eq!(next_pow2(1023), 1024);
     }
 }

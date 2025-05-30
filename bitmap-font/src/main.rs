@@ -1,4 +1,7 @@
 mod generator;
+mod coordinate;
+mod raster_config;
+mod grapheme;
 
 use crate::generator::BitmapFontGenerator;
 use font_atlas::*;
@@ -44,9 +47,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Texture size: {}x{}", bitmap_font.atlas_data.texture_width, bitmap_font.atlas_data.texture_height);
     println!("Cell size: {}x{}", bitmap_font.atlas_data.cell_width, bitmap_font.atlas_data.cell_height);
     println!("Total glyph count: {}", bitmap_font.atlas_data.glyphs.len());
-    println!("Glyph count per variant: {}/{}", 
-        bitmap_font.atlas_data.glyphs.len() / FontStyle::ALL.len(),
-        Glyph::GLYPH_ID_MASK + 1 // zero-based id/index
+    println!("Glyph count per variant: {}/{} (emoji: {})",
+        bitmap_font.atlas_data.glyphs.iter().filter(|g| !g.is_emoji).count() / FontStyle::ALL.len(),
+        Glyph::GLYPH_ID_MASK + 1, // zero-based id/index
+        bitmap_font.atlas_data.glyphs.iter().filter(|g| g.is_emoji).count()
     );
     
     Ok(())
