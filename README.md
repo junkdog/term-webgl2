@@ -90,37 +90,15 @@ terminal_grid.update_cells(gl, cell_data.iter())?;
 renderer.render(&terminal_grid);
 ```
 
-### Core Components
-
-The renderer exposes two primary types that work together to provide efficient terminal rendering:
-
-#### TerminalGrid
+### TerminalGrid
 Main rendering component managing the terminal display. Handles shader programs, cell data, GPU
 buffers, and rendering state. Key methods include `new()` for initialization, `update_cells()`
 for content updates, and sizing queries.
 
-#### FontAtlas
+### FontAtlas
 Manages the 3D texture atlas containing all font glyphs. Provides character-to-texture-coordinate
 mapping with fast ASCII optimization. Supports loading default or custom font atlases.
 
-### Usage Example
-
-```rust
-// Initialize and create terminal
-let mut renderer = Renderer::create("canvas")?;
-let atlas = FontAtlas::load_default(renderer.gl())?;
-let terminal_grid = TerminalGrid::new(renderer.gl(), atlas, renderer.canvas_size())?;
-
-// Update cell content
-let cells = vec![
-    CellData::new("H", FontStyle::Normal, GlyphEffect::None, 0xFFFFFFFF, 0x000000FF),
-    CellData::new("i", FontStyle::Normal, GlyphEffect::None, 0xFFFFFFFF, 0x000000FF),
-    CellData::new("!", FontStyle::Bold, GlyphEffect::None, 0xFF00FFFF, 0x000000FF),
-];
-
-terminal_grid.update_cells(renderer.gl(), cells.iter())?;
-renderer.render(&terminal_grid);
-```
 
 ### Cell Data Structure
 
@@ -129,14 +107,6 @@ Each terminal cell requires:
 - **style**: `FontStyle` enum (Normal, Bold, Italic, BoldItalic)
 - **effect**: `GlyphEffect` enum (None, Underline, Strikethrough)
 - **fg/bg**: Colors as 32-bit ARGB values (`0xAARRGGBB`)
-
-## WebGL2 Feature Dependencies
-
-The renderer requires WebGL2 for:
-- **3D Textures** (`TEXTURE_3D`, `texStorage3D`, `texSubImage3D`)
-- **Instanced Rendering** (`drawElementsInstanced`, `vertexAttribDivisor`)
-- **Advanced Buffers** (`UNIFORM_BUFFER`, `vertexAttribIPointer`)
-- **Vertex Array Objects** (`createVertexArray`)
 
 ## Font Atlas 3D Texture Architecture
 
@@ -179,13 +149,13 @@ through simple bit shifts and masks.
 
 #### ID to 3D Position Examples
 
-| Character | Style  | Glyph ID | Calculation         | Result                | 
-|-----------|--------|----------|---------------------|-----------------------|
-| ' ' (32)  | Normal | 0x0020   | 32÷16=2, 32%16=0    | Slice 2, Grid (0,0)   |
-| 'A' (65)  | Normal | 0x0041   | 65÷16=4, 65%16=1    | Slice 4, Grid (1,0)   |
-| 'A' (65)  | Bold   | 0x0241   | 577÷16=36, 577%16=1 | Slice 36, Grid (1,0)  |
-| '€'       | Normal | 0x0080   | Mapped to ID 128    | Slice 8, Grid (0,0)   |
-| '🚀'      | Emoji  | 0x0881   | With emoji bit set  | Slice 136, Grid (1,0) |
+| Character | Style       | Glyph ID | Calculation            | Result                | 
+|-----------|-------------|----------|------------------------|-----------------------|
+| ' ' (32)  | Normal      | 0x0020   | 32÷16=2, 32%16=0       | Slice 2, Grid (0,0)   |
+| 'A' (65)  | Normal      | 0x0041   | 65÷16=4, 65%16=1       | Slice 4, Grid (1,0)   |
+| 'A' (65)  | Bold+Italic | 0x0641   | 1601÷16=100, 1601%16=1 | Slice 100, Grid (1,0) |
+| '€'       | Normal      | 0x0080   | Mapped to ID 128       | Slice 8, Grid (0,0)   |
+| '🚀'      | Emoji       | 0x0881   | With emoji bit set     | Slice 136, Grid (1,0) |
 
 The consistent modular arithmetic ensures that style variants maintain the same grid position
 within their respective slices, improving texture cache coherence.
@@ -285,9 +255,19 @@ avoiding expensive conditionals or memory lookups in the hot path.
 
 - **Emoji Rendering**: Bit 11 detection for full-color emoji with texture-based coloring
 - **Missing Glyph Handling**: Automatic fallback to space character with debug logging
-### Build and Deployment
 
-#### Development Setup
+
+### WebGL2 Feature Dependencies
+
+The renderer requires WebGL2 for:
+- **3D Textures** (`TEXTURE_3D`, `texStorage3D`, `texSubImage3D`)
+- **Instanced Rendering** (`drawElementsInstanced`, `vertexAttribDivisor`)
+- **Advanced Buffers** (`UNIFORM_BUFFER`, `vertexAttribIPointer`)
+- **Vertex Array Objects** (`createVertexArray`)
+
+## Build and Deployment
+
+### Development Setup
 ```bash
 # Install Rust toolchain
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
