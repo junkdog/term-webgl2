@@ -33,15 +33,6 @@ impl Texture {
 
 
         // upload the texture data; convert to u8 array
-        let texture_data: Vec<u8> = atlas.texture_data.iter()
-            .flat_map(|&color| [
-                    (color >> 24) as u8,  // R
-                    (color >> 16) as u8,  // G
-                    (color >> 8) as u8,   // B
-                    color as u8,          // A
-            ])
-            .collect();
-        
         gl.tex_sub_image_3d_with_opt_u8_array_and_src_offset(
             GL::TEXTURE_3D,
             0, // level
@@ -49,7 +40,7 @@ impl Texture {
             width, height, depth, // texture size
             GL::RGBA,
             GL::UNSIGNED_BYTE,
-            Some(&texture_data),
+            Some(&atlas.texture_data),
             0 // src offset
         ).map_err(|_| Error::texture_creation_failed())?;
 

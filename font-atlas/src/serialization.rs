@@ -51,11 +51,11 @@ impl Serializer {
     pub fn write_i32(&mut self, value: i32) {
         self.data.extend(&value.to_le_bytes());
     }
-    
-    pub fn write_u32_slice(&mut self, value: &[u32]) {
+
+    pub fn write_u8_slice(&mut self, value: &[u8]) {
         self.write_u32(value.len() as u32);
         for &v in value {
-            self.write_u32(v);
+            self.write_u8(v);
         }
     }
 
@@ -106,16 +106,16 @@ impl <'a> Deserializer<'a> {
 
         Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
     }
-    
-    pub fn read_u32_slice(&mut self) -> Result<Vec<u32>, SerializationError> {
+
+    pub fn read_u8_slice(&mut self) -> Result<Vec<u8>, SerializationError> {
         let length = self.read_u32()? as usize;
-        self.verify_offset_in_bounds(length * 4)?;
+        self.verify_offset_in_bounds(length)?;
 
         let mut values = Vec::with_capacity(length);
         for _ in 0..length {
-            values.push(self.read_u32()?);
+            values.push(self.read_u8()?);
         }
-        
+
         Ok(values)
     }
 
@@ -204,7 +204,7 @@ impl Serializable for FontAtlasData {
         ser.write_u32(self.texture_width);
         ser.write_u32(self.texture_height);
         ser.write_u32(self.texture_depth);
-        
+
         ser.write_i32(self.cell_width);
         ser.write_i32(self.cell_height);
 
@@ -213,8 +213,8 @@ impl Serializable for FontAtlasData {
         ser.data.extend(self.glyphs.iter().flat_map(Glyph::serialize));
 
         // serialize 3d texture data
-        ser.write_u32_slice(&self.texture_data);
-        
+        ser.write_u8_slice(&self.texture_data);
+
         ser.data
     }
 
@@ -242,7 +242,7 @@ impl Serializable for FontAtlasData {
         let texture_width = deser.read_u32()?;
         let texture_height = deser.read_u32()?;
         let texture_depth = deser.read_u32()?;
-        
+
         let cell_width = deser.read_i32()?;
         let cell_height = deser.read_i32()?;
 
@@ -252,9 +252,9 @@ impl Serializable for FontAtlasData {
         for _ in 0..glyph_count {
             glyphs.push(Glyph::deserialize(deser)?);
         }
-        
+
         // deserialize texture data
-        let texture_data = deser.read_u32_slice()?;
+        let texture_data = deser.read_u8_slice()?;
 
         Ok(FontAtlasData {
             font_size,

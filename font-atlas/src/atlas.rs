@@ -18,7 +18,7 @@ pub struct FontAtlasData {
     /// The glyphs in the font
     pub glyphs: Vec<Glyph>,
     /// The 3d texture data containing the font glyphs
-    pub texture_data: Vec<u32>,
+    pub texture_data: Vec<u8>,
 }
 
 impl Debug for FontAtlasData {

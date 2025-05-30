@@ -202,6 +202,17 @@ impl BitmapFontGenerator {
             updated_glyph.pixel_coords = coord.xy(&config);
             rasterized_glyphs.push(updated_glyph);
         }
+        
+        let texture_data = texture_data
+            .iter()
+            .flat_map(|&color| {
+                let r = (color >> 24) as u8;
+                let g = (color >> 16) as u8;
+                let b = (color >> 8) as u8;
+                let a = (color & 0xFF) as u8;
+                [r, g, b, a]
+            })
+            .collect::<Vec<u8>>();
 
         BitmapFont {
             atlas_data: FontAtlasData {
