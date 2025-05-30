@@ -72,7 +72,8 @@ impl TerminalGrid {
         let cell_size = atlas.cell_size();
         let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
 
-        let cell_data = create_terminal_cell_data(cols, rows);
+        let fill_glyph = atlas.get_glyph_coord("🤌", FontStyle::Normal).unwrap_or('X' as i32);
+        let cell_data = create_terminal_cell_data(cols, rows, fill_glyph);
         let cell_pos = CellStatic::create_grid(cols, rows);
         let buffers = setup_buffers(gl, vao, &cell_pos, &cell_data, cell_size)?;
 
@@ -531,9 +532,10 @@ impl CellUbo {
 fn create_terminal_cell_data(
     cols: i32,
     rows: i32,
+    fill_glyph: i32,
 ) -> Vec<CellDynamic> {
     (0..cols * rows)
-        .map(|i| CellDynamic::new(i, 0xffff_ffff, 0x0000_00ff))
+        .map(|i| CellDynamic::new(fill_glyph, 0xffff_ffff, 0x0000_00ff))
         .collect()
 }
 

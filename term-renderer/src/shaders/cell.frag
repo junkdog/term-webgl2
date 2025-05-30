@@ -31,23 +31,34 @@ void main() {
     uint grid_x = pos_in_slice % 4u;
     uint grid_y = pos_in_slice / 4u;
 
+    // 0.0 for normal glyphs, 1.0 for emojis
+    float emoji_factor = float((glyph_index >> 11) & 0x1u);
+
     vec3 tex_coord = vec3(
         (float(grid_x) + v_tex_coord.x) / 4.0,
         (float(grid_y) + v_tex_coord.y) / 4.0,
         (float(slice) + 0.5) / u_num_slices
     );
 
-    vec3 fg = vec3(
-        normalize_lsb(v_packed_data.x >> 16),
-        normalize_lsb(v_packed_data.x >> 24),
-        normalize_lsb(v_packed_data.y)
+    vec4 glyph = texture(u_sampler, tex_coord);
+
+    // color for normal glyphs are take from teh packed data;
+    // emoji colors are sampled from the texture directly
+    vec3 fg = mix(
+        vec3(
+            normalize_lsb(v_packed_data.x >> 16),
+            normalize_lsb(v_packed_data.x >> 24),
+            normalize_lsb(v_packed_data.y)
+        ),
+        glyph.rgb,
+        emoji_factor
     );
+
     vec3 bg = vec3(
         normalize_lsb(v_packed_data.y >> 8),
         normalize_lsb(v_packed_data.y >> 16),
         normalize_lsb(v_packed_data.y >> 24)
     );
 
-    float a = texture(u_sampler, tex_coord).a;
-    FragColor = vec4(mix(bg, fg, a), 1.0);
+    FragColor = vec4(mix(bg, fg, glyph.a), 1.0);
 }
