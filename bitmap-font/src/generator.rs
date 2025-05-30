@@ -11,7 +11,6 @@ pub(super) struct BitmapFontGenerator {
     cache: SwashCache,
     font_size: f32,
     metrics: Metrics,
-    texture_width: i32,
 }
 
 
@@ -132,11 +131,6 @@ impl GlyphCoordinate {
         Self { slice, grid_x, grid_y }
     }
 
-    fn to_glyph_id(&self) -> u16 {
-        self.slice << 4
-            | (self.grid_y as u16 * 4) + self.grid_x as u16
-    }
-
     fn xy(&self, config: &RasterizationConfig) -> (i32, i32) {
         let x = self.grid_x as i32 * config.cell_width + FontAtlasData::PADDING;
         let y = self.grid_y as i32 * config.cell_height + FontAtlasData::PADDING;
@@ -153,12 +147,9 @@ impl GlyphCoordinate {
 }
 
 impl BitmapFontGenerator {
-    const GRID_SIZE: usize = 4;
-    const GLYPHS_PER_SLICE: usize = Self::GRID_SIZE * Self::GRID_SIZE;  // 4x4 grid
 
     pub fn new(
         font_size: f32,
-        texture_width: usize,
     ) -> Self {
         let mut font_system = FontSystem::new();
         let font_db = font_system.db_mut();
@@ -177,7 +168,6 @@ impl BitmapFontGenerator {
             cache,
             metrics,
             font_size,
-            texture_width: texture_width as i32,
         }
     }
 

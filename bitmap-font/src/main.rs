@@ -1,5 +1,4 @@
 mod generator;
-mod verify_atlas_main;
 
 use crate::generator::BitmapFontGenerator;
 use font_atlas::*;
@@ -27,17 +26,14 @@ qrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶¸¹º»¼½¾¿ÀÁÂÃ
 
 /// ▬▭▮▯
 
-const EMOJI_GLYPHS: &str = "
-";
-
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // panic hook
     color_eyre::install()?;
     
-    // let bitmap_font = BitmapFontGenerator::new(10.0, 1024) // 10.0 is the ref benchmark font size
-    // let bitmap_font = BitmapFontGenerator::new(40.0, 1024)
-    let bitmap_font = BitmapFontGenerator::new(15.0, 1024)
+    // let bitmap_font = BitmapFontGenerator::new(10.0) // 10.0 is the ref benchmark font size
+    // let bitmap_font = BitmapFontGenerator::new(40.0)
+    let bitmap_font = BitmapFontGenerator::new(15.0)
         .generate(GLYPHS);
 
     bitmap_font.save("./data/bitmap_font.atlas")?;
@@ -67,9 +63,8 @@ impl BitmapFont {
     pub fn generate(
         chars: &str,
         font_size: f32,
-        texture_width: usize,
     ) -> Self {
-        BitmapFontGenerator::new(font_size, texture_width)
+        BitmapFontGenerator::new(font_size)
             .generate(chars)
     }
 
