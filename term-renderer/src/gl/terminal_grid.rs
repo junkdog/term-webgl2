@@ -543,9 +543,9 @@ fn create_terminal_cell_data(cols: i32, rows: i32) -> Vec<CellDynamic> {
     (0..cols * rows)
         .map(|i| {
             if i & 1 == 1 {
-                CellDynamic::new(0x12, 0xffff_ffff, 0x0000_00ff)
+                CellDynamic::new('A' as i32, 0xffff_ffff, 0x0000_00ff)
             } else {
-                CellDynamic::new(0x62, 0x0000_00ff, 0xffff_ffff)
+                CellDynamic::new(' ' as i32, 0x0000_00ff, 0xffff_ffff)
             }
         })
         .collect()

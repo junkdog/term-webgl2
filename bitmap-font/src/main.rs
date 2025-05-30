@@ -1,4 +1,5 @@
 mod generator;
+mod verify_atlas_main;
 
 use crate::generator::BitmapFontGenerator;
 use font_atlas::*;
@@ -13,7 +14,7 @@ const GLYPHS: &str = "
 !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop
 qrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãä
 åæçèéêëìíîïðñòóôõö÷øùúûüýþÿıƒ‗•←↑→↓↔↕─│┌┐└┘├┤┬┴┼═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬▀▄█
-░▒▓ ■□▪▫▬▭▮▯▲▶▼◀◆◇◈◉○◎●◐◑◒◓◕◖◗◢◣◤◥
+░▒▓ ■□▪▫▲▶▼◀◆◇◈◉○◎●◐◑◒◓◕◖◗◢◣◤◥
 ├─└─│─┤─┬─┴─┼─┌─┐─╶╴╷╵╸╺╻╹
 ∀∃∄∅∆∇∈∉∋∌∏∑∞∟∠∡∢∥∧∨∩∪∫∮
 ≈≠≡≤≥≦≧≨≩≪≫≬≭≮≯≰≱≲≳≴≵≶≷≸≹≺≻≼≽≾≿
@@ -26,6 +27,8 @@ qrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶¸¹º»¼½¾¿ÀÁÂÃ
 ◐◑◒◓◔◕◖◗⊙⏴⏵⏶⏷▶
 ";
 
+/// ▬▭▮▯
+
 const EMOJI_GLYPHS: &str = "
 ➰⌚⏰⏱⏲⏳⏸⏹⏺⏯⏮⏭
 ";
@@ -36,11 +39,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install()?;
     
     // let bitmap_font = BitmapFontGenerator::new(10.0, 1024) // 10.0 is the ref benchmark font size
-    let bitmap_font = BitmapFontGenerator::new(18.0, 1024)
+    let bitmap_font = BitmapFontGenerator::new(13.0, 1024)
         .generate(GLYPHS);
 
     bitmap_font.save("./data/bitmap_font.atlas")?;
-    
+
     println!("Bitmap font generated!");
     println!("Texture size: {}x{}", bitmap_font.atlas_data.texture_width, bitmap_font.atlas_data.texture_height);
     println!("Cell size: {}x{}", bitmap_font.atlas_data.cell_width, bitmap_font.atlas_data.cell_height);
@@ -78,7 +81,7 @@ impl BitmapFont {
     //         self.metadata.texture_width,
     //         self.metadata.texture_height
     //     );
-    // 
+    //
     //     for y in 0..self.metadata.texture_height {
     //         for x in 0..self.metadata.texture_width {
     //             let idx = y * self.metadata.texture_width + x;
@@ -90,11 +93,11 @@ impl BitmapFont {
     //                     *color as u8
     //                 ];
     //                 img.put_pixel(x, y, Rgba(pixel));
-    //                 
+    //
     //             }
     //         }
     //     }
-    // 
+    //
     //     img.save(path)?;
     //     Ok(())
     // }
@@ -103,16 +106,16 @@ impl BitmapFont {
     //     let metadata = &self.atlas_data;
     //     let mut file = File::create(path)?;
     //     Write::write_all(&mut file, &metadata.to_binary())?;
-    // 
+    //
     //     Ok(())
     // }
-    
+
     /// Save bitmap font and metadata to a file
     pub fn save(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let metadata = &self.atlas_data;
         let mut file = File::create(path)?;
         Write::write_all(&mut file, &metadata.to_binary())?;
-        
+
         Ok(())
     }
 }

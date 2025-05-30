@@ -56,6 +56,7 @@ impl<'a> GraphemeSet<'a> {
             for style in FontStyle::ALL {
                 glyphs.push(Glyph::new(c, style, (0, 0)));
             }
+                // glyphs.push(Glyph::new(c, FontStyle::Normal, (0, 0)));
         }
 
         // unicode glyphs fill any gaps in the ASCII range (0x000-0x1FF)
@@ -106,7 +107,7 @@ impl RasterizationConfig {
 
         let max_id = glyphs.iter().map(|g| g.id).max().unwrap_or(0) as i32;
         let depth = (max_id + Self::GLYPHS_PER_SLICE - 1) / Self::GLYPHS_PER_SLICE;
-        
+
         Self {
             texture_width: next_pow2(slice_width),
             texture_height: next_pow2(slice_height),
@@ -143,7 +144,7 @@ impl GlyphCoordinate {
         self.slice << 4
             | (self.grid_y as u16 * 4) + self.grid_x as u16
     }
-    
+
     fn xy(&self, config: &RasterizationConfig) -> (i32, i32) {
         let x = self.grid_x as i32 * config.cell_width + PADDING;
         let y = self.grid_y as i32 * config.cell_height + PADDING;
@@ -186,7 +187,8 @@ impl BitmapFontGenerator {
         let glyphs = grapheme_set.into_glyphs();
 
         // calculate texture dimensions
-        let (cell_w, cell_h) = self.calculate_cell_dimensions(&glyphs);
+        // let (cell_w, cell_h) = self.calculate_cell_dimensions(&glyphs);
+        let (cell_w, cell_h) = self.calculate_cell_dimensions(&[Glyph::new("█", FontStyle::Normal, (0, 0))]);
         let config = RasterizationConfig::new(cell_w, cell_h, &glyphs);
         println!("{:?}", &config);
 
@@ -253,7 +255,7 @@ impl BitmapFontGenerator {
 
             let x_offset = coord.grid_x as i32 * config.cell_width;
             let y_offset = coord.grid_y as i32 * config.cell_height;
-            
+
             // calculate position in 3D texture
             let px = x + x_offset + PADDING;
             let py = y + y_offset + PADDING;
