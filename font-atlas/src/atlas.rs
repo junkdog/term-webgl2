@@ -1,6 +1,7 @@
+use std::fmt::Debug;
 use crate::{Deserializer, FontAtlasDeserializationError, Glyph, Serializable};
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct FontAtlasData {
     /// The font size in points
     pub font_size: f32,
@@ -18,6 +19,21 @@ pub struct FontAtlasData {
     pub glyphs: Vec<Glyph>,
     /// The 3d texture data containing the font glyphs
     pub texture_data: Vec<u32>,
+}
+
+impl Debug for FontAtlasData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FontAtlasData")
+            .field("font_size", &self.font_size)
+            .field("texture_width", &self.texture_width)
+            .field("texture_height", &self.texture_height)
+            .field("texture_depth", &self.texture_depth)
+            .field("cell_width", &self.cell_width)
+            .field("cell_height", &self.cell_height)
+            .field("glyphs_count", &self.glyphs.len())
+            .field("texture_data_kb", &(self.texture_data.len() * 4 / 1024))
+            .finish()
+    }
 }
 
 
