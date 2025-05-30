@@ -1,13 +1,12 @@
 ## WebGL2 Terminal Renderer
 
-A high-performance terminal rendering system for web browsers, achieving sub-millisecond render times through WebGL2's advanced features.
+A high-performance terminal rendering system for web browsers, targeting sub-millisecond render times.
 
 ## Key Features
 
 - **Single Draw Call** - Renders entire terminal (e.g., 200×80 cells) in one instanced draw
-- **3D Texture Atlas** - 16 glyphs per texture slice with 4×4 grid layout
 - **Zero-Copy Updates** - Direct memory mapping for dynamic cell updates
-- **Full Unicode** - Complete Unicode support with grapheme clustering
+- **Unicode and Emoji Support** - Complete Unicode support with grapheme clustering
 - **ASCII Fast Path** - Direct bit operations for ASCII characters (no lookups)
 
 
@@ -131,17 +130,6 @@ Each terminal cell requires:
 - **effect**: `GlyphEffect` enum (None, Underline, Strikethrough)
 - **fg/bg**: Colors as 32-bit ARGB values (`0xAARRGGBB`)
 
-## Architecture Overview
-
-The renderer achieves sub-millisecond performance through four key optimizations:
-
-1. **Single Draw Call**: Entire terminal rendered with one `drawElementsInstanced` call
-2. **3D Texture Atlas**: 4×4 glyph grids per slice for 16× memory efficiency
-3. **Instanced Rendering**: Shared quad geometry with per-cell instance data
-4. **Optimized Buffers**: Static/dynamic separation with aligned packing
-
-**Rendering Pipeline**: Application → Update Cells → GPU Instanced Draw → Display
-
 ## WebGL2 Feature Dependencies
 
 The renderer requires WebGL2 for:
@@ -172,9 +160,8 @@ The font atlas uses a 3D texture organized as multiple slices, each containing a
 - Position in slice: `ID % 16`
 - Grid coordinates: `(pos % 4, pos ÷ 4)`
 
-This layout packs 16 glyphs per slice compared to the naive one-glyph-per-layer approach, reducing
-texture memory overhead by 16× while maintaining fast coordinate calculation through simple bit
-shifts and masks.
+This layout packs 16 glyphs per slice while maintaining fast coordinate calculation
+through simple bit shifts and masks.
 
 ### Glyph ID Encoding and Mapping
 
@@ -192,13 +179,13 @@ shifts and masks.
 
 #### ID to 3D Position Examples
 
-| Character | Style | Glyph ID | Calculation | Result | 
-|-----------|-------|----------|-------------|--------|
-| ' ' (32) | Normal | 0x0020 | 32÷16=2, 32%16=0 | Slice 2, Grid (0,0) |
-| 'A' (65) | Normal | 0x0041 | 65÷16=4, 65%16=1 | Slice 4, Grid (1,0) |
-| 'A' (65) | Bold | 0x0241 | 577÷16=36, 577%16=1 | Slice 36, Grid (1,0) |
-| '€' | Normal | 0x0080 | Mapped to ID 128 | Slice 8, Grid (0,0) |
-| '🚀' | Emoji | 0x0881 | With emoji bit set | Slice 136, Grid (1,0) |
+| Character | Style  | Glyph ID | Calculation         | Result                | 
+|-----------|--------|----------|---------------------|-----------------------|
+| ' ' (32)  | Normal | 0x0020   | 32÷16=2, 32%16=0    | Slice 2, Grid (0,0)   |
+| 'A' (65)  | Normal | 0x0041   | 65÷16=4, 65%16=1    | Slice 4, Grid (1,0)   |
+| 'A' (65)  | Bold   | 0x0241   | 577÷16=36, 577%16=1 | Slice 36, Grid (1,0)  |
+| '€'       | Normal | 0x0080   | Mapped to ID 128    | Slice 8, Grid (0,0)   |
+| '🚀'      | Emoji  | 0x0881   | With emoji bit set  | Slice 136, Grid (1,0) |
 
 The consistent modular arithmetic ensures that style variants maintain the same grid position
 within their respective slices, improving texture cache coherence.
@@ -260,7 +247,7 @@ For a typical 12×18 pixel font with 2048 glyphs:
 |----------------------|-----------|----------------------------------|
 | **3D Texture**       | ~1.7 MB   | 48×72×128 RGBA (16 glyphs/slice) |
 | **Vertex Buffers**   | ~200 KB   | For 200×80 terminal              |
-| **Cache Efficiency** | Excellent | Common ASCII chars in 6 slices   |
+| **Cache Efficiency** | Good      | Common ASCII chars in 6 slices   |
 | **Memory Access**    | Coalesced | 64-bit aligned instance data     |
 
 The 4×4 grid layout ensures that adjacent terminal cells often access the same texture slice,

@@ -26,8 +26,8 @@ void main() {
     uint glyph_index = v_packed_data.x & 0xFFFFu;
 
     // Calculate 3D position from sequential index
-    uint slice = glyph_index / 16u;
-    uint pos_in_slice = glyph_index % 16u;
+    uint slice = glyph_index >> 4;
+    uint pos_in_slice = glyph_index & 0x0Fu;
     uint grid_x = pos_in_slice % 4u;
     uint grid_y = pos_in_slice / 4u;
 
