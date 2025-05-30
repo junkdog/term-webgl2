@@ -213,7 +213,8 @@ impl Serializable for FontAtlasData {
         ser.data.extend(self.glyphs.iter().flat_map(Glyph::serialize));
 
         // serialize 3d texture data
-        ser.write_u8_slice(&self.texture_data);
+        let packed_texture_data = miniz_oxide::deflate::compress_to_vec(&self.texture_data, 9);
+        ser.write_u8_slice(&packed_texture_data);
 
         ser.data
     }
@@ -254,7 +255,11 @@ impl Serializable for FontAtlasData {
         }
 
         // deserialize texture data
-        let texture_data = deser.read_u8_slice()?;
+        let packed_texture_data = deser.read_u8_slice()?;
+        let texture_data = miniz_oxide::inflate::decompress_to_vec(&packed_texture_data)
+            .map_err(|_| SerializationError {
+                message: CompactString::const_new("Failed to decompress texture data"),
+            })?;
 
         Ok(FontAtlasData {
             font_size,
