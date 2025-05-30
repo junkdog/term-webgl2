@@ -4,7 +4,7 @@ use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderP
 use crate::mat4::Mat4;
 use std::fmt::Debug;
 use web_sys::{console, WebGl2RenderingContext};
-use font_atlas::FontStyle;
+use font_atlas::{FontStyle, GlyphEffect};
 
 /// A high-performance terminal grid renderer using instanced rendering.
 ///
@@ -141,10 +141,6 @@ impl TerminalGrid {
             ).data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
             num_slices: texture_slices as f32,
-            // atlas_cell_size: [
-            //     1.0 / self.atlas.cell_size().0 as f32,
-            //     1.0 / self.atlas.cell_size().1 as f32,
-            // ],
         };
         console::log_1(&format!("cell size: {:?}", data.cell_size).into());
         console::log_1(&format!("screen size: {:?}", screen_size).into());
@@ -356,15 +352,6 @@ impl Drawable for TerminalGrid {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GlyphEffect {
-    /// No special effect applied to the glyph.
-    None,
-    /// Underline effect applied below the glyph.
-    Underline,
-    /// Strikethrough effect applied through the glyph.
-    Strikethrough,
-}
 
 /// Data for a single terminal cell including character and colors.
 ///
@@ -525,7 +512,6 @@ struct CellUbo {
     pub projection: [f32; 16],     // mat4
     pub cell_size: [f32; 2],       // vec2 - screen cell size
     pub num_slices: f32,
-    // pub atlas_cell_size: [f32; 2], // vec2 - atlas UV cell size (1.0/4.0 = 0.25)
 }
 
 impl CellUbo {
@@ -534,7 +520,6 @@ impl CellUbo {
             projection: projection.data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
             num_slices: 1.0, // default to 1 slice, can be updated later
-            // atlas_cell_size: [0.25, 0.25], // 1/4 for a 4x4 grid per slice
         }
     }
 }

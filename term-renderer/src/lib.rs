@@ -5,6 +5,7 @@ mod gl;
 pub(crate) mod js;
 
 pub use ::font_atlas::FontAtlasData;
+pub use ::font_atlas::GlyphEffect;
 pub use crate::error::Error;
 pub use crate::gl::{CellData, FontAtlas, Renderer, TerminalGrid};
 pub use mat4::Mat4;

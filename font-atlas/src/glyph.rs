@@ -123,6 +123,16 @@ impl Glyph {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GlyphEffect {
+    /// No special effect applied to the glyph.
+    None,
+    /// Underline effect applied below the glyph.
+    Underline,
+    /// Strikethrough effect applied through the glyph.
+    Strikethrough,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FontStyle {
     Normal     = 0x0000,
     Bold       = 0x0200,

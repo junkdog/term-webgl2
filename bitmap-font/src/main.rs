@@ -36,7 +36,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install()?;
     
     // let bitmap_font = BitmapFontGenerator::new(10.0, 1024) // 10.0 is the ref benchmark font size
-    let bitmap_font = BitmapFontGenerator::new(30.0, 1024)
+    // let bitmap_font = BitmapFontGenerator::new(30.0, 1024)
+    let bitmap_font = BitmapFontGenerator::new(15.0, 1024)
         .generate(GLYPHS);
 
     bitmap_font.save("./data/bitmap_font.atlas")?;
