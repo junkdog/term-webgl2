@@ -3,9 +3,8 @@ use compact_str::{CompactString, ToCompactString};
 /// Represents a single character glyph in a font atlas texture.
 ///
 /// A `Glyph` contains the metadata needed to locate and identify a character
-/// within a font atlas texture. Each glyph has a unique ID that corresponds
-/// to its layer in a WebGL 2D texture array, along with its pixel coordinates
-/// in the source atlas image.
+/// within a font atlas texture. Each glyph has a unique ID that maps
+/// to its coordinates in a WebGL `TEXTURE_3D`.
 ///
 /// # ASCII Optimization
 /// For ASCII characters, the glyph ID directly corresponds to the character's
@@ -27,7 +26,7 @@ use compact_str::{CompactString, ToCompactString};
 /// - The first 9 bits (0-8) represent the base glyph ID, allowing for 512 unique glyphs.
 /// - Underlined and strikethrough styles are mutually exclusive.
 /// - Emoji glyphs implicitly clear any other style bits.
-/// - The full 16-bit glyph ID is the texture array layer index in the WebGL2 shader.
+/// - The full 16-bit glyph ID encodes the texture 3d coordinates.
 ///
 /// ## Glyph ID Encoding Examples
 ///
@@ -40,7 +39,7 @@ use compact_str::{CompactString, ToCompactString};
 /// | '🚀' (0x81) | Emoji            | `1000_0000_1000_0001` | `0x8081`  | "rocket" emoji      |
 #[derive(Debug, Eq, PartialEq)]
 pub struct Glyph {
-    /// The glyph ID; used as z-offset in the resulting texture array
+    /// The glyph ID; encodes the 3d texture coordinates
     pub id: u16,
     /// The style of the glyph, e.g., bold, italic
     pub style: FontStyle,
@@ -110,16 +109,6 @@ impl Glyph {
         self.symbol.len() == 1
             && self.symbol.chars().next().unwrap().is_ascii()
     }
-    
-    // pub fn layer_id(&self) -> i32 {
-    //     debug_assert!(!self.is_emoji || self.style == FontStyle::Normal,
-    //         "Emoji glyphs must have the normal style");
-    // 
-    //     let region_bits = (self.is_emoji as u16 * Self::EMOJI_FLAG)
-    //         | self.style.id_mask();
-    //     
-    //     (self.id | region_bits) as i32
-    // }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
