@@ -283,6 +283,39 @@ trunk serve
 trunk build --release
 ```
 
+## Design Decisions
+
+### Why 4×4 Grid Per Slice?
+
+- **GPU compatibility**: 2D texture arrays and 3D textures have limited layer support across
+  browsers and GPUs. Many systems can't reliably handle thousands of layers, but can handle depths in
+  the hundreds.
+- **Depth reduction**: Packing 16 glyphs per slice reduces a 2000+ glyph atlas from 2000+ layers to
+  ~140 layers, staying within widely-supported limits
+- **Cache efficiency**: Related glyphs (e.g., ASCII characters) cluster in the same slice,
+  improving texture cache hit rates
+- **Simple addressing**: 16 glyphs per slice allows coordinate calculation using bit masking (ID &
+  0x0F)
+
+### Why Separate Style Encoding?
+
+- Avoids duplicating glyph definitions
+- Enables runtime style switching without texture lookups
+- Maintains consistent coordinates for style variants
+
+### Why Power-of-2 Texture Depth?
+
+- Required by some GPU architectures
+- Simplifies mipmap generation (if needed)
+
+## Limitations
+
+- Maximum 512 base glyphs (9-bit addressing)
+- Fixed 4 style variants per glyph
+- Monospace fonts only
+- Single font family per atlas
+
+
 ## TODO
 - [ ] **Text Effects**: Underline, strikethrough
 - [x] **Font Variants**: Bold, italic, and other font weight support
