@@ -194,8 +194,7 @@ within their respective slices, improving texture cache coherence.
 
 ASCII characters (0-127) bypass the HashMap lookup entirely through direct bit manipulation.
 For ASCII input, the glyph ID is computed as `char_code | style_bits`, providing zero-overhead
-character mapping. Non-ASCII characters use a HashMap for flexible Unicode support, with the
-lookup cost amortized by the GPU's parallel processing of other cells. This hybrid approach
+character mapping. Non-ASCII characters use a HashMap for flexible Unicode suppor. This approach
 optimizes for the common case (>95% ASCII in typical terminal content) while maintaining full
 Unicode capability.
 
