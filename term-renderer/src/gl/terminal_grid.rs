@@ -367,11 +367,11 @@ impl Drawable for TerminalGrid {
 /// - BB: Blue component
 #[derive(Debug)]
 pub struct CellData<'a> {
-    pub symbol: &'a str,
-    pub style: FontStyle,
-    pub effect: GlyphEffect,
-    pub fg: u32,
-    pub bg: u32,
+    symbol: &'a str,
+    style: FontStyle,
+    effect: GlyphEffect,
+    fg: u32,
+    bg: u32,
 }
 
 impl<'a> CellData<'a> {

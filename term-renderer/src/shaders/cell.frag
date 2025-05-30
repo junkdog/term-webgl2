@@ -49,5 +49,5 @@ void main() {
     );
 
     float a = texture(u_sampler, tex_coord).a;
-    FragColor = vec4(mix(fg, bg, a), 1.0);
+    FragColor = vec4(mix(bg, fg, a), 1.0);
 }
