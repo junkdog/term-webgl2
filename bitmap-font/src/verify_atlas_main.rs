@@ -80,12 +80,12 @@ fn render_slice_pair(
         }
 
         // Render left slice
-        render_slice_row(atlas, left_slice, y, display_height, &mut output);
+        render_slice_row(atlas, left_slice, y, &mut output);
 
         // Render right slice if present
         if let Some(right) = right_slice {
             write!(&mut output, "  ").ok(); // Gap between slices
-            render_slice_row(atlas, right, y, display_height, &mut output);
+            render_slice_row(atlas, right, y, &mut output);
         }
 
         writeln!(&mut output).ok();
@@ -99,7 +99,6 @@ fn render_slice_row(
     atlas: &FontAtlasData,
     slice: usize,
     y: usize,
-    display_height: usize,
     output: &mut String
 ) {
     let slice_height = atlas.texture_height as usize;
@@ -116,16 +115,22 @@ fn render_slice_row(
             idx_top
         };
 
-        let pixel_top = if idx_top < atlas.texture_data.len() {
-            atlas.texture_data[idx_top]
+        let pixel_top = if 4 * idx_top < atlas.texture_data.len() {
+            (atlas.texture_data[idx_top * 4] as u32) << 24
+                | (atlas.texture_data[idx_top * 4 + 1] as u32) << 16
+                | (atlas.texture_data[idx_top * 4 + 2] as u32) << 8
+                | (atlas.texture_data[idx_top * 4 + 3] as u32)
         } else {
-            0
+            0x000000
         };
 
-        let pixel_bottom = if idx_bottom < atlas.texture_data.len() && y + 1 < display_height {
-            atlas.texture_data[idx_bottom]
+        let pixel_bottom: u32 = if 4 * idx_bottom < atlas.texture_data.len() && y + 1 < display_height {
+            (atlas.texture_data[idx_bottom * 4] as u32) << 24
+                | (atlas.texture_data[idx_bottom * 4 + 1] as u32) << 16
+                | (atlas.texture_data[idx_bottom * 4 + 2] as u32) << 8
+                | (atlas.texture_data[idx_bottom * 4 + 3] as u32)
         } else {
-            0
+            0x000000
         };
 
         let a_top = pixel_top & 0xFF;
