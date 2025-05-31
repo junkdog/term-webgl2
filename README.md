@@ -317,7 +317,7 @@ trunk build --release
 
 
 ## TODO
-- [ ] **Text Effects**: Underline, strikethrough
+- [x] **Text Effects**: Underline, strikethrough
 - [x] **Font Variants**: Bold, italic, and other font weight support
 - [x] **Complete Glyph Set**: Report (e.g. via logging) when glyphs are missing from the atlas
 - [x] **Emoji support**: Currently renders with only the foreground color

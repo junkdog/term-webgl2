@@ -44,9 +44,10 @@ impl BitmapFontGenerator {
         let grapheme_set = GraphemeSet::new(chars);
         let glyphs = grapheme_set.into_glyphs();
 
-        // calculate texture dimensions
-        // let (cell_w, cell_h) = self.calculate_cell_dimensions(&glyphs);
-        let (cell_w, cell_h) = self.calculate_cell_dimensions(&[Glyph::new("█", FontStyle::Normal, (0, 0))]);
+        // calculate texture dimensions using all font styles to ensure proper cell sizing
+        let test_glyphs = create_test_glyphs_for_cell_calculation();
+        let (cell_w, cell_h) = self.calculate_cell_dimensions(&test_glyphs);
+
         let config = RasterizationConfig::new(cell_w, cell_h, &glyphs);
         println!("{:?}", &config);
 
@@ -70,7 +71,7 @@ impl BitmapFontGenerator {
             updated_glyph.pixel_coords = coord.xy(&config);
             rasterized_glyphs.push(updated_glyph);
         }
-        
+
         let texture_data = texture_data
             .iter()
             .flat_map(|&color| {
@@ -220,7 +221,7 @@ impl BitmapFontGenerator {
 
         buffer
     }
-    
+
     fn rasterize_emoji(
         &mut self,
         emoji: &str,
@@ -285,7 +286,7 @@ impl BitmapFontGenerator {
 
     /// Calculates the required cell dimensions for a monospaced bitmap font
     /// by finding the maximum width and height of all glyphs in the character set.
-    fn calculate_cell_dimensions(&mut self, glyps: &[Glyph]) -> (i32, i32) {
+    fn calculate_cell_dimensions(&mut self, glyphs: &[Glyph]) -> (i32, i32) {
         let mut max_width = 0;
         let mut max_height = 0;
 
@@ -293,20 +294,23 @@ impl BitmapFontGenerator {
         let width = 100.0;
         let height = 100.0;
 
-        let attrs = attrs(FontStyle::Normal);
-
         let font_system = &mut self.font_system;
         let swash_cache = &mut self.cache;
         let metrics = self.metrics;
 
-        // iterate through all characters in the set
-        for c in glyps.iter().map(|g| &g.symbol) {
+        // iterate through all glyphs, accounting for their specific styles
+        for glyph in glyphs.iter() {
+            let attrs = attrs(glyph.style);
+
             let mut buffer = Buffer::new(font_system, metrics);
             let mut buffer = buffer.borrow_with(font_system);
             buffer.set_size(Some(width), Some(height));
 
-            // add the character to the buffer, then measure it
-            buffer.set_text(&c.to_string(), &attrs, cosmic_text::Shaping::Advanced);
+            // add the character to the buffer with its specific style
+            buffer.set_text(&glyph.symbol, &attrs, cosmic_text::Shaping::Advanced);
+
+            let mut glyph_max_x = 0;
+            let mut glyph_max_y = 0;
 
             buffer.draw(swash_cache, WHITE, |x, y, _w, _h, color| {
                 let a = color.a();
@@ -314,12 +318,15 @@ impl BitmapFontGenerator {
                     return;
                 }
 
-                max_width = x.max(max_width);
-                max_height = y.max(max_height);
+                glyph_max_x = x.max(glyph_max_x);
+                glyph_max_y = y.max(glyph_max_y);
             });
+
+            max_width = glyph_max_x.max(max_width);
+            max_height = glyph_max_y.max(max_height);
         }
 
-        // add some padding
+        // add padding
         let cell_width = max_width + FontAtlasData::PADDING * 2;
         let cell_height = max_height + FontAtlasData::PADDING * 2;
 
@@ -378,4 +385,20 @@ impl GlyphBounds {
 
         (offset_x, offset_y)
     }
+}
+
+/// Creates test glyphs for accurate cell dimension calculation across all font styles
+fn create_test_glyphs_for_cell_calculation() -> Vec<Glyph> {
+    // Use multiple test characters that stress different dimensions:
+    // - "█" for full block coverage
+    // - "M" for typical capital letter width
+    // - "g" and "y" for descenders
+    // - "f" and "j" for potential ascender/descender combinations
+    ["█", "M", "W", "g", "y", "f", "j", "Q", "b"].into_iter()
+        .flat_map(|ch| {
+            FontStyle::ALL.iter().map(move |style| {
+                Glyph::new(ch, *style, (0, 0))
+            })
+        })
+        .collect()
 }

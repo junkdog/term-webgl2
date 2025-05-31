@@ -22,7 +22,6 @@ float horizontal_line(vec2 tex_coord, float center, float thickness) {
     return 1.0 - smoothstep(0.0, thickness, abs(tex_coord.y - center));
 }
 
-
 float normalize_lsb(uint value) {
     return (float(value & 0xFFu)) / 255.0;
 }
