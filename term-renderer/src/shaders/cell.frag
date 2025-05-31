@@ -18,15 +18,20 @@ in vec2 v_tex_coord;
 
 out vec4 FragColor;
 
+float horizontal_line(vec2 tex_coord, float center, float thickness) {
+    return 1.0 - smoothstep(0.0, thickness, abs(tex_coord.y - center));
+}
+
+
 float normalize_lsb(uint value) {
     return (float(value & 0xFFu)) / 255.0;
 }
 
 void main() {
-    // Extract sequential glyph index from packed data
+    // extract sequential glyph index from packed data
     uint glyph_index = v_packed_data.x & 0xFFFFu;
 
-    // Calculate 3D position from sequential index
+    // 3D texture position from sequential index
     uint slice = (glyph_index & 0xCFFFu) >> 4; // strip underline/strikethrough bits
     uint pos_in_slice = glyph_index & 0x0Fu;
     uint grid_x = pos_in_slice % 4u;
@@ -38,6 +43,13 @@ void main() {
         (float(slice) + 0.5) / u_num_slices
     );
 
+    // the base foreground color is used for normal glyphs and underlines/strikethroughs
+    vec3 base_fg = vec3(
+        normalize_lsb(v_packed_data.x >> 16),
+        normalize_lsb(v_packed_data.x >> 24),
+        normalize_lsb(v_packed_data.y)
+    );
+
     vec4 glyph = texture(u_sampler, tex_coord);
 
     // 0.0 for normal glyphs, 1.0 for emojis: used for determining color source
@@ -45,15 +57,21 @@ void main() {
 
     // color for normal glyphs are taken from the packed data;
     // emoji colors are sampled from the texture directly
-    vec3 fg = mix(
-        vec3(
-            normalize_lsb(v_packed_data.x >> 16),
-            normalize_lsb(v_packed_data.x >> 24),
-            normalize_lsb(v_packed_data.y)
-        ),
-        glyph.rgb,
-        emoji_factor
+    vec3 fg = mix(base_fg, glyph.rgb, emoji_factor);
+
+    // apply strikethrough or underline if the glyph has either bit set
+    float line_alpha = max(
+        horizontal_line(v_tex_coord, 0.80, 0.05) * float((glyph_index >> 12) & 0x1u),
+        horizontal_line(v_tex_coord, 0.50, 0.05) * float((glyph_index >> 13) & 0x1u)
     );
+
+    // if we're drawing a line, blend it with the base foreground color.
+    // this allows us to do strikethroughs and underlines on emojis with
+    // the same color as the base foreground.
+    fg = mix(fg, base_fg, line_alpha);
+
+    // make sure to set the alpha when drawing a line
+    float a = max(glyph.a, line_alpha);
 
     vec3 bg = vec3(
         normalize_lsb(v_packed_data.y >> 8),
@@ -61,5 +79,5 @@ void main() {
         normalize_lsb(v_packed_data.y >> 24)
     );
 
-    FragColor = vec4(mix(bg, fg, glyph.a), 1.0);
+    FragColor = vec4(mix(bg, fg, a), 1.0);
 }
