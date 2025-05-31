@@ -28,7 +28,6 @@ fn run() -> Result<(), Error> {
 
     let canvas_size = renderer.canvas_size();
     let terminal_grid = TerminalGrid::new(gl, atlas, canvas_size)?;
-    terminal_grid.upload_ubo_data(gl);
 
     renderer.begin_frame();
     renderer.render(&terminal_grid);

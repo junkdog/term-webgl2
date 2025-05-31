@@ -136,6 +136,8 @@ impl TerminalGrid {
             sampler_loc,
         };
 
+        grid.upload_ubo_data(gl);
+        
         Ok(grid)
     }
 
