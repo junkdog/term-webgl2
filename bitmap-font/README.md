@@ -1,7 +1,7 @@
-# bitmap-font Technical Documentation
+# bitmap-font
 
-A high-performance font atlas generator for WebGL terminal renderers, optimized for GPU texture
-memory and rendering efficiency.
+A font atlas generator for WebGL terminal renderers, optimized for GPU texture memory and
+rendering efficiency.
 
 ## Overview
 

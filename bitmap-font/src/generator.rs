@@ -230,11 +230,11 @@ impl BitmapFontGenerator {
         let f = &mut self.font_system;
 
         // First pass: measure at default size
-        let measure_size = self.font_size * 2.0; // Start slightly larger
-        let measure_metrics = Metrics::new(measure_size, measure_size * 2.0);
+        let measure_size = self.font_size * 4.0; // Start larger
+        let measure_metrics = Metrics::new(measure_size, measure_size * 1.2);
 
         let mut measure_buffer = Buffer::new(f, measure_metrics);
-        measure_buffer.set_size(f, Some(inner_cell_w * 4.0), Some(inner_cell_h * 4.0));
+        measure_buffer.set_size(f, Some(inner_cell_w * 8.0), Some(inner_cell_h * 8.0));
         measure_buffer.set_text(f, emoji, &attrs(FontStyle::Normal), cosmic_text::Shaping::Advanced);
         measure_buffer.shape_until_scroll(f, true);
 

@@ -74,8 +74,37 @@ impl TerminalGrid {
         let cell_size = atlas.cell_size();
         let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
 
-        let fill_glyph = atlas.get_glyph_coord("🤌", FontStyle::Normal).unwrap_or('X' as i32);
-        let cell_data = create_terminal_cell_data(cols, rows, fill_glyph);
+        let fill_glyphs = [
+            atlas.get_glyph_coord("🤫", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("🙌", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("n", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("o", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("r", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("m", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("a", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("l", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("b", FontStyle::Bold).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("o", FontStyle::Bold).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("l", FontStyle::Bold).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("d", FontStyle::Bold).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("t", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("a", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("l", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("c", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("b", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("-", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("t", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("a", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("l", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("c", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("🤪", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("🤩", FontStyle::Normal).unwrap_or('X' as i32),
+        ];
+        let cell_data = create_terminal_cell_data(cols, rows, &fill_glyphs);
         let cell_pos = CellStatic::create_grid(cols, rows);
         let buffers = setup_buffers(gl, vao, &cell_pos, &cell_data, cell_size)?;
 
@@ -140,10 +169,10 @@ impl TerminalGrid {
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
             num_slices: self.atlas.num_slices as f32,
         };
-        
+
         console::log_1(&format!("cell size: {:?}", data.cell_size).into());
         console::log_1(&format!("screen size: {:?}", self.canvas_size_px).into());
-        
+
         self.ubo.upload_data(gl, &data);
     }
 
@@ -531,10 +560,11 @@ impl CellUbo {
 fn create_terminal_cell_data(
     cols: i32,
     rows: i32,
-    fill_glyph: i32,
+    fill_glyph: &[i32],
 ) -> Vec<CellDynamic> {
+    let glyph_len = fill_glyph.len();
     (0..cols * rows)
-        .map(|i| CellDynamic::new(fill_glyph, 0xffff_ffff, 0x0000_00ff))
+        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len], 0xffff_ffff, 0x0000_00ff))
         .collect()
 }
 

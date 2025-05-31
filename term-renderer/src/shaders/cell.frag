@@ -12,6 +12,7 @@ layout(std140) uniform CellUniforms {
 
 
 // packs 8b: 2b layer, 3b fg.rgb, 3b bg.rgb
+// ref: https://github.com/junkdog/term-webgl2?tab=readme-ov-file#glyph-id-bit-layout-16-bit
 flat in uvec2 v_packed_data;
 in vec2 v_tex_coord;
 
@@ -26,13 +27,10 @@ void main() {
     uint glyph_index = v_packed_data.x & 0xFFFFu;
 
     // Calculate 3D position from sequential index
-    uint slice = glyph_index >> 4;
+    uint slice = (glyph_index & 0xCFFFu) >> 4; // strip underline/strikethrough bits
     uint pos_in_slice = glyph_index & 0x0Fu;
     uint grid_x = pos_in_slice % 4u;
     uint grid_y = pos_in_slice / 4u;
-
-    // 0.0 for normal glyphs, 1.0 for emojis
-    float emoji_factor = float((glyph_index >> 11) & 0x1u);
 
     vec3 tex_coord = vec3(
         (float(grid_x) + v_tex_coord.x) / 4.0,
@@ -42,7 +40,10 @@ void main() {
 
     vec4 glyph = texture(u_sampler, tex_coord);
 
-    // color for normal glyphs are take from teh packed data;
+    // 0.0 for normal glyphs, 1.0 for emojis: used for determining color source
+    float emoji_factor = float((glyph_index >> 11) & 0x1u);
+
+    // color for normal glyphs are taken from the packed data;
     // emoji colors are sampled from the texture directly
     vec3 fg = mix(
         vec3(
