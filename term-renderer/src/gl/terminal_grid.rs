@@ -391,11 +391,10 @@ impl Drawable for TerminalGrid {
 ///
 /// `CellData` represents the visual content of one terminal cell, including
 /// the character to display and its foreground and background colors.
-/// Colors are specified as ARGB values packed into 32-bit integers.
+/// Colors are specified as RGB values packed into 32-bit integers.
 ///
 /// # Color Format
-/// Colors use the format 0xAARRGGBB where:
-/// - AA: Alpha channel (transparency)
+/// Colors use the format 0xRRGGBB where:
 /// - RR: Red component
 /// - GG: Green component  
 /// - BB: Blue component
@@ -416,8 +415,8 @@ impl<'a> CellData<'a> {
     /// * `symbol` - Character to display (should be a single character)
     /// * `style` - Font style for the character (e.g. bold, italic)
     /// * `effect` - Optional glyph effect (e.g. underline, strikethrough)
-    /// * `fg` - Foreground color as ARGB value (0xAARRGGBB)
-    /// * `bg` - Background color as ARGB value (0xAARRGGBB)
+    /// * `fg` - Foreground color as RGB value (0xRRGGBB)
+    /// * `bg` - Background color as RGB value (0xRRGGBB)
     ///
     /// # Returns
     /// New `CellData` instance
@@ -526,13 +525,13 @@ impl CellDynamic {
         data[0] = (layer & 0xFF) as u8;
         data[1] = ((layer >> 8) & 0xFF) as u8;
 
-        data[2] = ((fg >> 24) & 0xFF) as u8; // R
-        data[3] = ((fg >> 16) & 0xFF) as u8; // G
-        data[4] = ((fg >> 8) & 0xFF) as u8;  // B
+        data[2] = ((fg >> 16) & 0xFF) as u8; // R
+        data[3] = ((fg >> 8)  & 0xFF) as u8; // G
+        data[4] = ((fg)       & 0xFF) as u8; // B
 
-        data[5] = ((bg >> 24) & 0xFF) as u8; // R
-        data[6] = ((bg >> 16) & 0xFF) as u8; // G
-        data[7] = ((bg >> 8) & 0xFF) as u8;  // B
+        data[5] = ((bg >> 16) & 0xFF) as u8; // R
+        data[6] = ((bg >> 8)  & 0xFF) as u8; // G
+        data[7] = ((bg)       & 0xFF) as u8; // B
 
         Self { data }
     }
@@ -567,7 +566,7 @@ fn create_terminal_cell_data(
 ) -> Vec<CellDynamic> {
     let glyph_len = fill_glyph.len();
     (0..cols * rows)
-        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as i32, 0xffff_ffff, 0x0000_00ff))
+        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as i32, 0xffff_ff, 0x0000_00))
         .collect()
 }
 
