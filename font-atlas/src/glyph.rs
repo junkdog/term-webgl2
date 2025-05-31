@@ -114,11 +114,11 @@ impl Glyph {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GlyphEffect {
     /// No special effect applied to the glyph.
-    None,
+    None = 0x0,
     /// Underline effect applied below the glyph.
-    Underline,
+    Underline = 0x1000,
     /// Strikethrough effect applied through the glyph.
-    Strikethrough,
+    Strikethrough = 0x2000,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

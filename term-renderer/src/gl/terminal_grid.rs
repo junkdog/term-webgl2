@@ -208,7 +208,10 @@ impl TerminalGrid {
             .for_each(|(cell, data)| {
                 let layer = atlas.get_glyph_coord(data.symbol, data.style)
                     .unwrap_or(fallback_glyph);
-                
+
+                // underline and strikethrough effects
+                let layer = layer | data.effect as i32;
+
                 *cell = CellDynamic::new(layer, data.fg, data.bg);
             });
 
@@ -512,11 +515,9 @@ impl CellStatic {
 }
 
 impl CellDynamic {
-    pub(crate) const DEPTH_ATTRIB: u32 = 3;
-    pub(crate) const FG_ATTRIB: u32 = 4;
-    pub(crate) const BG_ATTRIB: u32 = 5;
-
     pub(crate) fn new(layer: i32, fg: u32, bg: u32) -> Self {
+        debug_assert!(layer > 0 && layer < u16::MAX as i32, "layer: {layer}");
+
         let layer = layer as u32;
         let mut data = [0; 8];
 
