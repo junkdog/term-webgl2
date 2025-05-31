@@ -25,6 +25,8 @@ pub struct FontAtlas {
     glyph_coords: HashMap<CompactString, i32>,
     /// The size of each character cell in pixels
     cell_size: (i32, i32),
+    /// The number of slices in the atlas texture
+    pub(super) num_slices: u32,
 }
 
 
@@ -43,7 +45,8 @@ impl FontAtlas {
         config: FontAtlasData,
     ) -> Result<Self, Error> {
         let texture = crate::gl::texture::Texture::from_font_atlas_data(gl, GL::RGBA, &config)?;
-
+        let num_slices = config.texture_depth;
+        
         let texture_layers = config.glyphs.iter().map(|g| g.id as i32).max().unwrap_or(0) + 1;
         console::log_1(&format!("Creating atlas grid with {}/{texture_layers} layers",
             config.glyphs.len()).into());
@@ -64,6 +67,7 @@ impl FontAtlas {
             texture,
             glyph_coords: layers,
             cell_size: (cell_width, cell_height),
+            num_slices,
         })
     }
 

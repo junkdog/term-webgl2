@@ -20,6 +20,8 @@ pub struct TerminalGrid {
     cells: Vec<CellDynamic>,
     /// Terminal size in cells
     terminal_size: (u16, u16),
+    /// Size of the canvas in pixels
+    canvas_size_px: (i32, i32),
     /// Buffers for the terminal grid
     buffers: TerminalBuffers,
     /// shared state for the shader program
@@ -97,6 +99,7 @@ impl TerminalGrid {
         let grid = Self {
             shader,
             terminal_size: (cols as u16, rows as u16),
+            canvas_size_px: screen_size,
             cells: cell_data,
             buffers,
             ubo,
@@ -123,28 +126,24 @@ impl TerminalGrid {
     ///
     /// # Parameters
     /// * `gl` - WebGL2 rendering context
-    /// * `screen_size` - Screen dimensions in pixels as (width, height)
     pub fn upload_ubo_data(
         &self,
         gl: &WebGl2RenderingContext,
-        screen_size: (i32, i32),
-        texture_slices: u32,
     ) {
-        // let cell_size = (cell_size.0 - 2, cell_size.1 - 2);
-        
         let cell_size = self.cell_size();
         
-        // todo: this should reflect on self.cell_size - but needs more wörk
         let data = CellUbo {
             projection: Mat4::orthographic_from_size(
-                screen_size.0 as f32,
-                screen_size.1 as f32
+                self.canvas_size_px.0 as f32,
+                self.canvas_size_px.1 as f32
             ).data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
-            num_slices: texture_slices as f32,
+            num_slices: self.atlas.num_slices as f32,
         };
+        
         console::log_1(&format!("cell size: {:?}", data.cell_size).into());
-        console::log_1(&format!("screen size: {:?}", screen_size).into());
+        console::log_1(&format!("screen size: {:?}", self.canvas_size_px).into());
+        
         self.ubo.upload_data(gl, &data);
     }
 

@@ -24,12 +24,11 @@ fn run() -> Result<(), Error> {
     
     console::log_1(&format!("Font Atlas: {:?}", atlas_data).into());
     
-    let num_slices = atlas_data.texture_depth;
     let atlas = FontAtlas::load(gl, atlas_data)?;
 
     let canvas_size = renderer.canvas_size();
     let terminal_grid = TerminalGrid::new(gl, atlas, canvas_size)?;
-    terminal_grid.upload_ubo_data(gl, canvas_size, num_slices);
+    terminal_grid.upload_ubo_data(gl);
 
     renderer.begin_frame();
     renderer.render(&terminal_grid);
