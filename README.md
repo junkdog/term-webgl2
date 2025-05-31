@@ -83,7 +83,6 @@ The terminal renderer provides a high-performance WebGL2-based text rendering sy
 // Create terminal renderer
 let atlas = FontAtlas::load_default(gl)?;
 let terminal_grid = TerminalGrid::new(gl, atlas, (800, 600))?;
-terminal_grid.upload_ubo_data(gl, (800, 600), num_slices);
 
 // Update cells and render
 terminal_grid.update_cells(gl, cell_data.iter())?;
@@ -119,11 +118,11 @@ glyphs × 4 styles + emoji.
 
 The font atlas uses a 3D texture organized as multiple slices, each containing a 4×4 grid of glyphs:
 
-| Dimension | Size | Formula | Description |
-|-----------|------|---------|-------------|
-| **Width** | Cell × 4 | 12 × 4 = 48px | 4 glyphs horizontally |
-| **Height** | Cell × 4 | 18 × 4 = 72px | 4 glyphs vertically |
-| **Depth** | ⌈Glyphs/16⌉ | Next power of 2 | One slice per 16 glyphs |
+| Dimension  | Size        | Formula         | Description             |
+|------------|-------------|-----------------|-------------------------|
+| **Width**  | Cell × 4    | 12 × 4 = 48px   | 4 glyphs horizontally   |
+| **Height** | Cell × 4    | 18 × 4 = 72px   | 4 glyphs vertically     |
+| **Depth**  | ⌈Glyphs/16⌉ | Next power of 2 | One slice per 16 glyphs |
 
 **Coordinate Mapping:**
 - Glyph ID → Slice: `ID ÷ 16`
