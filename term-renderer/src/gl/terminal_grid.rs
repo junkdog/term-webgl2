@@ -565,7 +565,7 @@ fn create_terminal_cell_data(
 ) -> Vec<CellDynamic> {
     let glyph_len = fill_glyph.len();
     (0..cols * rows)
-        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len], 0xffff_ffff, 0x0000_00ff))
+        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as i32, 0xffff_ffff, 0x0000_00ff))
         .collect()
 }
 

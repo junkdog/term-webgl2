@@ -1,4 +1,5 @@
 use crate::coordinate::GlyphCoordinate;
+use crate::font_discovery::{FontDiscovery, FontFamily};
 use crate::grapheme::GraphemeSet;
 use crate::raster_config::RasterizationConfig;
 use crate::BitmapFont;
@@ -11,32 +12,35 @@ pub(super) struct BitmapFontGenerator {
     font_system: FontSystem,
     cache: SwashCache,
     font_size: f32,
+    line_height: f32,
     metrics: Metrics,
+    font_family_name: String,
 }
 
 impl BitmapFontGenerator {
-
-    pub fn new(
+    /// Creates a new generator with the specified font family
+    pub fn new_with_family(
+        font_family: FontFamily,
         font_size: f32,
-    ) -> Self {
-        let mut font_system = FontSystem::new();
-        let font_db = font_system.db_mut();
+        line_height: f32,
+    ) -> Result<Self, String> {
+        let discovery = FontDiscovery::new();
+        let mut font_system = discovery.into_font_system();
 
-        // load the font files
-        font_db.load_font_file("./data/NimbusMonoPS-Regular.otf").unwrap();
-        font_db.load_font_file("./data/NimbusMonoPS-Bold.otf").unwrap();
-        font_db.load_font_file("./data/NimbusMonoPS-Italic.otf").unwrap();
-        font_db.load_font_file("./data/NimbusMonoPS-BoldItalic.otf").unwrap();
+        // verify the font family is loaded
+        FontDiscovery::load_font_family(&mut font_system, &font_family)?;
 
-        let metrics = Metrics::new(font_size, font_size * 1.2);
+        let metrics = Metrics::new(font_size, font_size * line_height);
         let cache = SwashCache::new();
 
-        Self {
+        Ok(Self {
             font_system,
             cache,
             metrics,
             font_size,
-        }
+            line_height,
+            font_family_name: font_family.name,
+        })
     }
 
     pub fn generate(&mut self, chars: &str) -> BitmapFont {
@@ -49,6 +53,7 @@ impl BitmapFontGenerator {
         let (cell_w, cell_h) = self.calculate_cell_dimensions(&test_glyphs);
 
         let config = RasterizationConfig::new(cell_w, cell_h, &glyphs);
+        println!("Font: {} @ {}pt (line height: {})", self.font_family_name, self.font_size, self.line_height);
         println!("{:?}", &config);
 
         // allocate 3d rgba texture data
@@ -216,7 +221,9 @@ impl BitmapFontGenerator {
         buffer.set_size(f, Some(inner_cell_w as f32), Some(inner_cell_h as f32));
 
         buffer.set_monospace_width(f, Some(inner_cell_w as f32));
-        buffer.set_text(f, c, &attrs(style), cosmic_text::Shaping::Advanced);
+
+        let attrs = attrs(&self.font_family_name, style);
+        buffer.set_text(f, c, &attrs, cosmic_text::Shaping::Advanced);
         buffer.shape_until_scroll(f, true);
 
         buffer
@@ -232,11 +239,13 @@ impl BitmapFontGenerator {
 
         // First pass: measure at default size
         let measure_size = self.font_size * 4.0; // Start larger
-        let measure_metrics = Metrics::new(measure_size, measure_size * 1.2);
+        let measure_metrics = Metrics::new(measure_size, measure_size * self.line_height);
 
         let mut measure_buffer = Buffer::new(f, measure_metrics);
         measure_buffer.set_size(f, Some(inner_cell_w * 8.0), Some(inner_cell_h * 8.0));
-        measure_buffer.set_text(f, emoji, &attrs(FontStyle::Normal), cosmic_text::Shaping::Advanced);
+
+        let attrs = &attrs(&self.font_family_name, FontStyle::Normal);
+        measure_buffer.set_text(f, emoji, &attrs, cosmic_text::Shaping::Advanced);
         measure_buffer.shape_until_scroll(f, true);
 
         // Measure actual bounds
@@ -274,11 +283,11 @@ impl BitmapFontGenerator {
 
         // render at scaled size
         let scaled_size = measure_size * scale;
-        let scaled_metrics = Metrics::new(scaled_size, scaled_size * 1.2);
+        let scaled_metrics = Metrics::new(scaled_size, scaled_size * self.line_height);
 
         let mut buffer = Buffer::new(f, scaled_metrics);
         buffer.set_size(f, Some(inner_cell_w), Some(inner_cell_w));
-        buffer.set_text(f, emoji, &attrs(FontStyle::Normal), cosmic_text::Shaping::Advanced);
+        buffer.set_text(f, emoji, &attrs, cosmic_text::Shaping::Advanced);
         buffer.shape_until_scroll(f, true);
 
         buffer
@@ -297,10 +306,11 @@ impl BitmapFontGenerator {
         let font_system = &mut self.font_system;
         let swash_cache = &mut self.cache;
         let metrics = self.metrics;
+        let font_family_name = &self.font_family_name;
 
         // iterate through all glyphs, accounting for their specific styles
         for glyph in glyphs.iter() {
-            let attrs = attrs(glyph.style);
+            let attrs = attrs(font_family_name, glyph.style);
 
             let mut buffer = Buffer::new(font_system, metrics);
             let mut buffer = buffer.borrow_with(font_system);
@@ -337,8 +347,12 @@ impl BitmapFontGenerator {
 
 
 
-fn attrs(style: FontStyle) -> Attrs<'static> {
+fn attrs(
+    font_family: &str,
+    style: FontStyle
+) -> Attrs {
     let attrs = Attrs::new()
+        .family(Family::Name(font_family))
         .style(Style::Normal)
         .family(Family::Monospace)
         .weight(Weight::NORMAL);
