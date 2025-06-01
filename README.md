@@ -258,11 +258,6 @@ Performs the core rendering logic with efficient 2D array texture lookups:
 The key optimization is that all coordinate calculations use bit operations, avoiding expensive 
 conditionals or memory lookups in the hot path.
 
-### Advanced Features
-
-- **Emoji Rendering**: Bit 11 detection for full-color emoji with texture-based coloring
-- **Missing Glyph Handling**: Automatic fallback to space character with debug logging
-
 
 ### WebGL2 Feature Dependencies
 
