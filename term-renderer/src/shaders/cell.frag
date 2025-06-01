@@ -31,7 +31,7 @@ void main() {
     // extract sequential glyph index from packed data
     uint glyph_index = v_packed_data.x & 0xFFFFu;
 
-    // 3D texture position from sequential index
+    // texture position from sequential index
     uint layer = (glyph_index & 0x0FFFu) >> 4; // only keep layer-coding bits
     uint pos_in_layer = glyph_index & 0x0Fu;
 
@@ -64,7 +64,6 @@ void main() {
     // color for normal glyphs are taken from the packed data;
     // emoji colors are sampled from the texture directly
     vec3 fg = mix(base_fg, glyph.rgb, emoji_factor);
-
 
     // if we're drawing a line, blend it with the base foreground color.
     // this allows us to do strikethroughs and underlines on emojis with
