@@ -236,12 +236,14 @@ fn setup_buffers(
     cell_size: (i32, i32),
 ) -> Result<TerminalBuffers, Error> {
     let (w, h) = (cell_size.0 as f32, cell_size.1 as f32);
+    
+    let overlap = 0.5;
+    let overlap = 0.0; // no overlap for now, can be adjusted later
     let vertices = [
-        // x, y, u, v
-          w, 0.0, 1.0, 0.0, // top-right
-        0.0,   h, 0.0, 1.0, // bottom-left
-          w,   h, 1.0, 1.0, // bottom-right
-        0.0, 0.0, 0.0, 0.0  // top-left
+        w + overlap,    -overlap, 1.0, 0.0, // top-right 
+           -overlap, h + overlap, 0.0, 1.0, // bottom-left 
+        w + overlap, h + overlap, 1.0, 1.0, // bottom-right 
+           -overlap,    -overlap, 0.0, 0.0  // top-left 
     ];
     let indices = [0, 1, 2, 0, 3, 1];
 

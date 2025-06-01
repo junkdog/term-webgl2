@@ -25,8 +25,8 @@ void main() {
     v_packed_data = a_packed_data;
 
     vec2 offset = vec2(
-        float(a_instance_pos.x) * u_cell_size.x,
-        float(a_instance_pos.y) * u_cell_size.y
+        floor(float(a_instance_pos.x) * u_cell_size.x + 0.5), // pixel-snapped
+        floor(float(a_instance_pos.y) * u_cell_size.y + 0.5)  // pixel-snapped
     );
 
     gl_Position = u_projection * vec4(a_pos + offset, 0.0, 1.0);

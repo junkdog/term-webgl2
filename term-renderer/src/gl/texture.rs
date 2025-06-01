@@ -73,10 +73,10 @@ impl Texture {
     }
 
     fn setup_mipmap_3d(gl: &web_sys::WebGl2RenderingContext) {
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
-        // gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MIN_FILTER, GL::NEAREST as i32);
-        // gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MAG_FILTER, GL::NEAREST as i32);
+        // gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
+        // gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
+        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MIN_FILTER, GL::NEAREST as i32);
+        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MAG_FILTER, GL::NEAREST as i32);
         gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
         gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
         gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_R, GL::CLAMP_TO_EDGE as i32);
