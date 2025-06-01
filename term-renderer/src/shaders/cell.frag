@@ -33,12 +33,10 @@ void main() {
     // 3D texture position from sequential index
     uint slice = (glyph_index & 0xCFFFu) >> 4; // strip underline/strikethrough bits
     uint pos_in_slice = glyph_index & 0x0Fu;
-    uint grid_x = pos_in_slice % 4u;
-    uint grid_y = pos_in_slice / 4u;
 
     vec3 tex_coord = vec3(
-        (float(grid_x) + v_tex_coord.x) / 4.0,
-        (float(grid_y) + v_tex_coord.y) / 4.0,
+        (float(pos_in_slice) + v_tex_coord.x) / 16.0,
+        v_tex_coord.y,
         (float(slice) + 0.5) / u_num_slices
     );
 

@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("=== Font Atlas Grid Viewer ===");
     println!("Texture: {}x{}x{} (4x4 cells per slice)",
-        atlas.texture_width, atlas.texture_height, atlas.texture_depth);
+        atlas.texture_width, atlas.texture_height, atlas.texture_layers);
 
     // Calculate total number of slices
     let max_slice = atlas.glyphs.iter().max_by_key(|g| g.id).unwrap().id as usize / 16;

@@ -136,7 +136,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Texture size: {}x{}x{}",
         bitmap_font.atlas_data.texture_width,
         bitmap_font.atlas_data.texture_height,
-        bitmap_font.atlas_data.texture_depth);
+        bitmap_font.atlas_data.texture_layers);
     println!("Cell size: {}x{}",
         bitmap_font.atlas_data.cell_width,
         bitmap_font.atlas_data.cell_height);
@@ -145,6 +145,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         bitmap_font.atlas_data.glyphs.iter().filter(|g| !g.is_emoji).count() / FontStyle::ALL.len(),
         Glyph::GLYPH_ID_MASK + 1, // zero-based id/index
         bitmap_font.atlas_data.glyphs.iter().filter(|g| g.is_emoji).count()
+    );
+    println!("Longest grapheme in bytes: {}",
+        bitmap_font.atlas_data.glyphs.iter()
+            .map(|g| g.symbol.len())
+            .max()
+            .unwrap_or(0)
     );
 
     Ok(())

@@ -22,7 +22,7 @@ impl Texture {
         let (width, height, depth) = (
             atlas.texture_width as i32,
             atlas.texture_height as i32,
-            atlas.texture_depth as i32
+            atlas.texture_layers as i32
         );
 
         // prepare texture

@@ -45,7 +45,7 @@ impl FontAtlas {
         config: FontAtlasData,
     ) -> Result<Self, Error> {
         let texture = crate::gl::texture::Texture::from_font_atlas_data(gl, GL::RGBA, &config)?;
-        let num_slices = config.texture_depth;
+        let num_slices = config.texture_layers;
         
         let texture_layers = config.glyphs.iter().map(|g| g.id as i32).max().unwrap_or(0) + 1;
         console::log_1(&format!("Creating atlas grid with {}/{texture_layers} layers",

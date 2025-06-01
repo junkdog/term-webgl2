@@ -1,16 +1,19 @@
 use std::fmt::Debug;
+use compact_str::CompactString;
 use crate::{Deserializer, FontAtlasDeserializationError, Glyph, Serializable};
 
 #[derive(PartialEq)]
 pub struct FontAtlasData {
+    /// The name of the font
+    pub font_name: CompactString,
     /// The font size in points
     pub font_size: f32,
     /// Width of the texture in pixels
     pub texture_width: u32,
     /// Height of the texture in pixels
     pub texture_height: u32,
-    /// Depth of the texture in pixels
-    pub texture_depth: u32,
+    /// Number of the texture layers
+    pub texture_layers: u32,
     /// Width of each character cell
     pub cell_width: i32,
     /// Height of each character cell
@@ -24,10 +27,11 @@ pub struct FontAtlasData {
 impl Debug for FontAtlasData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FontAtlasData")
+            .field("font_name", &self.font_name)
             .field("font_size", &self.font_size)
             .field("texture_width", &self.texture_width)
             .field("texture_height", &self.texture_height)
-            .field("texture_depth", &self.texture_depth)
+            .field("texture_layers", &self.texture_layers)
             .field("cell_width", &self.cell_width)
             .field("cell_height", &self.cell_height)
             .field("glyphs_count", &self.glyphs.len())

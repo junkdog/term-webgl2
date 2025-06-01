@@ -90,10 +90,11 @@ impl BitmapFontGenerator {
 
         BitmapFont {
             atlas_data: FontAtlasData {
+                font_name: self.font_family_name.clone().into(),
                 font_size: self.font_size,
                 texture_width: config.texture_width as u32,
                 texture_height: config.texture_height as u32,
-                texture_depth: config.texture_depth as u32,
+                texture_layers: config.layers as u32,
                 cell_width: config.cell_width,
                 cell_height: config.cell_height,
                 glyphs: rasterized_glyphs,
@@ -127,7 +128,8 @@ impl BitmapFontGenerator {
 
         // render pixels to texture
         let cell_offset = (cell_offset.0, cell_offset.1);
-        self.render_pixels_to_texture(pixels, cell_offset, coord.slice as i32, config, texture);
+        debug_assert_eq!(cell_offset.1, 0, "Y offset should be zero for single row texture");
+        self.render_pixels_to_texture(pixels, cell_offset, coord.layer as i32, config, texture);
     }
 
     fn rasterize_glyph_for_atlas(&mut self, glyph: &Glyph, inner_w: i32, inner_h: i32) -> Buffer {
@@ -178,7 +180,7 @@ impl BitmapFontGenerator {
         &self,
         pixels: Vec<(i32, i32, Color)>,
         cell_offset: (i32, i32),
-        slice: i32,
+        layer: i32,
         config: &RasterizationConfig,
         texture: &mut [u32],
     ) {
@@ -194,7 +196,7 @@ impl BitmapFontGenerator {
             let py = y + cell_offset.1 + FontAtlasData::PADDING;
 
             if px >= 0 && px < config.texture_width && py >= 0 && py < config.texture_height {
-                let idx = self.texture_index(px, py, slice, config);
+                let idx = self.texture_index(px, py, layer, config);
 
                 if idx < texture.len() {
                     let [r, g, b, a] = color.as_rgba().map(|c| c as u32);
@@ -408,7 +410,17 @@ fn create_test_glyphs_for_cell_calculation() -> Vec<Glyph> {
     // - "M" for typical capital letter width
     // - "g" and "y" for descenders
     // - "f" and "j" for potential ascender/descender combinations
-    ["█", "M", "W", "g", "y", "f", "j", "Q", "b"].into_iter()
+    [
+        "█",
+        // "M",
+        // "W",
+        // "g",
+        // "y",
+        // "f",
+        // "j",
+        // "Q",
+        // "b"
+    ].into_iter()
         .flat_map(|ch| {
             FontStyle::ALL.iter().map(move |style| {
                 Glyph::new(ch, *style, (0, 0))

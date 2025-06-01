@@ -193,17 +193,19 @@ impl Serializable for Glyph {
 impl Serializable for FontAtlasData {
     fn serialize(&self) -> Vec<u8> {
         let mut ser = Serializer::new();
-            ser.write_u8(ATLAS_HEADER[0]);
+        ser.write_u8(ATLAS_HEADER[0]);
         ser.write_u8(ATLAS_HEADER[1]);
         ser.write_u8(ATLAS_HEADER[2]);
         ser.write_u8(ATLAS_HEADER[3]);
         
         ser.write_u8(ATLAS_VERSION);
         
+        ser.write_string(&self.font_name);
         ser.write_f32(self.font_size);
+        
         ser.write_u32(self.texture_width);
         ser.write_u32(self.texture_height);
-        ser.write_u32(self.texture_depth);
+        ser.write_u32(self.texture_layers);
 
         ser.write_i32(self.cell_width);
         ser.write_i32(self.cell_height);
@@ -239,7 +241,9 @@ impl Serializable for FontAtlasData {
             });
         }
         
+        let font_name = deser.read_string()?;
         let font_size = deser.read_f32()?;
+        
         let texture_width = deser.read_u32()?;
         let texture_height = deser.read_u32()?;
         let texture_depth = deser.read_u32()?;
@@ -262,10 +266,11 @@ impl Serializable for FontAtlasData {
             })?;
 
         Ok(FontAtlasData {
+            font_name,
             font_size,
             texture_width,
             texture_height,
-            texture_depth,
+            texture_layers: texture_depth,
             cell_width,
             cell_height,
             glyphs,
@@ -487,10 +492,11 @@ mod tests {
 
         // Create original FontAtlasConfig
         let original = FontAtlasData {
+            font_name: CompactString::from("TestFont"),
             font_size: 16.5,
             texture_width: 512,
             texture_height: 256,
-            texture_depth: 256,
+            texture_layers: 256,
             cell_width: 12,
             cell_height: 18,
             glyphs,

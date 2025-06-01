@@ -4,7 +4,7 @@ use compact_str::{CompactString, ToCompactString};
 ///
 /// A `Glyph` contains the metadata needed to locate and identify a character
 /// within a font atlas texture. Each glyph has a unique ID that maps
-/// to its coordinates in a WebGL `TEXTURE_3D`.
+/// to its coordinates in a WebGL `TEXTURE_2D_ARRAY`.
 ///
 /// # ASCII Optimization
 /// For ASCII characters, the glyph ID directly corresponds to the character's
@@ -12,7 +12,7 @@ use compact_str::{CompactString, ToCompactString};
 /// characters are assigned sequential IDs starting from a base value.
 ///
 /// # Glyph ID Bit Layout (16-bit)
-///
+/// todo: update representation to match the new style
 /// | Bit(s) | Flag Name     | Hex Mask | Binary Mask           | Description               |
 /// |--------|---------------|----------|-----------------------|---------------------------|
 /// | 0-8    | GLYPH_ID      | `0x01FF` | `0000_0001_1111_1111` | Base glyph id             |
@@ -24,9 +24,8 @@ use compact_str::{CompactString, ToCompactString};
 /// | 15     | EMOJI         | `0x8000` | `1000_0000_0000_0000` | Emoji character           |
 ///
 /// - The first 9 bits (0-8) represent the base glyph ID, allowing for 512 unique glyphs.
-/// - Underlined and strikethrough styles are mutually exclusive.
-/// - Emoji glyphs implicitly clear any other style bits.
-/// - The full 16-bit glyph ID encodes the texture 3d coordinates.
+/// - Emoji glyphs implicitly clear any other font style bits.
+/// - The fragment shader uses the glyph ID to decode the texture coordinates and effects.
 ///
 /// ## Glyph ID Encoding Examples
 ///
