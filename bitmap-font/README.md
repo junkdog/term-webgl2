@@ -5,7 +5,7 @@ rendering efficiency.
 
 ## Overview
 
-`bitmap-font` generates tightly-packed 3D texture atlases from TTF/OTF font files, producing a
+`bitmap-font` generates tightly-packed 2D texture array atlases from TTF/OTF font files, producing a
 binary format optimized for GPU upload. The system supports multiple font styles, full Unicode
 including emoji, and automatic grapheme clustering.
 
@@ -13,7 +13,7 @@ including emoji, and automatic grapheme clustering.
 
 The crate consists of:
 - **Font rasterization engine** using cosmic-text for high-quality text rendering
-- **3D texture packer** organizing glyphs into 4×4 grids per texture slice
+- **2D texture array packer** organizing glyphs into 16×1 grids per texture layer
 - **Binary serializer** with zlib compression for efficient storage
 - **Atlas verification tool** for debugging and visualization
 
@@ -52,12 +52,12 @@ The generator assigns IDs based on three character categories:
 **1. ASCII Characters (0x00-0x7F)**
 - Direct mapping: character code = base glyph ID
 - Guarantees fast lookup for common characters
-- Occupies first 8 texture slices (128 chars ÷ 16 per slice)
+- Occupies first 8 texture layers (128 chars ÷ 16 per layer)
 
 **2. Unicode Characters**
 - Fill unused slots in the 0x00-0x1FF range
 - Sequential assignment starting from first available ID
-- Maximum 384 additional non-ASCII glyphs (512 total - 128 ASCII)
+- Constrained to 512 glyphs (0x000-0x1FF)
 
 **3. Emoji Characters**
 - Start at ID 0x800 (bit 11 set)
@@ -65,43 +65,44 @@ The generator assigns IDs based on three character categories:
 - No style variants (emoji are always rendered as-is)
 - Can extend beyond the 512 base glyph limit
 
-### Texture Slice Calculation
+### Texture Layer Calculation
 
 With the ID assignment scheme:
-- Regular glyphs with styles: IDs 0x0000-0x07FF (first 128 slices)
-- Emoji glyphs: IDs 0x0800+ (slices 128+)
+- Regular glyphs with styles: IDs 0x0000-0x07FF (first 128 layers)
+- Emoji glyphs: IDs 0x0800+ (layers 128+)
 
 For a typical atlas with ~500 base glyphs + 100 emoji:
-- Base glyphs × 4 styles = 2000 IDs → 125 slices
-- Emoji = 100 IDs → 7 additional slices
-- Total ≈ 132 slices → rounded to 256 (next power of 2)
+- Base glyphs × 4 styles = 2000 IDs → 125 layers
+- Emoji = 100 IDs → 7 additional layers
+- Total = 132 layers
 
-## 3D Texture Organization
+## 2D Texture Array Organization
 
-### Slice Layout
+### Layer Layout
 
-Each texture slice contains a 4×4 grid of glyphs:
+Each texture layer contains a 16×1 grid of glyphs:
 
 ```
-Position in slice = ID & 0x0F (modulo 16)
-Grid X = Position % 4
-Grid Y = Position ÷ 4
-Slice Z = ID ÷ 16
+Position in layer = ID & 0x0F (modulo 16)
+Grid X = Position (0-15)
+Grid Y = 0 (always single row)
+Layer = ID ÷ 16
 ```
 
 ### Memory Layout
 
-The 3D texture uses RGBA format with dimensions:
-- Width: cell_width × 4
-- Height: cell_height × 4
-- Depth: next_power_of_2(max_glyph_id ÷ 16)
+The 2D texture array uses RGBA format with dimensions:
+
+- Width: cell_width × 16
+- Height: cell_height × 1
+- Layers: max_glyph_id ÷ 16
 
 The RGBA format is required for emoji support - while monochrome glyphs could use a single channel,
 emoji glyphs need full color information.
 
 This layout ensures:
 - Efficient GPU memory alignment
-- Cache-friendly access patterns (related glyphs in same slice)
+- Cache-friendly access pattern (sequential glyphs in same row)
 - Simple coordinate calculation using bit operations
 
 ## Rasterization Process
@@ -113,7 +114,7 @@ fit within the cell boundaries. Additional padding of 1px on all sides prevents 
 
 ### Font Style Handling
 
-Each glyph is rendered four times with appropriate font selection based on the style flags.
+Each glyph is rendered four time, one for each of the styles (normal, bold, italic, bold+italic).
 
 ### Emoji Special Handling
 
@@ -178,8 +179,7 @@ The tool generates an atlas from a predefined character set including:
 ### Verification
 
 The `verify-atlas` binary visualizes the texture layout, showing:
-- Slice organization
+- Layer organization
 - Character placement
 - Grid boundaries
 - Glyph distribution
-

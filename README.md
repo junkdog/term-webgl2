@@ -1,6 +1,7 @@
 ## WebGL2 Terminal Renderer
 
-A high-performance terminal rendering system for web browsers, targeting sub-millisecond render times.
+A high-performance terminal rendering system for web browsers, targeting sub-millisecond render 
+times.
 
 ## Key Features
 
@@ -26,8 +27,9 @@ For a typical 12×18 pixel font with ~2500 glyphs:
 
 The renderer consists of three specialized crates:
 
-**`bitmap-font`** - Generates GPU-optimized font atlases from TTF/OTF files. Automatically calculates
-cell dimensions, supports font styles (normal/bold/italic), and outputs packed texture data.
+**`bitmap-font`** - Generates GPU-optimized font atlases from TTF/OTF files. Automatically 
+calculates cell dimensions, supports font styles (normal/bold/italic), and outputs packed
+texture data.
 
 **`font-atlas`** - Provides shared data structures and efficient binary serialization. Features
 versioned format with header validation and cross-platform encoding.
@@ -39,8 +41,8 @@ buffer management and state tracking for consistent sub-millisecond performance.
 ## Architecture Overview
 
 The architecture leverages GPU instancing to reuse a single quad geometry across all terminal cells,
-with per-instance data providing position, character, and color information. The 3D texture atlas
-maximizes cache efficiency by packing related glyphs into 4×4 grids within each texture slice.
+with per-instance data providing position, character, and color information. The 2D texture array
+maximizes cache efficiency by packing related glyphs into horizontal strips within each layer.
 
 ### Buffer Management Strategy
 
@@ -50,7 +52,7 @@ The renderer employs several optimization strategies:
 2. **Separate Static/Dynamic**: Geometry and positions rarely change; only cell content is dynamic
 3. **Aligned Packing**: All structures use explicit alignment for optimal GPU access
 4. **Batch Updates**: Cell updates are batched and uploaded in a single operation
-5. **Immutable Storage**: 3D texture uses `texStorage3D` for driver optimization hints
+5. **Immutable Storage**: 2D texture array uses `texStorage3D` for driver optimization hints
 
 These strategies combined enable the renderer to achieve consistent sub-millisecond frame times even
 for large terminals (200×80 cells = 16,000 instances).
@@ -67,13 +69,14 @@ For a 200×80 terminal with 2048 glyphs:
 | Overhead       | ~10 KB    | VAO, shaders, uniforms      |
 | **Total**      | **~2 MB** | GPU memory                  |
 
-This efficient memory usage allows multiple terminal instances without significant GPU memory 
+This efficient memory usage allows multiple terminal instances without significant GPU memory
 pressure.
 
 ## Terminal Grid Renderer API
 
 The WebGL2 terminal renderer provides efficient text rendering through a simple API centered
-around two main components: `TerminalGrid` for managing the display and `FontAtlas` for glyph storage.
+around two main components: `TerminalGrid` for managing the display and `FontAtlas` for glyph 
+storage.
 
 ### Quick Start
 
@@ -95,7 +98,7 @@ buffers, and rendering state. Key methods include `new()` for initialization, `u
 for content updates, and sizing queries.
 
 ### FontAtlas
-Manages the 3D texture atlas containing all font glyphs. Provides character-to-texture-coordinate
+Manages the 2D texture array containing all font glyphs. Provides character-to-texture-coordinate
 mapping with fast ASCII optimization. Supports loading default or custom font atlases.
 
 
@@ -107,29 +110,33 @@ Each terminal cell requires:
 - **effect**: `GlyphEffect` enum (None, Underline, Strikethrough)
 - **fg/bg**: Colors as 32-bit ARGB values (`0xAARRGGBB`)
 
-## Font Atlas 3D Texture Architecture
+## Font Atlas 2D Texture Array Architecture
 
-The font atlas uses a WebGL 3D texture where each slice contains a 4×4 grid of glyphs (16 per
-slice). This provides 16× better memory utilization than one-glyph-per-layer approaches while
-maintaining O(1) coordinate lookups through simple bit operations. The system supports 512 base
-glyphs × 4 styles + emoji.
+The font atlas uses a WebGL 2D texture array where each layer contains a 16×1 grid of glyphs (16 
+per layer). This provides optimal memory utilization and cache efficiency while maintaining O(1) 
+coordinate lookups through simple bit operations. The system supports 512 base glyphs × 4 styles + 
+emoji.
 
-### 3D Texture Coordinate System
+### 2D Texture Array Coordinate System
 
-The font atlas uses a 3D texture organized as multiple slices, each containing a 4×4 grid of glyphs:
+The font atlas uses a 2D texture array organized as multiple layers, each containing a 16×1 grid 
+of glyphs:
 
-| Dimension  | Size        | Formula         | Description             |
-|------------|-------------|-----------------|-------------------------|
-| **Width**  | Cell × 4    | 12 × 4 = 48px   | 4 glyphs horizontally   |
-| **Height** | Cell × 4    | 18 × 4 = 72px   | 4 glyphs vertically     |
-| **Depth**  | ⌈Glyphs/16⌉ | Next power of 2 | One slice per 16 glyphs |
+| Dimension  | Size        | Formula            | Description             |
+|------------|-------------|--------------------|-------------------------|
+| **Width**  | Cell × 16   | 12 × 16 = 192px    | 16 glyphs horizontally  |
+| **Height** | Cell × 1    | 18 × 1 = 18px      | 1 glyph vertically      |
+| **Layers** | ⌈Glyphs/16⌉ | max(glyph.id) / 16 | One layer per 16 glyphs |
+
+The layers are densely packed, but there might be gaps beween font variants
+and before the first emoji layer, unless all 512 glyphs are used.
 
 **Coordinate Mapping:**
-- Glyph ID → Slice: `ID ÷ 16`
-- Position in slice: `ID % 16`
-- Grid coordinates: `(pos % 4, pos ÷ 4)`
+- Glyph ID → Layer: `ID ÷ 16`
+- Position in layer: `ID % 16`
+- Grid coordinates: `(pos, layer)`
 
-This layout packs 16 glyphs per slice while maintaining fast coordinate calculation
+This layout packs 16 glyphs per layer with optimal horizontal cache locality
 through simple bit shifts and masks.
 
 ### Glyph ID Encoding and Mapping
@@ -146,18 +153,18 @@ through simple bit shifts and masks.
 | 13     | STRIKETHROUGH | `0x2000` | `0010_0000_0000_0000` | Strikethrough effect      |
 | 14-15  | RESERVED      | `0xC000` | `1100_0000_0000_0000` | Reserved for future use   |
 
-#### ID to 3D Position Examples
+#### ID to 2D Array Position Examples
 
 | Character | Style       | Glyph ID | Calculation            | Result                | 
 |-----------|-------------|----------|------------------------|-----------------------|
-| ' ' (32)  | Normal      | 0x0020   | 32÷16=2, 32%16=0       | Slice 2, Grid (0,0)   |
-| 'A' (65)  | Normal      | 0x0041   | 65÷16=4, 65%16=1       | Slice 4, Grid (1,0)   |
-| 'A' (65)  | Bold+Italic | 0x0641   | 1601÷16=100, 1601%16=1 | Slice 100, Grid (1,0) |
-| '€'       | Normal      | 0x0080   | Mapped to ID 128       | Slice 8, Grid (0,0)   |
-| '🚀'      | Emoji       | 0x0881   | With emoji bit set     | Slice 136, Grid (1,0) |
+| ' ' (32)  | Normal      | 0x0020   | 32÷16=2, 32%16=0       | Layer 2, Position 0   |
+| 'A' (65)  | Normal      | 0x0041   | 65÷16=4, 65%16=1       | Layer 4, Position 1   |
+| 'A' (65)  | Bold+Italic | 0x0641   | 1601÷16=100, 1601%16=1 | Layer 100, Position 1 |
+| '€'       | Normal      | 0x0080   | Mapped to ID 128       | Layer 8, Position 0   |
+| '🚀'      | Emoji       | 0x0881   | With emoji bit set     | Layer 136, Position 1 |
 
-The consistent modular arithmetic ensures that style variants maintain the same grid position
-within their respective slices, improving texture cache coherence.
+The consistent modular arithmetic ensures that style variants maintain the same horizontal position
+within their respective layers, improving texture cache coherence.
 
 ### ASCII Optimization
 
@@ -198,9 +205,9 @@ The 8-byte `CellDynamic` structure is tightly packed to minimize bandwidth:
 
 ```
 Byte Layout: [0][1][2][3][4][5][6][7]
-             └─┬─┘ └───┬───┘ └───┬───┘
-           Glyph ID   FG RGB   BG RGB
-           (16-bit)  (24-bit) (24-bit)
+              └┬─┘  └──┬──┘  └──┬──┘
+           Glyph ID  FG RGB   BG RGB
+           (16-bit) (24-bit) (24-bit)
 ```
 
 This layout enables the GPU to fetch all cell data in a single 64-bit read, with the glyph
@@ -211,15 +218,15 @@ Layout section.
 
 For a typical 12×18 pixel font with 2048 glyphs:
 
-| Component            | Size      | Details                          |
-|----------------------|-----------|----------------------------------|
-| **3D Texture**       | ~1.7 MB   | 48×72×128 RGBA (16 glyphs/slice) |
-| **Vertex Buffers**   | ~200 KB   | For 200×80 terminal              |
-| **Cache Efficiency** | Good      | Common ASCII chars in 6 slices   |
-| **Memory Access**    | Coalesced | 64-bit aligned instance data     |
+| Component            | Size      | Details                           |
+|----------------------|-----------|-----------------------------------|
+| **2D Texture Array** | ~1.7 MB   | 192×18×128 RGBA (16 glyphs/layer) |
+| **Vertex Buffers**   | ~200 KB   | For 200×80 terminal               |
+| **Cache Efficiency** | Good      | Sequential glyphs in same layer   |
+| **Memory Access**    | Coalesced | 64-bit aligned instance data      |
 
-The 4×4 grid layout ensures that adjacent terminal cells often access the same texture slice,
-maximizing GPU cache hits. ASCII characters (the most common) are packed into the first 8 slices,
+The 16×1 grid layout ensures that adjacent terminal cells often access the same texture layer,
+maximizing GPU cache hits. ASCII characters (the most common) are packed into the first 8 layers,
 providing optimal memory locality for typical terminal content.
 
 ### Instance Data Packing
@@ -241,14 +248,15 @@ Transforms cell geometry from grid space to screen space using per-instance attr
 - Passes packed instance data directly to fragment shader without unpacking
 
 #### Fragment Shader (`cell.frag`)
-Performs the core rendering logic with efficient 3D texture lookups:
+Performs the core rendering logic with efficient 2D array texture lookups:
 - Extracts 16-bit glyph ID from packed instance data
-- Computes 3D texture coordinates using modular arithmetic (ID → slice/grid position)
+- Computes layer index and horizontal position using bit operations (glyph_id → layer/position)
+- Samples from 2D texture array using direct layer indexing
 - Detects emoji glyphs via bit 11 for special color handling
 - Blends foreground/background colors with glyph alpha for anti-aliasing
 
-The key optimization is that all coordinate calculations use bit operations and modular arithmetic,
-avoiding expensive conditionals or memory lookups in the hot path.
+The key optimization is that all coordinate calculations use bit operations, avoiding expensive 
+conditionals or memory lookups in the hot path.
 
 ### Advanced Features
 
@@ -259,7 +267,7 @@ avoiding expensive conditionals or memory lookups in the hot path.
 ### WebGL2 Feature Dependencies
 
 The renderer requires WebGL2 for:
-- **3D Textures** (`TEXTURE_3D`, `texStorage3D`, `texSubImage3D`)
+- **2D Texture Arrays** (`TEXTURE_2D_ARRAY`, `texStorage3D`, `texSubImage3D`)
 - **Instanced Rendering** (`drawElementsInstanced`, `vertexAttribDivisor`)
 - **Advanced Buffers** (`UNIFORM_BUFFER`, `vertexAttribIPointer`)
 - **Vertex Array Objects** (`createVertexArray`)
@@ -284,17 +292,13 @@ trunk build --release
 
 ## Design Decisions
 
-### Why 4×4 Grid Per Slice?
+### Why 16×1 Grid Per Layer?
 
-- **GPU compatibility**: 2D texture arrays and 3D textures have limited layer support across
-  browsers and GPUs. Many systems can't reliably handle thousands of layers, but can handle depths in
-  the hundreds.
-- **Depth reduction**: Packing 16 glyphs per slice reduces a 2000+ glyph atlas from 2000+ layers to
-  ~140 layers, staying within widely-supported limits
-- **Cache efficiency**: Related glyphs (e.g., ASCII characters) cluster in the same slice,
-  improving texture cache hit rates
-- **Simple addressing**: 16 glyphs per slice allows coordinate calculation using bit masking (ID &
-  0x0F)
+- **GPU compatibility**: Single-row layout maximizes horizontal cache coherence and minimizes 
+texture sampling overhead
+- **Simplified math**: Position within layer is just a matter of `glyph_id & 0x0F`
+- **Cache efficiency**: Sequential glyphs (e.g., ASCII characters) are horizontally contiguous, 
+improving texture cache hit rates
 
 ### Why Separate Style Encoding?
 
@@ -320,7 +324,7 @@ trunk build --release
 - [x] **Font Variants**: Bold, italic, and other font weight support
 - [x] **Complete Glyph Set**: Report (e.g. via logging) when glyphs are missing from the atlas
 - [x] **Emoji support**: Currently renders with only the foreground color
-  
+
 ## Undecided|Lower Prio Features
 - [ ] **Double Buffering**: Are there any benefits to double buffering for terminal rendering?
 - [ ] **Dynamic Atlases**: Runtime glyph addition without regeneration
