@@ -306,17 +306,12 @@ improving texture cache hit rates
 - Enables runtime style switching without texture lookups
 - Maintains consistent coordinates for style variants
 
-### Why Power-of-2 Texture Depth?
-
-- Required by some GPU architectures
-- Simplifies mipmap generation (if needed)
-
 ## Limitations
 
 - Maximum 512 base glyphs (9-bit addressing)
 - Fixed 4 style variants per glyph
 - Monospace fonts only
-- Single font family per atlas
+- Single font family and font size per atlas
 
 
 ## TODO
