@@ -32,7 +32,7 @@ void main() {
     uint glyph_index = v_packed_data.x & 0xFFFFu;
 
     // 3D texture position from sequential index
-    uint layer = (glyph_index & 0xCFFFu) >> 4; // strips underline/strikethrough bits
+    uint layer = (glyph_index & 0x0FFFu) >> 4; // only keep layer-coding bits
     uint pos_in_layer = glyph_index & 0x0Fu;
 
     // apply strikethrough or underline if the glyph has either bit set
