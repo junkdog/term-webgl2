@@ -278,9 +278,10 @@ impl BitmapFontGenerator {
         let actual_width = (max_x - min_x + 1) as f32;
         let actual_height = (max_y - min_y + 1) as f32;
 
-        // calculate scale factor 
-        let scale_x = (inner_cell_w) / actual_width;
-        let scale_y = (inner_cell_h) / actual_height;
+        // calculate scale factor; overscale slightly to ensure it fits better
+        let scale_x = 1.06 * (inner_cell_w) / actual_width;
+        let scale_y = 1.06 * (inner_cell_h) / actual_height;
+
         let scale = scale_x.min(scale_y).min(1.0); // Don't scale up
 
         // render at scaled size
@@ -360,7 +361,7 @@ fn attrs(
         .family(Family::Monospace)
         .weight(default_weight);
 
-    
+
     use FontStyle::*;
     match style {
         Normal     => attrs,

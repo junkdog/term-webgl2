@@ -247,6 +247,7 @@ fn setup_buffers(
     // let overlap = 0.5;
     let overlap = 0.0; // no overlap for now, can be adjusted later
     let vertices = [
+        //    x            y       u    v
         w + overlap,    -overlap, 1.0, 0.0, // top-right
            -overlap, h + overlap, 0.0, 1.0, // bottom-left
         w + overlap, h + overlap, 1.0, 1.0, // bottom-right
