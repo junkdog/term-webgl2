@@ -207,8 +207,8 @@ Byte Layout: [0][1][2][3][4][5][6][7]
 ```
 
 This layout enables the GPU to fetch all cell data in a single 64-bit read, with the glyph
-ID encoding both the texture coordinate and style information as described in the Glyph ID Bit
-Layout section.
+ID encoding both the texture coordinate and style information as described in the [Glyph ID Bit
+Layout](#glyph-id-bit-layout-16-bit) section.
 
 ### Memory Layout and Performance
 
