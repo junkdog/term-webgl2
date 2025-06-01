@@ -12,7 +12,7 @@ impl GlyphCoordinate {
 
         // 16 glyphs per layer, indexed from 0 to 15
         Self {
-            layer: id >> 4,  
+            layer: id >> 4,
             glyph_index: (id & 0xF) as u8,
         }
     }
@@ -27,7 +27,7 @@ impl GlyphCoordinate {
     pub(super) fn cell_offset_in_px(&self, config: &RasterizationConfig) -> (i32, i32, i32) {
         (
             self.glyph_index as i32 * config.cell_width,
-            0, 
+            0,
             self.layer as i32,
         )
     }

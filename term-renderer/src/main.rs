@@ -1,6 +1,6 @@
 use web_sys::console;
 use font_atlas::FontAtlasData;
-use term_renderer::{BITMAP_FONT_IMAGE, BITMAP_FONT_METADATA};
+use term_renderer::DEFAULT_FONT_ATLAS_BLOB;
 use crate::error::Error;
 use crate::gl::{FontAtlas, Renderer, TerminalGrid};
 
@@ -19,7 +19,7 @@ fn run() -> Result<(), Error> {
     let mut renderer = Renderer::create("canvas")?;
     let gl = renderer.gl();
 
-    let atlas_data: FontAtlasData = FontAtlasData::from_binary(BITMAP_FONT_METADATA)
+    let atlas_data: FontAtlasData = FontAtlasData::from_binary(DEFAULT_FONT_ATLAS_BLOB)
         .map_err(|e| Error::deserialization_failed(e.message))?;
     
     console::log_1(&format!("Font Atlas: {:?}", atlas_data).into());
