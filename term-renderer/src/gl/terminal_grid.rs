@@ -382,7 +382,7 @@ impl Drawable for TerminalGrid {
     fn cleanup(&self, context: &mut RenderContext) {
         let gl = context.gl;
         gl.bind_vertex_array(None);
-        gl.bind_texture(GL::TEXTURE_3D, None);
+        gl.bind_texture(GL::TEXTURE_2D_ARRAY, None);
 
         self.ubo.unbind(gl)
     }

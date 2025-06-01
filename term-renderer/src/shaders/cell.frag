@@ -3,7 +3,7 @@
 precision mediump float;
 
 // uniforms
-uniform mediump sampler3D u_sampler;
+uniform mediump sampler2DArray u_sampler;
 layout(std140) uniform CellUniforms {
     mat4 u_projection;
     vec2 u_cell_size;
@@ -31,13 +31,13 @@ void main() {
     uint glyph_index = v_packed_data.x & 0xFFFFu;
 
     // 3D texture position from sequential index
-    uint slice = (glyph_index & 0xCFFFu) >> 4; // strip underline/strikethrough bits
-    uint pos_in_slice = glyph_index & 0x0Fu;
+    uint layer = (glyph_index & 0xCFFFu) >> 4; // strips underline/strikethrough bits
+    uint pos_in_layer = glyph_index & 0x0Fu;
 
     vec3 tex_coord = vec3(
-        (float(pos_in_slice) + v_tex_coord.x) / 16.0,
+        (float(pos_in_layer) + v_tex_coord.x) / 16.0,
         v_tex_coord.y,
-        (float(slice) + 0.5) / u_num_slices
+        float(layer)
     );
 
     // the base foreground color is used for normal glyphs and underlines/strikethroughs
