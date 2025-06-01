@@ -239,7 +239,7 @@ efficient GPU access.
 
 ### Shader Pipeline
 
-The renderer uses a two-stage shader pipeline optimized for instanced rendering:
+The renderer uses a branchless shader pipeline optimized for instanced rendering:
 
 #### Vertex Shader (`cell.vert`)
 Transforms cell geometry from grid space to screen space using per-instance attributes. The shader:
