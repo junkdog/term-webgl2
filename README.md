@@ -25,7 +25,7 @@ For a typical 12×18 pixel font with ~2500 glyphs:
 
 ## System Architecture
 
-The renderer consists of three specialized crates:
+The renderer consists of three crates:
 
 **`bitmap-font`** - Generates GPU-optimized font atlases from TTF/OTF files. Automatically 
 calculates cell dimensions, supports font styles (normal/bold/italic), and outputs packed
@@ -98,7 +98,7 @@ buffers, and rendering state. Key methods include `new()` for initialization, `u
 for content updates, and sizing queries.
 
 ### FontAtlas
-Manages the 2D texture array containing all font glyphs. Provides character-to-texture-coordinate
+Manages the 2D texture array containing all font glyphs. Provides character-to-glyph ID
 mapping with fast ASCII optimization. Supports loading default or custom font atlases.
 
 
@@ -130,14 +130,6 @@ of glyphs:
 
 The layers are densely packed, but there might be gaps beween font variants
 and before the first emoji layer, unless all 512 glyphs are used.
-
-**Coordinate Mapping:**
-- Glyph ID → Layer: `ID ÷ 16`
-- Position in layer: `ID % 16`
-- Grid coordinates: `(pos, layer)`
-
-This layout packs 16 glyphs per layer with optimal horizontal cache locality
-through simple bit shifts and masks.
 
 ### Glyph ID Encoding and Mapping
 
