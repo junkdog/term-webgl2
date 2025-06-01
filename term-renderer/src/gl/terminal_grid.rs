@@ -4,7 +4,7 @@ use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderP
 use crate::mat4::Mat4;
 use std::fmt::Debug;
 use web_sys::{console, WebGl2RenderingContext};
-use font_atlas::{FontStyle, GlyphEffect};
+use font_atlas::{FontAtlasData, FontStyle, GlyphEffect};
 
 /// A high-performance terminal grid renderer using instanced rendering.
 ///
@@ -162,14 +162,21 @@ impl TerminalGrid {
         gl: &WebGl2RenderingContext,
     ) {
         let cell_size = self.cell_size();
-        
+
+        let padding = FontAtlasData::PADDING as f32;
+
         let data = CellUbo {
             projection: Mat4::orthographic_from_size(
                 self.canvas_size_px.0 as f32,
                 self.canvas_size_px.1 as f32
             ).data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
+            padding_frac: [ // padding as fraction of cell size
+                padding / cell_size.0 as f32,
+                padding / cell_size.1 as f32,
+            ],
             num_slices: self.atlas.num_slices as f32,
+            _padding: [0.0; 1], // padding to ensure proper alignment
         };
 
         console::log_1(&format!("cell size: {:?}", data.cell_size).into());
@@ -236,14 +243,14 @@ fn setup_buffers(
     cell_size: (i32, i32),
 ) -> Result<TerminalBuffers, Error> {
     let (w, h) = (cell_size.0 as f32, cell_size.1 as f32);
-    
-    let overlap = 0.5;
+
+    // let overlap = 0.5;
     let overlap = 0.0; // no overlap for now, can be adjusted later
     let vertices = [
-        w + overlap,    -overlap, 1.0, 0.0, // top-right 
-           -overlap, h + overlap, 0.0, 1.0, // bottom-left 
-        w + overlap, h + overlap, 1.0, 1.0, // bottom-right 
-           -overlap,    -overlap, 0.0, 0.0  // top-left 
+        w + overlap,    -overlap, 1.0, 0.0, // top-right
+           -overlap, h + overlap, 0.0, 1.0, // bottom-left
+        w + overlap, h + overlap, 1.0, 1.0, // bottom-right
+           -overlap,    -overlap, 0.0, 0.0  // top-left
     ];
     let indices = [0, 1, 2, 0, 3, 1];
 
@@ -544,7 +551,9 @@ impl CellDynamic {
 struct CellUbo {
     pub projection: [f32; 16],     // mat4
     pub cell_size: [f32; 2],       // vec2 - screen cell size
+    pub padding_frac: [f32; 2], // padding as a fraction of cell size
     pub num_slices: f32,
+    pub _padding: [f32; 1],
 }
 
 impl CellUbo {
@@ -552,7 +561,12 @@ impl CellUbo {
         Self {
             projection: projection.data,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
+            padding_frac: [
+                FontAtlasData::PADDING as f32 / cell_size.0 as f32,
+                FontAtlasData::PADDING as f32 / cell_size.1 as f32,
+            ],
             num_slices: 1.0, // default to 1 slice, can be updated later
+            _padding: [0.0; 1], // padding to ensure proper alignment
         }
     }
 }

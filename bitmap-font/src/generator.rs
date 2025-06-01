@@ -121,7 +121,7 @@ impl BitmapFontGenerator {
         buffer.set_size(&mut self.font_system, Some(buffer_size.0), Some(buffer_size.1));
 
         let mut buffer = buffer.borrow_with(&mut self.font_system);
-        let cell_offset = coord.cell_offset(config);
+        let cell_offset = coord.cell_offset_in_px(config);
 
         // collect pixels and optionally calculate centering
         let pixels = Self::collect_glyph_pixels(&mut buffer, &mut self.cache, glyph.is_emoji, inner_cell_w, inner_cell_h);
@@ -353,12 +353,14 @@ fn attrs(
     font_family: &str,
     style: FontStyle
 ) -> Attrs {
+    let default_weight = Weight((Weight::NORMAL.0 + Weight::MEDIUM.0) / 2);
     let attrs = Attrs::new()
         .family(Family::Name(font_family))
         .style(Style::Normal)
         .family(Family::Monospace)
-        .weight(Weight::NORMAL);
+        .weight(default_weight);
 
+    
     use FontStyle::*;
     match style {
         Normal     => attrs,

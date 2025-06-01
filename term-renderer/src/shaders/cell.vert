@@ -12,7 +12,8 @@ layout(location = 3) in uvec2 a_packed_data;
 // uniforms
 layout(std140) uniform CellUniforms {
     mat4 u_projection;
-    vec2 u_cell_size;
+    vec2 u_cell_size; // unpadded cell size in pixels
+    vec2 u_padding_frac; // padding as fraction of cell size
     float u_num_slices;
 };
 

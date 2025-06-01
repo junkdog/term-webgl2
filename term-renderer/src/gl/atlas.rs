@@ -77,7 +77,9 @@ impl FontAtlas {
     }
 
     pub fn cell_size(&self) -> (i32, i32) {
-        self.cell_size
+        let (w, h) = self.cell_size;
+        (w - 2 * FontAtlasData::PADDING, h - 2 * FontAtlasData::PADDING)
+        // self.cell_size
     }
 
     /// Returns the texture array z-offset for the given key

@@ -6,7 +6,8 @@ precision mediump float;
 uniform mediump sampler2DArray u_sampler;
 layout(std140) uniform CellUniforms {
     mat4 u_projection;
-    vec2 u_cell_size;
+    vec2 u_cell_size; // unpadded cell size in pixels
+    vec2 u_padding_frac; // padding as fraction of cell size
     float u_num_slices;
 };
 
@@ -34,9 +35,17 @@ void main() {
     uint layer = (glyph_index & 0xCFFFu) >> 4; // strips underline/strikethrough bits
     uint pos_in_layer = glyph_index & 0x0Fu;
 
+    // apply strikethrough or underline if the glyph has either bit set
+    // (it's easier to do this before we recalculate the tex_coord)
+    float line_alpha = max(
+        horizontal_line(v_tex_coord, 0.80, 0.05) * float((glyph_index >> 12) & 0x1u),
+        horizontal_line(v_tex_coord, 0.50, 0.05) * float((glyph_index >> 13) & 0x1u)
+    );
+
+    vec2 inner_tex_coord = v_tex_coord * (1.0 - 2.0 * u_padding_frac) + u_padding_frac;
     vec3 tex_coord = vec3(
-        (float(pos_in_layer) + v_tex_coord.x) / 16.0,
-        v_tex_coord.y,
+        (float(pos_in_layer) + inner_tex_coord.x) / 16.0,
+        inner_tex_coord.y,
         float(layer)
     );
 
@@ -56,11 +65,6 @@ void main() {
     // emoji colors are sampled from the texture directly
     vec3 fg = mix(base_fg, glyph.rgb, emoji_factor);
 
-    // apply strikethrough or underline if the glyph has either bit set
-    float line_alpha = max(
-        horizontal_line(v_tex_coord, 0.80, 0.05) * float((glyph_index >> 12) & 0x1u),
-        horizontal_line(v_tex_coord, 0.50, 0.05) * float((glyph_index >> 13) & 0x1u)
-    );
 
     // if we're drawing a line, blend it with the base foreground color.
     // this allows us to do strikethroughs and underlines on emojis with

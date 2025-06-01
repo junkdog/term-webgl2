@@ -110,12 +110,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let line_height = if args.len() > 3 {
-        args[3].parse::<f32>().unwrap_or(1.2)
+        args[3].parse::<f32>().unwrap_or(1.0)
     } else {
-        println!("\nEnter line height multiplier (default: 1.2):");
+        println!("\nEnter line height multiplier (default: 1.0):");
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        input.trim().parse::<f32>().unwrap_or(1.2)
+        input.trim().parse::<f32>().unwrap_or(1.0)
     };
 
     println!("\nGenerating font atlas:");
@@ -164,12 +164,12 @@ fn print_help() {
     println!("Options:");
     println!("  font_name_or_index   Font selection by name (partial match) or index");
     println!("  font_size            Font size in points (default: 15.0)");
-    println!("  line_height          Line height multiplier (default: 1.2)");
+    println!("  line_height          Line height multiplier (default: 1.0)");
     println!();
     println!("Examples:");
     println!("  bitmap-font                    # Interactive mode");
     println!("  bitmap-font 1 16 1.5           # Use first font, 16pt, 1.5x line height");
-    println!("  bitmap-font \"JetBrains\" 14 1.2 # Find JetBrains font, 14pt");
+    println!("  bitmap-font \"JetBrains\" 14 1.0 # Find JetBrains font, 14pt");
 }
 
 /// Represents a bitmap font with all its associated metadata

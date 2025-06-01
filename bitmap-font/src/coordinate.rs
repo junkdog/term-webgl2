@@ -24,7 +24,7 @@ impl GlyphCoordinate {
         (x, y)
     }
 
-    pub(super) fn cell_offset(&self, config: &RasterizationConfig) -> (i32, i32, i32) {
+    pub(super) fn cell_offset_in_px(&self, config: &RasterizationConfig) -> (i32, i32, i32) {
         (
             self.glyph_index as i32 * config.cell_width,
             0, 
