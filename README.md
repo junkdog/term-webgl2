@@ -141,6 +141,10 @@ through simple bit shifts and masks.
 
 ### Glyph ID Encoding and Mapping
 
+The glyph ID is a 16-bit value that efficiently packs both the base glyph identifier
+and style information (such as weight, style flags, etc.) into a single value. This
+packed representation is passed directly to the GPU.
+
 #### Glyph ID Bit Layout (16-bit)
 
 | Bit(s) | Flag Name     | Hex Mask | Binary Mask           | Description               |
@@ -228,14 +232,6 @@ For a typical 12×18 pixel font with 2048 glyphs:
 The 16×1 grid layout ensures that adjacent terminal cells often access the same texture layer,
 maximizing GPU cache hits. ASCII characters (the most common) are packed into the first 8 layers,
 providing optimal memory locality for typical terminal content.
-
-### Instance Data Packing
-
-The 8-byte `CellDynamic` structure is tightly packed to minimize bandwidth and enable single-fetch
-GPU reads. The glyph ID includes both character and style information as bit flags, while colors
-are stored as 24-bit RGB values without alpha (alpha comes from the texture). This packing scheme
-achieves a 2:1 compression ratio compared to naive storage while maintaining alignment for
-efficient GPU access.
 
 ### Shader Pipeline
 
