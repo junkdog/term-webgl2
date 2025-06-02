@@ -1,3 +1,4 @@
+use std::cmp::min;
 use crate::error::Error;
 use crate::gl::ubo::UniformBufferObject;
 use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
@@ -190,7 +191,7 @@ impl TerminalGrid {
                     .unwrap_or(fallback_glyph);
 
                 // underline and strikethrough effects
-                let layer = layer | data.effect as i32;
+                let layer = layer | data.effect as u16;
 
                 *cell = CellDynamic::new(layer, data.fg, data.bg);
             });
@@ -207,65 +208,102 @@ impl TerminalGrid {
     ) -> Result<(), Error> {
         self.canvas_size_px = canvas_size;
         
-        // delete old cell instance buffers
-        gl.bind_vertex_array(Some(&self.buffers.vao));
-        gl.delete_buffer(Some(&self.buffers.instance_cell));
-        gl.delete_buffer(Some(&self.buffers.instance_pos));
+        // update the UBO with new screen size
+        self.upload_ubo_data(gl);
         
         let cell_size = self.atlas.cell_size();
         let cols = canvas_size.0 / cell_size.0;
         let rows = canvas_size.1 / cell_size.1;
+        if self.terminal_size == (cols as u16, rows as u16) {
+            return Ok(()); // no change in terminal size
+        }
         
-        let cell_data = create_terminal_cell_data(cols, rows, &Self::fill_glyphs(&self.atlas));
+        self.terminal_size = (cols as u16, rows as u16);
+        
+        // update buffers; bind VAO to ensure correct state
+        gl.bind_vertex_array(Some(&self.buffers.vao));
+        
+        // delete old cell instance buffers
+        gl.delete_buffer(Some(&self.buffers.instance_cell));
+        gl.delete_buffer(Some(&self.buffers.instance_pos));
+        
+        // resize cell data vector
+        let current_size = (self.terminal_size.0 as i32, self.terminal_size.1 as i32);
+        let cell_data = resize_cell_grid(&self.cells, current_size, (cols, rows));
+        self.cells = cell_data;
+        
         let cell_pos = CellStatic::create_grid(cols, rows);
         self.terminal_size = (cols as u16, rows as u16);
         
         // re-create buffers with new data
-        self.buffers.instance_cell = create_dynamic_instance_buffer(gl, &cell_data)?;
+        self.buffers.instance_cell = create_dynamic_instance_buffer(gl, &self.cells)?;
         self.buffers.instance_pos = create_static_instance_buffer(gl, &cell_pos)?;
-        gl.bind_vertex_array(None);
         
-        // update the UBO with new screen size and cell dimensions
-        self.upload_ubo_data(gl);
+        // unbind VAO
+        gl.bind_vertex_array(None);
         
         Ok(())
     }
     
     fn fill_glyphs(
         atlas: &FontAtlas,
-    ) -> [i32; 28] {
+    ) -> [u16; 28] {
         [
-            atlas.get_glyph_coord("🤫", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("🙌", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("n", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("o", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("r", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("m", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("a", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("l", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("b", FontStyle::Bold).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("o", FontStyle::Bold).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("l", FontStyle::Bold).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("d", FontStyle::Bold).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("t", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("a", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("l", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("c", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("b", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("-", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("t", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("a", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("l", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("c", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("🤪", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("🤩", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("🤫", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("🙌", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("n", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("o", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("r", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("m", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("a", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("l", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("b", FontStyle::Bold).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("o", FontStyle::Bold).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("l", FontStyle::Bold).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("d", FontStyle::Bold).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("t", FontStyle::Italic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("a", FontStyle::Italic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("l", FontStyle::Italic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("c", FontStyle::Italic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("b", FontStyle::BoldItalic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("-", FontStyle::BoldItalic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("t", FontStyle::BoldItalic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("a", FontStyle::BoldItalic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("l", FontStyle::BoldItalic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("c", FontStyle::BoldItalic).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("🤪", FontStyle::Normal).unwrap_or('X' as u16),
+            atlas.get_glyph_coord("🤩", FontStyle::Normal).unwrap_or('X' as u16),
         ]
     }
 }
+
+fn resize_cell_grid(
+    cells: &[CellDynamic],
+    old_size: (i32, i32),
+    new_size: (i32, i32),
+) -> Vec<CellDynamic> {
+    let new_len = new_size.0 * new_size.1;
+    
+    let mut new_cells = Vec::with_capacity(new_len as usize);
+    for i in 0..new_len {
+        new_cells.push(CellDynamic::new(' ' as u16, 0xFFFFFF, 0x000000));
+    }
+    
+    for y in 0..min(old_size.1, new_size.1) {
+        for x in 0..min(old_size.0, new_size.0) {
+            let new_idx = (y * new_size.0 + x) as usize;
+            let old_idx = (y * old_size.0 + x) as usize;
+            new_cells[new_idx] = cells[old_idx].clone();
+        }
+    }
+
+    new_cells
+}
+
 
 fn create_vao(gl: &WebGl2RenderingContext) -> Result<web_sys::WebGlVertexArrayObject, Error> {
     gl.create_vertex_array()
@@ -532,7 +570,7 @@ struct CellStatic {
 ///
 /// # Buffer Upload
 /// Uploaded to GPU using `GL::DYNAMIC_DRAW` for efficient updates.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C, align(4))]
 struct CellDynamic {
     
@@ -563,10 +601,7 @@ impl CellStatic {
 }
 
 impl CellDynamic {
-    pub(crate) fn new(layer: i32, fg: u32, bg: u32) -> Self {
-        debug_assert!(layer > 0 && layer < u16::MAX as i32, "layer: {layer}");
-
-        let layer = layer as u32;
+    pub(crate) fn new(layer: u16, fg: u32, bg: u32) -> Self {
         let mut data = [0; 8];
 
         data[0] = (layer & 0xFF) as u8;
@@ -616,11 +651,11 @@ impl CellUbo {
 fn create_terminal_cell_data(
     cols: i32,
     rows: i32,
-    fill_glyph: &[i32],
+    fill_glyph: &[u16],
 ) -> Vec<CellDynamic> {
     let glyph_len = fill_glyph.len();
     (0..cols * rows)
-        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as i32, 0xffff_ff, 0x0000_00))
+        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as u16, 0xffff_ff, 0x0000_00))
         .collect()
 }
 
