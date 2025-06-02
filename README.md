@@ -71,8 +71,6 @@ For a 200×80 terminal with 2048 glyphs:
 | Overhead       | ~10 KB    | VAO, shaders, uniforms      |
 | **Total**      | **~2 MB** | GPU memory                  |
 
-This efficient memory usage allows multiple terminal instances without significant GPU memory
-pressure.
 
 ## Terminal Grid Renderer API
 
@@ -168,14 +166,13 @@ within their respective layers, improving texture cache coherence.
 
 ASCII characters (0-127) bypass the HashMap lookup entirely through direct bit manipulation.
 For ASCII input, the glyph ID is computed as `char_code | style_bits`, providing zero-overhead
-character mapping. Non-ASCII characters use a HashMap for flexible Unicode suppor. This approach
-optimizes for the common case (>95% ASCII in typical terminal content) while maintaining full
-Unicode capability.
+character mapping. Non-ASCII characters use a HashMap for flexible Unicode support. This approach
+optimizes for the common case while maintaining full Unicode capability.
 
 ## GPU Buffer Architecture
 
-The renderer uses five specialized buffers managed through a Vertex Array Object (VAO) to
-achieve single-draw-call rendering. Each buffer serves a specific purpose in the instanced
+The renderer uses five buffers managed through a Vertex Array Object (VAO) to achieve
+single-draw-call rendering. Each buffer serves a specific purpose in the instanced
 rendering pipeline, with careful attention to memory alignment and update patterns.
 
 ### Buffer Layout Summary
