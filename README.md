@@ -1,7 +1,8 @@
-## WebGL2 Terminal Renderer
+## beamterm - A WebGL2 Terminal Renderer
 
 A high-performance terminal rendering system for web browsers, targeting sub-millisecond render 
-times.
+times. **beamterm** is a terminal renderer, not a full terminal emulator - it handles the display
+layer while you provide the terminal logic.
 
 ## Key Features
 
@@ -17,11 +18,12 @@ For a typical 12×18 pixel font with ~2500 glyphs:
 
 | Metric                          | Value                   |
 |---------------------------------|-------------------------|
-| Render Time                     | <1ms for 16,000 cells   |
+| Render Time†                    | <1ms for 16,000 cells   |
 | Draw Calls                      | 1 per frame             |
 | Memory Usage                    | ~3.5MB total GPU memory |
 | Update Bandwidth (full refresh) | ~8 MB/s @ 60 FPS        |
 
+† Includes ratatui buffer translation, GPU buffer uploads, and draw call execution.
 
 ## System Architecture
 
