@@ -22,7 +22,7 @@ pub struct FontAtlas {
     /// The underlying texture
     texture: crate::gl::texture::Texture,
     /// Symbol to 3d texture index
-    glyph_coords: HashMap<CompactString, i32>,
+    glyph_coords: HashMap<CompactString, u16>,
     /// The size of each character cell in pixels
     cell_size: (i32, i32),
     /// The number of slices in the atlas texture
@@ -60,7 +60,7 @@ impl FontAtlas {
             .filter(|g| g.style == FontStyle::Normal) // only normal style glyphs
             .filter(|g| !g.is_ascii())                // only non-ascii glyphs
             .for_each(|g| {
-                layers.insert(g.symbol.to_compact_string(), g.id as i32);
+                layers.insert(g.symbol.to_compact_string(), g.id);
             });
 
         Ok(Self {
@@ -83,17 +83,17 @@ impl FontAtlas {
     }
 
     /// Returns the texture array z-offset for the given key
-    pub(super) fn get_glyph_coord(&self, key: &str, font_style: FontStyle) -> Option<i32> {
+    pub(super) fn get_glyph_coord(&self, key: &str, font_style: FontStyle) -> Option<u16> {
         if key.len() == 1 {
             let ch = key.chars().next().unwrap();
             if ch.is_ascii() { // 0x00..0x7f double as layer
-                let id = ch as i32 | font_style.layer_mask();
+                let id = ch as u16 | font_style.style_mask();
                 return Some(id);
             }
         }
 
         self.glyph_coords.get(key)
             .copied()
-            .map(|id| id | font_style.layer_mask())
+            .map(|id| id | font_style.style_mask())
     }
 }

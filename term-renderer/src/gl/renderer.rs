@@ -1,9 +1,8 @@
-use web_sys::HtmlCanvasElement;
 use crate::error::Error;
 use crate::gl::context::GlState;
 use crate::gl::GL;
-use crate::mat4::Mat4;
 use crate::js;
+use web_sys::HtmlCanvasElement;
 
 /// Rendering context that provides access to WebGL state.
 pub struct RenderContext<'a> {

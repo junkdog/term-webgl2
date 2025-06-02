@@ -74,7 +74,7 @@ impl Glyph {
         let first_char = symbol.chars().next().unwrap();
         let id = if symbol.len() == 1 && first_char.is_ascii() {
             // Use a different ID for non-ASCII characters
-            first_char as u32 as u16 | style.id_mask()
+            first_char as u32 as u16 | style.style_mask()
         } else {
             Self::UNASSIGNED_ID
         };
@@ -95,7 +95,7 @@ impl Glyph {
         pixel_coords: (i32, i32),
     ) -> Self {
         Self {
-            id: base_id | style.id_mask(),
+            id: base_id | style.style_mask(),
             symbol: symbol.to_compact_string(),
             style,
             pixel_coords,
@@ -155,13 +155,8 @@ impl FontStyle {
         }
     }
     
-    /// Returns the style mask for this font style, used to encode the style in the glyph ID.
-    pub const fn id_mask(&self) -> u16 {
+    /// Returns the style bits for this font style, used to encode the style in the glyph ID.
+    pub const fn style_mask(&self) -> u16 {
         *self as u16
-    }
-    
-    /// Returns the style mask for this font style, used to encode the style in the glyph ID.
-    pub const fn layer_mask(&self) -> i32 {
-        *self as i32
     }
 }
