@@ -21,7 +21,6 @@ pub struct Renderer {
     gl: web_sys::WebGl2RenderingContext,
     canvas: web_sys::HtmlCanvasElement,
     state: GlState,
-    projection: Mat4
 }
 
 impl Renderer {
@@ -64,9 +63,8 @@ impl Renderer {
         // initialize WebGL context
         let gl = js::get_webgl2_context(&canvas)?;
         let state = GlState::new(&gl);
-        let projection = Mat4::orthographic_from_size(width as f32, height as f32);
 
-        let mut renderer = Self { gl, projection, canvas, state };
+        let mut renderer = Self { gl, canvas, state };
         renderer.resize(width as _, height as _);
         Ok(renderer)
     }
@@ -81,8 +79,6 @@ impl Renderer {
     /// * `width` - New canvas width in pixels
     /// * `height` - New canvas height in pixels
     pub fn resize(&mut self, width: i32, height: i32) {
-        // todo: fix/validate resize logic
-        
         self.canvas.set_width(width as u32);
         self.canvas.set_height(height as u32);
         self.state.viewport(&self.gl, 0, 0, width, height);

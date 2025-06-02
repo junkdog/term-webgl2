@@ -74,36 +74,7 @@ impl TerminalGrid {
         let cell_size = atlas.cell_size();
         let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
 
-        let fill_glyphs = [
-            atlas.get_glyph_coord("🤫", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("🙌", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("n", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("o", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("r", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("m", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("a", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("l", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("b", FontStyle::Bold).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("o", FontStyle::Bold).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("l", FontStyle::Bold).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("d", FontStyle::Bold).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("t", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("a", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("l", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("c", FontStyle::Italic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("b", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("-", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("t", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("a", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("l", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("c", FontStyle::BoldItalic).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("🤪", FontStyle::Normal).unwrap_or('X' as i32),
-            atlas.get_glyph_coord("🤩", FontStyle::Normal).unwrap_or('X' as i32),
-        ];
+        let fill_glyphs = Self::fill_glyphs(&atlas);
         let cell_data = create_terminal_cell_data(cols, rows, &fill_glyphs);
         let cell_pos = CellStatic::create_grid(cols, rows);
         let buffers = setup_buffers(gl, vao, &cell_pos, &cell_data, cell_size)?;
@@ -227,6 +198,72 @@ impl TerminalGrid {
         self.buffers.upload_instance_data(gl, &self.cells);
 
         Ok(())
+    }
+    
+    pub fn resize(
+        &mut self,
+        gl: &WebGl2RenderingContext,
+        canvas_size: (i32, i32),
+    ) -> Result<(), Error> {
+        self.canvas_size_px = canvas_size;
+        
+        // delete old cell instance buffers
+        gl.bind_vertex_array(Some(&self.buffers.vao));
+        gl.delete_buffer(Some(&self.buffers.instance_cell));
+        gl.delete_buffer(Some(&self.buffers.instance_pos));
+        
+        let cell_size = self.atlas.cell_size();
+        let cols = canvas_size.0 / cell_size.0;
+        let rows = canvas_size.1 / cell_size.1;
+        
+        let cell_data = create_terminal_cell_data(cols, rows, &Self::fill_glyphs(&self.atlas));
+        let cell_pos = CellStatic::create_grid(cols, rows);
+        self.terminal_size = (cols as u16, rows as u16);
+        
+        // re-create buffers with new data
+        self.buffers.instance_cell = create_dynamic_instance_buffer(gl, &cell_data)?;
+        self.buffers.instance_pos = create_static_instance_buffer(gl, &cell_pos)?;
+        gl.bind_vertex_array(None);
+        
+        // update the UBO with new screen size and cell dimensions
+        self.upload_ubo_data(gl);
+        
+        Ok(())
+    }
+    
+    fn fill_glyphs(
+        atlas: &FontAtlas,
+    ) -> [i32; 28] {
+        [
+            atlas.get_glyph_coord("🤫", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("🙌", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("n", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("o", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("r", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("m", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("a", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("l", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("b", FontStyle::Bold).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("o", FontStyle::Bold).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("l", FontStyle::Bold).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("d", FontStyle::Bold).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("t", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("a", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("l", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("c", FontStyle::Italic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("b", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("-", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("t", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("a", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("l", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("c", FontStyle::BoldItalic).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("🤪", FontStyle::Normal).unwrap_or('X' as i32),
+            atlas.get_glyph_coord("🤩", FontStyle::Normal).unwrap_or('X' as i32),
+        ]
     }
 }
 
