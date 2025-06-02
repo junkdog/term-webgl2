@@ -74,7 +74,7 @@ impl Glyph {
         let first_char = symbol.chars().next().unwrap();
         let id = if symbol.len() == 1 && first_char.is_ascii() {
             // Use a different ID for non-ASCII characters
-            first_char as u32 as u16 | style.style_mask()
+            first_char as u16 | style.style_mask()
         } else {
             Self::UNASSIGNED_ID
         };
