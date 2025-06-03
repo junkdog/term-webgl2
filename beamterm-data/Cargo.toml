@@ -1,0 +1,21 @@
+[package]
+name = "beamterm-data"
+description = "Core data structures and binary serialization for the beamterm WebGL terminal renderer"
+readme = "../README.md"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+compact_str = { workspace = true }
+miniz_oxide = "0.8.8"
+
+[package.metadata.docs.rs]
+all-features = true
+default-target = "wasm32-unknown-unknown"

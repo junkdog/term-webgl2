@@ -6,7 +6,7 @@ mod font_discovery;
 
 use crate::font_discovery::FontDiscovery;
 use crate::generator::BitmapFontGenerator;
-use font_atlas::*;
+use beamterm_data::*;
 use std::fs::File;
 use std::io::{self, Write};
 

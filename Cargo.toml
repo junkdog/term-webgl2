@@ -1,13 +1,29 @@
 [workspace]
 resolver = "2"
 members = [
-    "bitmap-font",
-    "font-atlas",
-    "term-renderer",
+    "beamterm-atlas",
+    "beamterm-data", 
+    "beamterm-renderer",
 ]
 
-# Shared dependencies can be defined here to ensure version consistency
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Adrian Papari <junkdog@angelhill.net>"]
+repository = "https://github.com/junkdog/beamterm"
+homepage = "https://github.com/junkdog/beamterm"
+documentation = "https://docs.rs/beamterm"
+keywords = ["terminal", "webgl", "wasm", "rendering", "gpu"]
+categories = ["graphics", "wasm", "web-programming"]
+
 [workspace.dependencies]
 compact_str = "0.9.0"
 thiserror = "2.0.12"
-image = "0.25.6"
+web-sys = "0.3.77"
+js-sys = "0.3.77"
+console_error_panic_hook = "0.1.7"
+web-time = "1.1.0"
+
+[workspace.metadata.docs.rs]
+default-target = "wasm32-unknown-unknown"

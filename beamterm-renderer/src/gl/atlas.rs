@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use compact_str::{CompactString, ToCompactString};
 use web_sys::console;
-use font_atlas::{FontAtlasData, FontStyle};
+use beamterm_data::{FontAtlasData, FontStyle};
 use crate::error::Error;
 use crate::gl::GL;
 

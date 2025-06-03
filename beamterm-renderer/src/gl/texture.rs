@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::gl::GL;
-use font_atlas::FontAtlasData;
+use beamterm_data::FontAtlasData;
 
 #[derive(Debug)]
 pub(super) struct Texture {

@@ -4,7 +4,7 @@ use crate::grapheme::GraphemeSet;
 use crate::raster_config::RasterizationConfig;
 use crate::BitmapFont;
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
-use font_atlas::{FontAtlasData, FontStyle, Glyph};
+use beamterm_data::{FontAtlasData, FontStyle, Glyph};
 
 const WHITE: Color = Color::rgb(0xff, 0xff, 0xff);
 

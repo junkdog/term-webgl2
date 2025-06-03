@@ -1,4 +1,4 @@
-use font_atlas::Glyph;
+use beamterm_data::Glyph;
 
 #[derive(Debug)]
 pub(super) struct RasterizationConfig {

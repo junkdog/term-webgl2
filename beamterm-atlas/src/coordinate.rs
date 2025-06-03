@@ -1,5 +1,5 @@
 use crate::raster_config::RasterizationConfig;
-use font_atlas::FontAtlasData;
+use beamterm_data::FontAtlasData;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct GlyphCoordinate {

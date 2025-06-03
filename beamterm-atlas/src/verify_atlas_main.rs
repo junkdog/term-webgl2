@@ -1,7 +1,7 @@
 // Create another binary in bitmap-font/src/bin/view_atlas_grid.rs
 
 use colored::Colorize;
-use font_atlas::FontAtlasData;
+use beamterm_data::{FontAtlasData, Glyph};
 use std::fmt::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
-fn find_glyph_symbol(atlas: &FontAtlasData, slice: u16, pos: u16) -> Option<&font_atlas::Glyph> {
+fn find_glyph_symbol(atlas: &FontAtlasData, slice: u16, pos: u16) -> Option<&Glyph> {
     let glyph_id = slice << 4 | pos;
     atlas.glyphs.iter().find(|g| g.id == glyph_id)
 }

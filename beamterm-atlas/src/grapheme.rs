@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
-use font_atlas::{FontStyle, Glyph};
+use beamterm_data::{FontStyle, Glyph};
 
 pub struct GraphemeSet<'a> {
     ascii: Vec<&'a str>,

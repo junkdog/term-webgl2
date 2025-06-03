@@ -1,6 +1,6 @@
 use web_sys::console;
-use font_atlas::FontAtlasData;
-use term_renderer::DEFAULT_FONT_ATLAS_BLOB;
+use beamterm_data::FontAtlasData;
+use beamterm_renderer::DEFAULT_FONT_ATLAS_BLOB;
 use crate::error::Error;
 use crate::gl::{FontAtlas, Renderer, TerminalGrid};
 

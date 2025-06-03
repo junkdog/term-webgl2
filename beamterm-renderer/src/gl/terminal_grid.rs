@@ -5,7 +5,7 @@ use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderP
 use crate::mat4::Mat4;
 use std::fmt::Debug;
 use web_sys::{console, WebGl2RenderingContext};
-use font_atlas::{FontAtlasData, FontStyle, GlyphEffect};
+use beamterm_data::{FontAtlasData, FontStyle, GlyphEffect};
 
 /// A high-performance terminal grid renderer using instanced rendering.
 ///
