@@ -130,6 +130,8 @@ to render correctly.
 
 ## Binary Atlas Format
 
+## Binary Atlas Format
+
 ### File Structure
 
 The atlas uses a versioned binary format with header validation:
@@ -140,20 +142,26 @@ Header (5 bytes)
 └─ Version: 0x01
 
 Metadata Section
+├─ Font name (u8 length + UTF-8 string)
 ├─ Font size (f32)
-├─ Texture dimensions (u32 × 3)
-├─ Cell dimensions (i32 × 2)
+├─ Texture width (u32)
+├─ Texture height (u32)
+├─ Texture layers (u32)
+├─ Cell width (i32)
+├─ Cell height (i32)
 └─ Glyph count (u16)
 
 Glyph Definitions
 └─ Per glyph:
-   ├─ ID (u16)
-   ├─ Style (u8)
-   ├─ Is emoji (u8)
-   ├─ Pixel coordinates (i32 × 2)
-   └─ Symbol (length-prefixed UTF-8)
+   ├─ ID (u16 - base glyph identifier)
+   ├─ Style (u8) - ordinal: 0=Normal, 1=Bold, 2=Italic, 3=BoldItalic
+   ├─ Is emoji (u8) - 0=false, 1=true
+   ├─ Pixel X (i32)
+   ├─ Pixel Y (i32)
+   └─ Symbol (u8 length + UTF-8 string)
 
 Compressed Texture Data
+├─ Data length (u32)
 └─ zlib-compressed RGBA data
 ```
 
@@ -161,7 +169,8 @@ Compressed Texture Data
 
 - **Endianness**: Little-endian for cross-platform compatibility
 - **Compression**: zlib level 9 (typically 75% size reduction)
-- **String encoding**: Length-prefixed UTF-8 (max 255 bytes)
+- **String encoding**: Length-prefixed UTF-8 (u8 for strings, max 255 bytes)
+- **Texture data**: Length-prefixed compressed data (u32 length)
 - **Alignment**: Natural alignment without padding
 
 ## Usage
