@@ -29,14 +29,14 @@ For a typical 12×18 pixel font with ~2500 glyphs:
 
 The renderer consists of three crates:
 
-**`bitmap-font`** - Generates GPU-optimized font atlases from TTF/OTF files. Automatically 
+**`beamterm-atlas`** - Generates GPU-optimized font atlases from TTF/OTF files. Automatically 
 calculates cell dimensions, supports font styles (normal/bold/italic), and outputs packed
 texture data.
 
-**`font-atlas`** - Provides shared data structures and efficient binary serialization. Features
+**`beamterm-data`** - Provides shared data structures and efficient binary serialization. Features
 versioned format with header validation and cross-platform encoding.
 
-**`term-renderer`** - The WebGL2 rendering engine. Implements instanced rendering with optimized
+**`beamterm-renderer`** - The WebGL2 rendering engine. Implements instanced rendering with optimized
 buffer management and state tracking for consistent sub-millisecond performance.
 
 
