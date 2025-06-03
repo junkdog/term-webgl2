@@ -25,8 +25,10 @@ pub struct TerminalGrid {
     canvas_size_px: (i32, i32),
     /// Buffers for the terminal grid
     buffers: TerminalBuffers,
-    /// shared state for the shader program
-    ubo: UniformBufferObject,
+    /// shared state for the vertex shader
+    ubo_vertex: UniformBufferObject,
+    /// shared state for the fragment shader 
+    ubo_fragment: UniformBufferObject,
     /// Font atlas for rendering text.
     atlas: FontAtlas,
     /// Uniform location for the texture sampler.
@@ -87,8 +89,10 @@ impl TerminalGrid {
         let shader = ShaderProgram::create(gl, Self::VERTEX_GLSL, Self::FRAGMENT_GLSL)?;
         shader.use_program(gl);
 
-        let ubo = UniformBufferObject::new(gl, CellUbo::BINDING_POINT)?;
-        ubo.bind_to_shader(gl, &shader, "CellUniforms")?;
+        let ubo_vertex = UniformBufferObject::new(gl, CellVertexUbo::BINDING_POINT)?;
+        ubo_vertex.bind_to_shader(gl, &shader, "VertUbo")?;
+        let ubo_fragment = UniformBufferObject::new(gl, CellFragmentUbo::BINDING_POINT)?;
+        ubo_fragment.bind_to_shader(gl, &shader, "FragUbo")?;
 
         let sampler_loc = gl.get_uniform_location(&shader.program, "u_sampler")
             .ok_or(Error::uniform_location_failed("u_sampler"))?;
@@ -103,7 +107,8 @@ impl TerminalGrid {
             canvas_size_px: screen_size,
             cells: cell_data,
             buffers,
-            ubo,
+            ubo_vertex,
+            ubo_fragment,
             atlas,
             sampler_loc,
         };
@@ -134,27 +139,12 @@ impl TerminalGrid {
         gl: &WebGl2RenderingContext,
     ) {
         let cell_size = self.cell_size();
+        
+        let vertex_ubo = CellVertexUbo::new(self.canvas_size_px, cell_size);
+        self.ubo_vertex.upload_data(gl, &vertex_ubo);
 
-        let padding = FontAtlasData::PADDING as f32;
-
-        let data = CellUbo {
-            projection: Mat4::orthographic_from_size(
-                self.canvas_size_px.0 as f32,
-                self.canvas_size_px.1 as f32
-            ).data,
-            cell_size: [cell_size.0 as f32, cell_size.1 as f32],
-            padding_frac: [ // padding as fraction of cell size
-                padding / cell_size.0 as f32,
-                padding / cell_size.1 as f32,
-            ],
-            num_slices: self.atlas.num_slices as f32,
-            _padding: [0.0; 1], // padding to ensure proper alignment
-        };
-
-        console::log_1(&format!("cell size: {:?}", data.cell_size).into());
-        console::log_1(&format!("screen size: {:?}", self.canvas_size_px).into());
-
-        self.ubo.upload_data(gl, &data);
+        let fragment_ubo = CellFragmentUbo::new(cell_size);
+        self.ubo_fragment.upload_data(gl, &fragment_ubo);
     }
 
     /// Returns the total number of cells in the terminal grid.
@@ -245,39 +235,40 @@ impl TerminalGrid {
         Ok(())
     }
     
-    fn fill_glyphs(
-        atlas: &FontAtlas,
-    ) -> [u16; 28] {
+    fn fill_glyphs(atlas: &FontAtlas) -> Vec<u16> {
         [
-            atlas.get_glyph_coord("🤫", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("🙌", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("n", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("o", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("r", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("m", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("a", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("l", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("b", FontStyle::Bold).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("o", FontStyle::Bold).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("l", FontStyle::Bold).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("d", FontStyle::Bold).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("t", FontStyle::Italic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("a", FontStyle::Italic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("l", FontStyle::Italic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("i", FontStyle::Italic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("c", FontStyle::Italic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("b", FontStyle::BoldItalic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("-", FontStyle::BoldItalic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("t", FontStyle::BoldItalic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("a", FontStyle::BoldItalic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("l", FontStyle::BoldItalic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("i", FontStyle::BoldItalic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("c", FontStyle::BoldItalic).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("🤪", FontStyle::Normal).unwrap_or('X' as u16),
-            atlas.get_glyph_coord("🤩", FontStyle::Normal).unwrap_or('X' as u16),
-        ]
+            ("🤫", FontStyle::Normal),
+            ("🙌", FontStyle::Normal),
+            ("n", FontStyle::Normal),
+            ("o", FontStyle::Normal),
+            ("r", FontStyle::Normal),
+            ("m", FontStyle::Normal),
+            ("a", FontStyle::Normal),
+            ("l", FontStyle::Normal),
+            ("b", FontStyle::Bold),
+            ("o", FontStyle::Bold),
+            ("l", FontStyle::Bold),
+            ("d", FontStyle::Bold),
+            ("i", FontStyle::Italic),
+            ("t", FontStyle::Italic),
+            ("a", FontStyle::Italic),
+            ("l", FontStyle::Italic),
+            ("i", FontStyle::Italic),
+            ("c", FontStyle::Italic),
+            ("b", FontStyle::BoldItalic),
+            ("-", FontStyle::BoldItalic),
+            ("i", FontStyle::BoldItalic),
+            ("t", FontStyle::BoldItalic),
+            ("a", FontStyle::BoldItalic),
+            ("l", FontStyle::BoldItalic),
+            ("i", FontStyle::BoldItalic),
+            ("c", FontStyle::BoldItalic),
+            ("🤪", FontStyle::Normal),
+            ("🤩", FontStyle::Normal),
+        ].into_iter()
+            .map(|(symbol, style)| atlas.get_glyph_coord(symbol, style))
+            .map(|g| g.unwrap_or(' ' as u16))
+            .collect()
     }
 }
 
@@ -289,7 +280,7 @@ fn resize_cell_grid(
     let new_len = new_size.0 * new_size.1;
     
     let mut new_cells = Vec::with_capacity(new_len as usize);
-    for i in 0..new_len {
+    for _ in 0..new_len {
         new_cells.push(CellDynamic::new(' ' as u16, 0xFFFFFF, 0x000000));
     }
     
@@ -452,7 +443,8 @@ impl Drawable for TerminalGrid {
         gl.bind_vertex_array(Some(&self.buffers.vao));
 
         self.atlas.bind(gl, 0);
-        self.ubo.bind(context.gl);
+        self.ubo_vertex.bind(context.gl);
+        self.ubo_fragment.bind(context.gl);
         gl.uniform1i(Some(&self.sampler_loc), 0);
     }
 
@@ -467,7 +459,8 @@ impl Drawable for TerminalGrid {
         gl.bind_vertex_array(None);
         gl.bind_texture(GL::TEXTURE_2D_ARRAY, None);
 
-        self.ubo.unbind(gl)
+        self.ubo_vertex.unbind(gl);
+        self.ubo_fragment.unbind(gl);
     }
 }
 
@@ -621,31 +614,47 @@ impl CellDynamic {
 
 
 #[repr(C, align(16))] // std140 layout requires proper alignment
-struct CellUbo {
+struct CellVertexUbo {
     pub projection: [f32; 16],     // mat4
     pub cell_size: [f32; 2],       // vec2 - screen cell size
-    pub padding_frac: [f32; 2], // padding as a fraction of cell size
-    pub num_slices: f32,
-    pub _padding: [f32; 1],
+    pub _padding: [f32; 2],
 }
 
-impl CellUbo {
-    fn new(projection: Mat4, cell_size: (i32, i32)) -> Self {
+#[repr(C, align(16))] // std140 layout requires proper alignment
+struct CellFragmentUbo {
+    pub padding_frac: [f32; 2], // padding as a fraction of cell size
+    pub _padding: [f32; 2],
+}
+
+
+impl CellVertexUbo {
+    pub const BINDING_POINT: u32 = 0;
+    
+    fn new(canvas_size: (i32, i32), cell_size: (i32, i32)) -> Self {
+        let projection = Mat4::orthographic_from_size(
+            canvas_size.0 as f32,
+            canvas_size.1 as f32
+        ).data;
         Self {
-            projection: projection.data,
+            projection,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
-            padding_frac: [
-                FontAtlasData::PADDING as f32 / cell_size.0 as f32,
-                FontAtlasData::PADDING as f32 / cell_size.1 as f32,
-            ],
-            num_slices: 1.0, // default to 1 slice, can be updated later
-            _padding: [0.0; 1], // padding to ensure proper alignment
+            _padding: [0.0; 2], // padding to ensure proper alignment
         }
     }
 }
 
-impl CellUbo {
-    pub const BINDING_POINT: u32 = 0;
+impl CellFragmentUbo {
+    pub const BINDING_POINT: u32 = 1;
+
+    fn new(cell_size: (i32, i32)) -> Self {
+        Self {
+            padding_frac: [
+                FontAtlasData::PADDING as f32 / cell_size.0 as f32,
+                FontAtlasData::PADDING as f32 / cell_size.1 as f32,
+            ],
+            _padding: [0.0; 2], // padding to ensure proper alignment
+        }
+    }
 }
 
 fn create_terminal_cell_data(

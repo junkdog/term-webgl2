@@ -10,11 +10,9 @@ layout(location = 2) in uvec2 a_instance_pos;
 layout(location = 3) in uvec2 a_packed_data;
 
 // uniforms
-layout(std140) uniform CellUniforms {
+layout(std140) uniform VertUbo {
     mat4 u_projection;
     vec2 u_cell_size; // unpadded cell size in pixels
-    vec2 u_padding_frac; // padding as fraction of cell size
-    float u_num_slices;
 };
 
 // packs 8b: 2b layer, 3b fg.rgb, 3b bg.rgb

@@ -4,11 +4,8 @@ precision mediump float;
 
 // uniforms
 uniform mediump sampler2DArray u_sampler;
-layout(std140) uniform CellUniforms {
-    mat4 u_projection;
-    vec2 u_cell_size; // unpadded cell size in pixels
+layout(std140) uniform FragUbo {
     vec2 u_padding_frac; // padding as fraction of cell size
-    float u_num_slices;
 };
 
 
