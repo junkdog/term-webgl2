@@ -120,6 +120,21 @@ pub enum GlyphEffect {
     Strikethrough = 0x2000,
 }
 
+impl GlyphEffect {
+    pub fn from_u16(v: u16) -> GlyphEffect {
+        match v {
+            0x0    => GlyphEffect::None,
+            0x1000 => GlyphEffect::Underline,
+            0x2000 => GlyphEffect::Strikethrough,
+            0x3000 => GlyphEffect::Strikethrough,
+            _ => {
+                println!("Unknown glyph effect 0x{:x}", v);
+                panic!("yolo panic");
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FontStyle {
     Normal     = 0x0000,
@@ -136,17 +151,27 @@ impl FontStyle {
         FontStyle::BoldItalic,
     ];
 
-    pub fn from_u8(v: u8) -> FontStyle {
+    pub fn from_u16(v: u16) -> FontStyle {
         match v {
+            0x0000 => FontStyle::Normal,
+            0x0200 => FontStyle::Bold,
+            0x0400 => FontStyle::Italic,
+            0x0600 => FontStyle::BoldItalic,
+            _ => panic!("Invalid font style value: {}", v),
+        }
+    }
+
+    pub(super) fn from_ordinal(ordinal: u8) -> FontStyle {
+        match ordinal {
             0 => FontStyle::Normal,
             1 => FontStyle::Bold,
             2 => FontStyle::Italic,
             3 => FontStyle::BoldItalic,
-            _ => panic!("Invalid font style value: {}", v),
+            _ => panic!("Invalid font style ordinal: {}", ordinal),
         }
     }
     
-    pub const fn ordinal(&self) -> usize {
+    pub(super) const fn ordinal(&self) -> usize {
         match self {
             FontStyle::Normal     => 0,
             FontStyle::Bold       => 1,
@@ -154,7 +179,7 @@ impl FontStyle {
             FontStyle::BoldItalic => 3,
         }
     }
-    
+
     /// Returns the style bits for this font style, used to encode the style in the glyph ID.
     pub const fn style_mask(&self) -> u16 {
         *self as u16

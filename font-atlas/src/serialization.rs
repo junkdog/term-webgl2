@@ -182,7 +182,7 @@ impl Serializable for Glyph {
 
         Ok(Glyph {
             id,
-            style: FontStyle::from_u8(style),
+            style: FontStyle::from_ordinal(style),
             is_emoji,
             pixel_coords: (x, y),
             symbol,
