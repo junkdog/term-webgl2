@@ -205,8 +205,6 @@ impl TerminalGrid {
             return Ok(()); // no change in terminal size
         }
         
-        self.terminal_size = (cols as u16, rows as u16);
-        
         // update buffers; bind VAO to ensure correct state
         gl.bind_vertex_array(Some(&self.buffers.vao));
         
@@ -220,7 +218,6 @@ impl TerminalGrid {
         self.cells = cell_data;
         
         let cell_pos = CellStatic::create_grid(cols, rows);
-        self.terminal_size = (cols as u16, rows as u16);
         
         // re-create buffers with new data
         self.buffers.instance_cell = create_dynamic_instance_buffer(gl, &self.cells)?;
@@ -228,6 +225,8 @@ impl TerminalGrid {
         
         // unbind VAO
         gl.bind_vertex_array(None);
+        
+        self.terminal_size = (cols as u16, rows as u16);
         
         Ok(())
     }

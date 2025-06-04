@@ -133,6 +133,11 @@ impl Renderer {
         &self.gl
     }
 
+    /// Returns a mutable reference to the WebGL2 rendering context.
+    pub fn canvas(&self) -> &HtmlCanvasElement {
+        &self.canvas
+    }
+
     /// Returns the current canvas dimensions as a tuple.
     ///
     /// # Returns
