@@ -5,7 +5,7 @@ rendering efficiency.
 
 ## Overview
 
-`bitmap-font` generates tightly-packed 2D texture array atlases from TTF/OTF font files, producing a
+`beamterm-atlas` generates tightly-packed 2D texture array atlases from TTF/OTF font files, producing a
 binary format optimized for GPU upload. The system supports multiple font styles, full Unicode
 including emoji, and automatic grapheme clustering.
 
