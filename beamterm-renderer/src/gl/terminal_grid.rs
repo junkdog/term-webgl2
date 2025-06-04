@@ -177,13 +177,10 @@ impl TerminalGrid {
         self.cells.iter_mut()
             .zip(cells)
             .for_each(|(cell, data)| {
-                let layer = atlas.get_glyph_coord(data.symbol, data.style)
+                let glyph_id = atlas.get_base_glyph_id(data.symbol)
                     .unwrap_or(fallback_glyph);
 
-                // underline and strikethrough effects
-                let layer = layer | data.effect as u16;
-
-                *cell = CellDynamic::new(layer, data.fg, data.bg);
+                *cell = CellDynamic::new(glyph_id | data.style_bits, data.fg, data.bg);
             });
 
         self.buffers.upload_instance_data(gl, &self.cells);
@@ -477,10 +474,9 @@ impl Drawable for TerminalGrid {
 /// - GG: Green component  
 /// - BB: Blue component
 #[derive(Debug)]
-pub struct CellData<'a> {
+pub struct CellData<'a> { // todo: try to pre-pack the available glyph id bits
     symbol: &'a str,
-    style: FontStyle,
-    effect: GlyphEffect,
+    style_bits: u16,
     fg: u32,
     bg: u32,
 }
@@ -505,7 +501,17 @@ impl<'a> CellData<'a> {
         fg: u32,
         bg: u32
     ) -> Self {
-        Self { symbol, style, effect, fg, bg }
+        let style_bits = style.style_mask() | effect as u16;
+        Self { symbol, style_bits, fg, bg }
+    }
+    
+    pub fn new_with_style_bits(
+        symbol: &'a str,
+        style_bits: u16,
+        fg: u32,
+        bg: u32
+    ) -> Self {
+        Self { symbol, style_bits, fg, bg }
     }
 }
 
@@ -594,11 +600,11 @@ impl CellStatic {
 }
 
 impl CellDynamic {
-    pub(crate) fn new(layer: u16, fg: u32, bg: u32) -> Self {
+    pub(crate) fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
         let mut data = [0; 8];
 
-        data[0] = (layer & 0xFF) as u8;
-        data[1] = ((layer >> 8) & 0xFF) as u8;
+        data[0] = (glyph_id & 0xFF) as u8;
+        data[1] = ((glyph_id >> 8) & 0xFF) as u8;
 
         data[2] = ((fg >> 16) & 0xFF) as u8; // R
         data[3] = ((fg >> 8)  & 0xFF) as u8; // G

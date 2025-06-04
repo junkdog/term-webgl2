@@ -96,4 +96,18 @@ impl FontAtlas {
             .copied()
             .map(|id| id | font_style.style_mask())
     }
+
+    /// Returns the base glyph identifier for the given key
+    pub(super) fn get_base_glyph_id(&self, key: &str) -> Option<u16> {
+        if key.len() == 1 {
+            let ch = key.chars().next().unwrap();
+            if ch.is_ascii() { // 0x00..0x7f double as layer
+                let id = ch as u16;
+                return Some(id);
+            }
+        }
+
+        self.glyph_coords.get(key)
+            .copied()
+    }
 }
