@@ -14,7 +14,7 @@ categories.workspace = true
 
 [dependencies]
 beamterm-data = { path = "../beamterm-data", version = "0.1.0" }
-color-eyre = "0.6.4"
+color-eyre = "0.6.5"
 cosmic-text = "0.14.2"
 emojis = "0.6.4"
 unicode-segmentation = "1.12.0"
