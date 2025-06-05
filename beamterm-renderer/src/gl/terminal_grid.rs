@@ -577,7 +577,6 @@ impl CellStatic {
 }
 
 impl CellDynamic {
-
     #[rustfmt::skip]
     fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
         let mut data = [0; 8];
