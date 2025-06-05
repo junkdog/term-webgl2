@@ -1,4 +1,4 @@
-# bitmap-font
+# beamterm-atlas
 
 A font atlas generator for WebGL terminal renderers, optimized for GPU texture memory and
 rendering efficiency.
@@ -114,7 +114,7 @@ fit within the cell boundaries. Additional padding of 1px on all sides prevents 
 
 ### Font Style Handling
 
-Each glyph is rendered four time, one for each of the styles (normal, bold, italic, bold+italic).
+Each glyph is rendered four times, one for each of the styles (normal, bold, italic, bold+italic).
 
 ### Emoji Special Handling
 
@@ -130,8 +130,6 @@ to render correctly.
 
 ## Binary Atlas Format
 
-## Binary Atlas Format
-
 ### File Structure
 
 The atlas uses a versioned binary format with header validation:
@@ -144,16 +142,20 @@ Header (5 bytes)
 Metadata Section
 ├─ Font name (u8 length + UTF-8 string)
 ├─ Font size (f32)
-├─ Texture width (u32)
-├─ Texture height (u32)
-├─ Texture layers (u32)
+├─ Texture width (i32)
+├─ Texture height (i32)
+├─ Texture layers (i32)
 ├─ Cell width (i32)
 ├─ Cell height (i32)
+├─ Underline position (f32)
+├─ Underline thickness (f32)
+├─ Strikethrough position (f32)
+├─ Strikethrough thickness (f32)
 └─ Glyph count (u16)
 
 Glyph Definitions
 └─ Per glyph:
-   ├─ ID (u16 - base glyph identifier)
+   ├─ ID (u16 - includes style bits)
    ├─ Style (u8) - ordinal: 0=Normal, 1=Bold, 2=Italic, 3=BoldItalic
    ├─ Is emoji (u8) - 0=false, 1=true
    ├─ Pixel X (i32)
@@ -175,7 +177,63 @@ Compressed Texture Data
 
 ## Usage
 
-### Generation
+### Installation
+
+```bash
+cargo install beamterm-atlas
+```
+
+### Command-Line Interface
+
+```bash
+beamterm-atlas [OPTIONS] <FONT>
+```
+
+#### Arguments
+
+- `<FONT>` - Font selection by name (partial match) or 1-based index
+
+#### Options
+
+- `-s, --font-size <SIZE>` - Font size in points (default: 15.0)
+- `-l, --line-height <MULTIPLIER>` - Line height multiplier (default: 1.0)
+- `-o, --output <PATH>` - Output file path (default: "./bitmap_font.atlas")
+- `--underline-position <FRACTION>` - Underline position from 0.0 (top) to 1.0 (bottom) of cell (default: 0.85)
+- `--underline-thickness <PERCENT>` - Underline thickness as percentage of cell height (default: 5.0)
+- `--strikethrough-position <FRACTION>` - Strikethrough position from 0.0 (top) to 1.0 (bottom) of cell (default: 0.5)
+- `--strikethrough-thickness <PERCENT>` - Strikethrough thickness as percentage of cell height (default: 5.0)
+- `-L, --list-fonts` - List available fonts and exit
+
+### Examples
+
+List all available monospace fonts with complete style variants:
+```bash
+beamterm-atlas --list-fonts
+```
+
+Generate an atlas using JetBrains Mono at 16pt:
+```bash
+beamterm-atlas "JetBrains Mono" -s 16 -o jetbrains-16.atlas
+```
+
+Generate with custom text decoration settings:
+```bash
+beamterm-atlas "Fira Code" \
+  --underline-position 0.9 \
+  --underline-thickness 7.5 \
+  --strikethrough-position 0.45
+```
+
+Select font by index (useful for scripting):
+```bash
+# First, list fonts to see indices
+beamterm-atlas -L
+
+# Then select by number
+beamterm-atlas 5 -s 14
+```
+
+### Character Set
 
 The tool generates an atlas from a predefined character set including:
 - Full ASCII and Latin-1 supplement
@@ -192,3 +250,18 @@ The `verify-atlas` binary visualizes the texture layout, showing:
 - Character placement
 - Grid boundaries
 - Glyph distribution
+
+```bash
+verify-atlas
+```
+
+## Font Requirements
+
+The generator requires monospace fonts with all four style variants:
+- Regular
+- Bold
+- Italic
+- Bold+Italic
+
+Fonts missing any variant will not appear in the font list. The system automatically discovers
+all installed system fonts that meet these requirements.
