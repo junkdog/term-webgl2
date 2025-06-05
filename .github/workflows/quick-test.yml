@@ -1,0 +1,46 @@
+name: ⚡ Quick Test
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - master
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  quick-check:
+    name: ⚡ Quick Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: 🔧 Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fontconfig libfontconfig-dev
+
+      # Quick format check
+      - name: 🎨 Check formatting
+        run: cargo fmt --all -- --check
+
+      # Run clippy on native target (faster than WASM)
+      - name: 📎 Clippy check
+        run: cargo clippy --workspace --exclude beamterm-renderer -- -D warnings
+
+      # Basic build check for WASM
+      - name: 🕸️ Check WASM build
+        run: cargo check -p beamterm-renderer --target wasm32-unknown-unknown
+
+      # Run native tests only (faster)
+      - name: 🧪 Run tests
+        run: cargo test --workspace --exclude beamterm-renderer
