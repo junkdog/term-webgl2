@@ -1,17 +1,16 @@
+mod cli;
 mod coordinate;
 mod font_discovery;
 mod generator;
 mod grapheme;
 mod raster_config;
 
-use std::{
-    fs::File,
-    io::{self, Write},
-};
+use std::{fs::File, io::Write};
 
 use beamterm_data::*;
+use clap::Parser;
 
-use crate::{font_discovery::FontDiscovery, generator::BitmapFontGenerator};
+use crate::{cli::Cli, font_discovery::FontDiscovery, generator::BitmapFontGenerator};
 
 const GLYPHS: &str = r#"
 !"$#%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop
@@ -42,15 +41,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install()?;
 
     // parse command line arguments
-    let args: Vec<String> = std::env::args().collect();
+    let cli = Cli::parse();
 
-    if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
-        print_help();
+    // handle --list-fonts flag
+    if cli.list_fonts {
+        Cli::display_font_list();
         return Ok(());
     }
 
+    // validate CLI arguments
+    cli.validate()?;
+
     // discover available fonts
-    println!("Discovering monospace fonts...");
     let discovery = FontDiscovery::new();
     let available_fonts = discovery.discover_complete_monospace_families();
 
@@ -62,79 +64,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    println!("\nAvailable monospace fonts with all variants:");
-    for (i, font) in available_fonts.iter().enumerate() {
-        println!("  {}. {}", i + 1, font.name);
-    }
+    // select font
+    let selected_font = cli.select_font(&available_fonts)?;
 
-    let selected_font = if args.len() > 1 {
-        // try to parse font from command line
-        match args[1].parse::<usize>() {
-            Ok(idx) if idx > 0 && idx <= available_fonts.len() => &available_fonts[idx - 1],
-            _ => {
-                // Try to find by name
-                available_fonts
-                    .iter()
-                    .find(|f| f.name.to_lowercase().contains(&args[1].to_lowercase()))
-                    .unwrap_or_else(|| {
-                        eprintln!("Font '{}' not found, using first available", args[1]);
-                        &available_fonts[0]
-                    })
-            },
-        }
-    } else {
-        // interactive selection
-        println!("\nSelect a font (1-{}) or press Enter for default:", available_fonts.len());
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
+    // print configuration summary
+    cli.print_summary(&selected_font.name);
 
-        if let Ok(idx) = input.trim().parse::<usize>() {
-            if idx > 0 && idx <= available_fonts.len() {
-                &available_fonts[idx - 1]
-            } else {
-                println!("Invalid selection, using first font");
-                &available_fonts[0]
-            }
-        } else if input.trim().is_empty() {
-            &available_fonts[0]
-        } else {
-            // Try to find by name
-            available_fonts
-                .iter()
-                .find(|f| f.name.to_lowercase().contains(&input.trim().to_lowercase()))
-                .unwrap_or(&available_fonts[0])
-        }
-    };
-
-    let font_size = if args.len() > 2 {
-        args[2].parse::<f32>().unwrap_or(15.0)
-    } else {
-        println!("\nEnter font size (default: 15.0):");
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        input.trim().parse::<f32>().unwrap_or(15.0)
-    };
-
-    let line_height = if args.len() > 3 {
-        args[3].parse::<f32>().unwrap_or(1.0)
-    } else {
-        println!("\nEnter line height multiplier (default: 1.0):");
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        input.trim().parse::<f32>().unwrap_or(1.0)
-    };
-
-    println!("\nGenerating font atlas:");
-    println!("  Font: {}", selected_font.name);
-    println!("  Size: {}pt", font_size);
-    println!("  Line height: {}", line_height);
+    // TODO: Pass underline/strikethrough configuration to the generator
+    // These parameters should be stored in FontAtlasData for use during rendering
+    // Currently, the shader uses hardcoded values for these effects
 
     // Generate the font
-    let bitmap_font =
-        BitmapFontGenerator::new_with_family(selected_font.clone(), font_size, line_height)?
-            .generate(GLYPHS);
+    let bitmap_font = BitmapFontGenerator::new_with_family(
+        selected_font.clone(),
+        cli.font_size,
+        cli.line_height,
+    )?
+    .generate(GLYPHS);
 
-    bitmap_font.save("./data/bitmap_font.atlas")?;
+    bitmap_font.save(&cli.output)?;
 
     println!("\nBitmap font generated!");
     println!(
@@ -160,22 +108,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     Ok(())
-}
-
-fn print_help() {
-    println!("Bitmap Font Generator");
-    println!();
-    println!("Usage: bitmap-font [font_name_or_index] [font_size] [line_height]");
-    println!();
-    println!("Options:");
-    println!("  font_name_or_index   Font selection by name (partial match) or index");
-    println!("  font_size            Font size in points (default: 15.0)");
-    println!("  line_height          Line height multiplier (default: 1.0)");
-    println!();
-    println!("Examples:");
-    println!("  bitmap-font                    # Interactive mode");
-    println!("  bitmap-font 1 16 1.5           # Use first font, 16pt, 1.5x line height");
-    println!("  bitmap-font \"JetBrains\" 14 1.0 # Find JetBrains font, 14pt");
 }
 
 /// Represents a bitmap font with all its associated metadata
