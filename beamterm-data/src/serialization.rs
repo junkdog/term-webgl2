@@ -1,6 +1,6 @@
 use compact_str::{format_compact, CompactString};
 
-use crate::{FontAtlasData, FontStyle, Glyph};
+use crate::{FontAtlasData, FontStyle, Glyph, LineDecoration};
 
 const ATLAS_HEADER: [u8; 4] = [0xBA, 0xB1, 0xF0, 0xA5];
 const ATLAS_VERSION: u8 = 0x01; // dictates the format of the serialized data
@@ -203,13 +203,18 @@ impl Serializable for FontAtlasData {
         ser.write_string(&self.font_name);
         ser.write_f32(self.font_size);
 
-        ser.write_u32(self.texture_width);
-        ser.write_u32(self.texture_height);
-        ser.write_u32(self.texture_layers);
+        ser.write_i32(self.texture_dimensions.0);
+        ser.write_i32(self.texture_dimensions.1);
+        ser.write_i32(self.texture_dimensions.2);
 
-        ser.write_i32(self.cell_width);
-        ser.write_i32(self.cell_height);
-
+        ser.write_i32(self.cell_size.0);
+        ser.write_i32(self.cell_size.1);
+        
+        ser.write_f32(self.underline.position);
+        ser.write_f32(self.underline.thickness);
+        ser.write_f32(self.strikethrough.position);
+        ser.write_f32(self.strikethrough.thickness);
+        
         // serialize the glyphs
         ser.write_u16(self.glyphs.len() as u16);
         ser.data.extend(self.glyphs.iter().flat_map(Glyph::serialize));
@@ -239,12 +244,11 @@ impl Serializable for FontAtlasData {
         let font_name = deser.read_string()?;
         let font_size = deser.read_f32()?;
 
-        let texture_width = deser.read_u32()?;
-        let texture_height = deser.read_u32()?;
-        let texture_depth = deser.read_u32()?;
-
-        let cell_width = deser.read_i32()?;
-        let cell_height = deser.read_i32()?;
+        let texture_dimensions = (deser.read_i32()?, deser.read_i32()?, deser.read_i32()?);
+        let cell_size = (deser.read_i32()?, deser.read_i32()?);
+        
+        let underline = LineDecoration::new(deser.read_f32()?, deser.read_f32()?);
+        let strikethrough = LineDecoration::new(deser.read_f32()?, deser.read_f32()?);
 
         // deserialize the glyphs
         let glyph_count = deser.read_u16()? as usize;
@@ -265,11 +269,10 @@ impl Serializable for FontAtlasData {
         Ok(FontAtlasData {
             font_name,
             font_size,
-            texture_width,
-            texture_height,
-            texture_layers: texture_depth,
-            cell_width,
-            cell_height,
+            texture_dimensions,
+            cell_size,
+            underline,
+            strikethrough,
             glyphs,
             texture_data,
         })
@@ -484,11 +487,10 @@ mod tests {
         let original = FontAtlasData {
             font_name: CompactString::from("TestFont"),
             font_size: 16.5,
-            texture_width: 512,
-            texture_height: 256,
-            texture_layers: 256,
-            cell_width: 12,
-            cell_height: 18,
+            texture_dimensions: (512, 256, 256),
+            cell_size: (12, 18),
+            underline: LineDecoration::new(0.85, 5.0 / 100.0),
+            strikethrough: LineDecoration::new(0.5, 5.0 / 100.0),
             glyphs,
             texture_data: Vec::new(),
         };
@@ -502,11 +504,10 @@ mod tests {
 
         // Assert all fields match
         assert_eq!(original.font_size, deserialized.font_size);
-        assert_eq!(original.texture_width, deserialized.texture_width);
-        assert_eq!(original.texture_height, deserialized.texture_height);
-        assert_eq!(original.texture_height, deserialized.texture_height);
-        assert_eq!(original.cell_width, deserialized.cell_width);
-        assert_eq!(original.cell_height, deserialized.cell_height);
+        assert_eq!(original.texture_dimensions, deserialized.texture_dimensions);
+        assert_eq!(original.cell_size, deserialized.cell_size);
+        assert_eq!(original.underline, deserialized.underline);
+        assert_eq!(original.strikethrough, deserialized.strikethrough);
         assert_eq!(original.glyphs.len(), deserialized.glyphs.len());
 
         // Assert each glyph matches

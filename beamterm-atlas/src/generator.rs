@@ -1,4 +1,5 @@
-use beamterm_data::{FontAtlasData, FontStyle, Glyph};
+use color_eyre::owo_colors::OwoColorize;
+use beamterm_data::{FontAtlasData, FontStyle, Glyph, LineDecoration};
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
 
 use crate::{
@@ -17,6 +18,8 @@ pub(super) struct BitmapFontGenerator {
     font_size: f32,
     line_height: f32,
     metrics: Metrics,
+    underline: LineDecoration,
+    strikethrough: LineDecoration,
     font_family_name: String,
 }
 
@@ -26,6 +29,8 @@ impl BitmapFontGenerator {
         font_family: FontFamily,
         font_size: f32,
         line_height: f32,
+        underline: LineDecoration,
+        strikethrough: LineDecoration,
     ) -> Result<Self, String> {
         let discovery = FontDiscovery::new();
         let mut font_system = discovery.into_font_system();
@@ -42,6 +47,8 @@ impl BitmapFontGenerator {
             metrics,
             font_size,
             line_height,
+            underline,
+            strikethrough,
             font_family_name: font_family.name,
         })
     }
@@ -93,11 +100,14 @@ impl BitmapFontGenerator {
             atlas_data: FontAtlasData {
                 font_name: self.font_family_name.clone().into(),
                 font_size: self.font_size,
-                texture_width: config.texture_width as u32,
-                texture_height: config.texture_height as u32,
-                texture_layers: config.layers as u32,
-                cell_width: config.cell_width,
-                cell_height: config.cell_height,
+                texture_dimensions: (
+                    config.texture_width,
+                    config.texture_height,
+                    config.layers
+                ),
+                cell_size: (config.cell_width, config.cell_height),
+                underline: self.underline,
+                strikethrough: self.strikethrough,
                 glyphs: rasterized_glyphs,
                 texture_data,
             },

@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Font Atlas Grid Viewer ===");
     println!(
         "Texture: {}x{}x{} (4x4 cells per slice)",
-        atlas.texture_width, atlas.texture_height, atlas.texture_layers
+        atlas.texture_dimensions.0, atlas.texture_dimensions.1, atlas.texture_dimensions.2
     );
 
     // Calculate total number of slices
@@ -44,8 +44,8 @@ fn render_slice_pair(
     left_slice: usize,
     right_slice: Option<usize>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let display_width = atlas.cell_width as usize * 4;
-    let display_height = atlas.cell_height as usize * 4;
+    let display_width = atlas.cell_size.0 as usize * 4;
+    let display_height = atlas.cell_size.1 as usize * 4;
 
     let mut output = String::new();
 
@@ -53,8 +53,8 @@ fn render_slice_pair(
     write!(&mut output, "   ").ok();
     // Left slice markers
     for x in 0..display_width {
-        if x % atlas.cell_width as usize == 0 {
-            write!(&mut output, "{}", (x / atlas.cell_width as usize).to_string().blue()).ok();
+        if x % atlas.cell_size.0 as usize == 0 {
+            write!(&mut output, "{}", (x / atlas.cell_size.0 as usize).to_string().blue()).ok();
         } else {
             write!(&mut output, " ").ok();
         }
@@ -64,8 +64,8 @@ fn render_slice_pair(
         write!(&mut output, "  ").ok(); // Gap between slices
                                         // Right slice markers
         for x in 0..display_width {
-            if x % atlas.cell_width as usize == 0 {
-                write!(&mut output, "{}", (x / atlas.cell_width as usize).to_string().blue()).ok();
+            if x % atlas.cell_size.0 as usize == 0 {
+                write!(&mut output, "{}", (x / atlas.cell_size.0 as usize).to_string().blue()).ok();
             } else {
                 write!(&mut output, " ").ok();
             }
@@ -76,8 +76,8 @@ fn render_slice_pair(
     // Process pixels in pairs for half-block rendering
     for y in (0..display_height).step_by(2) {
         // Draw row marker
-        if y % atlas.cell_height as usize == 0 {
-            write!(&mut output, "{:2} ", (y / atlas.cell_height as usize).to_string().blue()).ok();
+        if y % atlas.cell_size.1 as usize == 0 {
+            write!(&mut output, "{:2} ", (y / atlas.cell_size.1 as usize).to_string().blue()).ok();
         } else {
             write!(&mut output, "   ").ok();
         }
@@ -99,11 +99,11 @@ fn render_slice_pair(
 }
 
 fn render_slice_row(atlas: &FontAtlasData, slice: usize, y: usize, output: &mut String) {
-    let slice_height = atlas.texture_height as usize;
-    let slice_width = atlas.texture_width as usize;
+    let slice_height = atlas.texture_dimensions.1 as usize;
+    let slice_width = atlas.texture_dimensions.0 as usize;
     let slice_offset = slice * slice_width * slice_height;
-    let display_width = atlas.cell_width as usize * 4;
-    let display_height = atlas.cell_height as usize * 4;
+    let display_width = atlas.cell_size.0 as usize * 4;
+    let display_height = atlas.cell_size.1 as usize * 4;
 
     for x in 0..display_width {
         let idx_top = slice_offset + y * slice_width + x;
@@ -157,14 +157,14 @@ fn render_slice_row(atlas: &FontAtlasData, slice: usize, y: usize, output: &mut 
             },
             (false, false) => {
                 // Empty pixel
-                let on_h_grid = x % atlas.cell_width as usize == 0;
-                let on_v_grid_top = y % atlas.cell_height as usize == 0;
-                let on_v_grid_bottom = (y + 1) % atlas.cell_height as usize == 0;
+                let on_h_grid = x % atlas.cell_size.0 as usize == 0;
+                let on_v_grid_top = y % atlas.cell_size.1 as usize == 0;
+                let on_v_grid_bottom = (y + 1) % atlas.cell_size.1 as usize == 0;
 
                 if on_h_grid && on_v_grid_top {
                     // Top pixel is at cell start
-                    let y_pos = y / atlas.cell_height as usize;
-                    let x_pos = x / atlas.cell_width as usize;
+                    let y_pos = y / atlas.cell_size.1 as usize;
+                    let x_pos = x / atlas.cell_size.0 as usize;
                     // Position within the 4x4 grid of this slice
                     let pos = y_pos * 4 + x_pos;
 
@@ -176,8 +176,8 @@ fn render_slice_row(atlas: &FontAtlasData, slice: usize, y: usize, output: &mut 
                     }
                 } else if on_h_grid && on_v_grid_bottom && y + 1 < display_height {
                     // Bottom pixel is at cell start
-                    let y_pos = (y + 1) / atlas.cell_height as usize;
-                    let x_pos = x / atlas.cell_width as usize;
+                    let y_pos = (y + 1) / atlas.cell_size.1 as usize;
+                    let x_pos = x / atlas.cell_size.0 as usize;
                     let pos = y_pos * 4 + x_pos;
 
                     if let Some(glyph) = find_glyph_symbol(atlas, slice as u16, pos as u16) {

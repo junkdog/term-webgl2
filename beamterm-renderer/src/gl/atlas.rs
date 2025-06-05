@@ -43,7 +43,7 @@ impl FontAtlas {
         config: FontAtlasData,
     ) -> Result<Self, Error> {
         let texture = crate::gl::texture::Texture::from_font_atlas_data(gl, GL::RGBA, &config)?;
-        let num_slices = config.texture_layers;
+        let num_slices = config.texture_dimensions.2;
 
         let texture_layers = config.glyphs.iter().map(|g| g.id as i32).max().unwrap_or(0) + 1;
         console::log_1(
@@ -51,7 +51,7 @@ impl FontAtlas {
                 .into(),
         );
 
-        let (cell_width, cell_height) = (config.cell_width, config.cell_height);
+        let (cell_width, cell_height) = config.cell_size;
         let mut layers = HashMap::new();
 
         // we only store the normal-styled glyphs (incl emoji) in the atlas lookup,
@@ -67,7 +67,7 @@ impl FontAtlas {
             texture,
             glyph_coords: layers,
             cell_size: (cell_width, cell_height),
-            num_slices,
+            num_slices: num_slices as u32,
         })
     }
 

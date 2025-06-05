@@ -73,27 +73,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: Pass underline/strikethrough configuration to the generator
     // These parameters should be stored in FontAtlasData for use during rendering
     // Currently, the shader uses hardcoded values for these effects
+    let underline = LineDecoration::new(cli.underline_position, cli.underline_thickness / 100.0);
+    let strikethrough = LineDecoration::new(cli.strikethrough_position, cli.strikethrough_thickness / 100.0);
 
     // Generate the font
     let bitmap_font = BitmapFontGenerator::new_with_family(
         selected_font.clone(),
         cli.font_size,
         cli.line_height,
+        underline,
+        strikethrough,
     )?
     .generate(GLYPHS);
 
     bitmap_font.save(&cli.output)?;
-
+    
+    let atlas = &bitmap_font.atlas_data;
     println!("\nBitmap font generated!");
     println!(
         "Texture size: {}x{}x{}",
-        bitmap_font.atlas_data.texture_width,
-        bitmap_font.atlas_data.texture_height,
-        bitmap_font.atlas_data.texture_layers
+        atlas.texture_dimensions.0,
+        atlas.texture_dimensions.1,
+        atlas.texture_dimensions.2
     );
     println!(
         "Cell size: {}x{}",
-        bitmap_font.atlas_data.cell_width, bitmap_font.atlas_data.cell_height
+        bitmap_font.atlas_data.cell_size.0, bitmap_font.atlas_data.cell_size.1
     );
     println!("Total glyph count: {}", bitmap_font.atlas_data.glyphs.len());
     println!(

@@ -14,11 +14,7 @@ impl Texture {
         format: u32,
         atlas: &FontAtlasData,
     ) -> Result<Self, Error> {
-        let (width, height, layers) = (
-            atlas.texture_width as i32,
-            atlas.texture_height as i32,
-            atlas.texture_layers as i32,
-        );
+        let (width, height, layers) = atlas.texture_dimensions;
 
         // prepare texture
         let gl_texture = gl.create_texture().ok_or(Error::texture_creation_failed())?;

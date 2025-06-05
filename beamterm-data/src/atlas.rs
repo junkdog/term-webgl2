@@ -10,16 +10,14 @@ pub struct FontAtlasData {
     pub font_name: CompactString,
     /// The font size in points
     pub font_size: f32,
-    /// Width of the texture in pixels
-    pub texture_width: u32,
-    /// Height of the texture in pixels
-    pub texture_height: u32,
-    /// Number of the texture layers
-    pub texture_layers: u32,
-    /// Width of each character cell
-    pub cell_width: i32,
-    /// Height of each character cell
-    pub cell_height: i32,
+    /// Width, height and depth of the texture in pixels
+    pub texture_dimensions: (i32, i32, i32),
+    /// Width and height of each character cell
+    pub cell_size: (i32, i32),
+    /// Underline configuration
+    pub underline: LineDecoration,
+    /// Strikethrough configuration
+    pub strikethrough: LineDecoration,
     /// The glyphs in the font
     pub glyphs: Vec<Glyph>,
     /// The 3d texture data containing the font glyphs
@@ -31,11 +29,8 @@ impl Debug for FontAtlasData {
         f.debug_struct("FontAtlasData")
             .field("font_name", &self.font_name)
             .field("font_size", &self.font_size)
-            .field("texture_width", &self.texture_width)
-            .field("texture_height", &self.texture_height)
-            .field("texture_layers", &self.texture_layers)
-            .field("cell_width", &self.cell_width)
-            .field("cell_height", &self.cell_height)
+            .field("texture_dimensions", &self.texture_dimensions)
+            .field("cell_size", &self.cell_size)
             .field("glyphs_count", &self.glyphs.len())
             .field("texture_data_kb", &(self.texture_data.len() * 4 / 1024))
             .finish()
@@ -58,16 +53,35 @@ impl FontAtlasData {
     }
 
     pub fn terminal_size(&self, viewport_width: i32, viewport_height: i32) -> (i32, i32) {
-        (viewport_width / self.cell_width, viewport_height / self.cell_height)
+        (viewport_width / self.cell_size.0, viewport_height / self.cell_size.1)
     }
 
     pub fn cell_size(&self) -> (i32, i32) {
-        (self.cell_width, self.cell_height)
+        self.cell_size
     }
 }
 
 impl Default for FontAtlasData {
     fn default() -> Self {
         Self::from_binary(include_bytes!("../../data/bitmap_font.atlas")).unwrap()
+    }
+}
+
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct LineDecoration {
+    /// 0.0 to 1.0, where 0.0 is the top of the text line and 1.0 is the bottom.
+    pub(super) position: f32,
+    /// Thickness of the line as a fraction of the cell height (0.0 to 1.0)
+    pub(super) thickness: f32,
+}
+
+
+impl LineDecoration {
+    pub fn new(position: f32, thickness: f32) -> Self {
+        Self {
+            position: position.clamp(0.0, 1.0),
+            thickness: thickness.clamp(0.0, 1.0),
+        }
     }
 }
