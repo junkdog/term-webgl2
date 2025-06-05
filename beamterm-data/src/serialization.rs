@@ -209,12 +209,12 @@ impl Serializable for FontAtlasData {
 
         ser.write_i32(self.cell_size.0);
         ser.write_i32(self.cell_size.1);
-        
+
         ser.write_f32(self.underline.position);
         ser.write_f32(self.underline.thickness);
         ser.write_f32(self.strikethrough.position);
         ser.write_f32(self.strikethrough.thickness);
-        
+
         // serialize the glyphs
         ser.write_u16(self.glyphs.len() as u16);
         ser.data.extend(self.glyphs.iter().flat_map(Glyph::serialize));
@@ -246,7 +246,7 @@ impl Serializable for FontAtlasData {
 
         let texture_dimensions = (deser.read_i32()?, deser.read_i32()?, deser.read_i32()?);
         let cell_size = (deser.read_i32()?, deser.read_i32()?);
-        
+
         let underline = LineDecoration::new(deser.read_f32()?, deser.read_f32()?);
         let strikethrough = LineDecoration::new(deser.read_f32()?, deser.read_f32()?);
 

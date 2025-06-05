@@ -2,8 +2,7 @@ mod atlas;
 mod glyph;
 mod serialization;
 
-pub use atlas::FontAtlasData;
-pub use atlas::LineDecoration;
+pub use atlas::{FontAtlasData, LineDecoration};
 pub use glyph::{FontStyle, Glyph, GlyphEffect};
 use serialization::*;
 

@@ -1,4 +1,3 @@
-use color_eyre::owo_colors::OwoColorize;
 use beamterm_data::{FontAtlasData, FontStyle, Glyph, LineDecoration};
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
 
@@ -100,11 +99,7 @@ impl BitmapFontGenerator {
             atlas_data: FontAtlasData {
                 font_name: self.font_family_name.clone().into(),
                 font_size: self.font_size,
-                texture_dimensions: (
-                    config.texture_width,
-                    config.texture_height,
-                    config.layers
-                ),
+                texture_dimensions: (config.texture_width, config.texture_height, config.layers),
                 cell_size: (config.cell_width, config.cell_height),
                 underline: self.underline,
                 strikethrough: self.strikethrough,

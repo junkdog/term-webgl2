@@ -74,7 +74,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // These parameters should be stored in FontAtlasData for use during rendering
     // Currently, the shader uses hardcoded values for these effects
     let underline = LineDecoration::new(cli.underline_position, cli.underline_thickness / 100.0);
-    let strikethrough = LineDecoration::new(cli.strikethrough_position, cli.strikethrough_thickness / 100.0);
+    let strikethrough =
+        LineDecoration::new(cli.strikethrough_position, cli.strikethrough_thickness / 100.0);
 
     // Generate the font
     let bitmap_font = BitmapFontGenerator::new_with_family(
@@ -87,14 +88,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .generate(GLYPHS);
 
     bitmap_font.save(&cli.output)?;
-    
+
     let atlas = &bitmap_font.atlas_data;
     println!("\nBitmap font generated!");
     println!(
         "Texture size: {}x{}x{}",
-        atlas.texture_dimensions.0,
-        atlas.texture_dimensions.1,
-        atlas.texture_dimensions.2
+        atlas.texture_dimensions.0, atlas.texture_dimensions.1, atlas.texture_dimensions.2
     );
     println!(
         "Cell size: {}x{}",
