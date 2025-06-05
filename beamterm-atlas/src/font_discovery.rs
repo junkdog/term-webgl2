@@ -37,8 +37,7 @@ impl FontDiscovery {
 
         // group fonts by family name
         for face in db.faces().filter(|f| f.monospaced) {
-            let family_name = face.families.iter()
-                .next()
+            let family_name = face.families.first()
                 .map(|(name, _)| name.clone())
                 .unwrap_or_else(|| "Unknown".to_string());
 

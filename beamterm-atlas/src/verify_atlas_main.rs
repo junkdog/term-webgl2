@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Display slices two per row
     for slice_pair in (0..=max_slice).step_by(2) {
         let slice_left = slice_pair;
-        let slice_right = if slice_pair + 1 <= max_slice { Some(slice_pair + 1) } else { None };
+        let slice_right = if slice_pair < max_slice { Some(slice_pair + 1) } else { None };
 
         println!("\n=== Slice {} {} ===",
             slice_left,
@@ -184,12 +184,12 @@ fn render_slice_row(
                         let ch = glyph.symbol.chars().next().unwrap_or(' ');
                         write!(output, "{}", ch.to_string().truecolor(0xfe, 0x80, 0x19)).ok();
                     } else {
-                        write!(output, "{}", "+").ok();
+                        write!(output, "+").ok();
                     }
                 } else if on_h_grid {
-                    write!(output, "{}", "|").ok();
+                    write!(output, "|").ok();
                 } else if on_v_grid_top || on_v_grid_bottom {
-                    write!(output, "{}", "-").ok();
+                    write!(output, "-").ok();
                 } else {
                     write!(output, " ").ok();
                 }
@@ -201,8 +201,8 @@ fn render_slice_row(
 fn rgb_components(color: u32) -> (u8, u8, u8) {
     let a = color & 0xFF;
 
-    let r = (((color >> 24) & 0xFF) * a >> 8) as u8;
-    let g = (((color >> 16) & 0xFF) * a >> 8) as u8;
-    let b = (((color >> 8)  & 0xFF) * a >> 8) as u8;
+    let r = ((((color >> 24) & 0xFF) * a) >> 8) as u8;
+    let g = ((((color >> 16) & 0xFF) * a) >> 8) as u8;
+    let b = ((((color >> 8)  & 0xFF) * a) >> 8) as u8;
     (r, g, b)
 }

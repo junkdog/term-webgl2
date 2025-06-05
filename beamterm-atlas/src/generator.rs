@@ -247,7 +247,7 @@ impl BitmapFontGenerator {
         measure_buffer.set_size(f, Some(inner_cell_w * 8.0), Some(inner_cell_h * 8.0));
 
         let attrs = &attrs(&self.font_family_name, FontStyle::Normal);
-        measure_buffer.set_text(f, emoji, &attrs, cosmic_text::Shaping::Advanced);
+        measure_buffer.set_text(f, emoji, attrs, cosmic_text::Shaping::Advanced);
         measure_buffer.shape_until_scroll(f, true);
 
         // Measure actual bounds
@@ -290,7 +290,7 @@ impl BitmapFontGenerator {
 
         let mut buffer = Buffer::new(f, scaled_metrics);
         buffer.set_size(f, Some(inner_cell_w), Some(inner_cell_w));
-        buffer.set_text(f, emoji, &attrs, cosmic_text::Shaping::Advanced);
+        buffer.set_text(f, emoji, attrs, cosmic_text::Shaping::Advanced);
         buffer.shape_until_scroll(f, true);
 
         buffer

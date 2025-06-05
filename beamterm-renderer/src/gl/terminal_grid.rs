@@ -284,7 +284,7 @@ fn resize_cell_grid(
         for x in 0..min(old_size.0, new_size.0) {
             let new_idx = (y * new_size.0 + x) as usize;
             let old_idx = (y * old_size.0 + x) as usize;
-            new_cells[new_idx] = cells[old_idx].clone();
+            new_cells[new_idx] = cells[old_idx];
         }
     }
 

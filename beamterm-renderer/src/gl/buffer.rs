@@ -53,7 +53,7 @@ pub(crate) fn buffer_upload_array<T>(
 ) {
     unsafe {
         let data_ptr = data.as_ptr() as *const u8;
-        let size = data.len() * size_of::<T>();
+        let size = std::mem::size_of_val(data);
         let view = js_sys::Uint8Array::view(slice::from_raw_parts(data_ptr, size));
         gl.buffer_data_with_array_buffer_view(target, &view, usage);
     }

@@ -151,7 +151,7 @@ impl <'a> Deserializer<'a> {
 impl Serializable for CompactString {
     fn serialize(&self) -> Vec<u8> {
         let mut ser = Serializer::new();
-        ser.write_string(&self);
+        ser.write_string(self);
         ser.data
     }
 

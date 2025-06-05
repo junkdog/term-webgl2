@@ -20,7 +20,7 @@ impl<'a> GraphemeSet<'a> {
         let mut emoji = vec![];
 
         for g in graphemes {
-            if g.len() == 1 && g.chars().all(|c| c.is_ascii()) {
+            if g.len() == 1 && g.is_ascii() {
                 ascii.push(g);
             } else if emojis::get(g).is_some() {
                 emoji.push(g);

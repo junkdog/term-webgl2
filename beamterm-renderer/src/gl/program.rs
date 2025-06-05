@@ -75,11 +75,11 @@ enum ShaderType {
     Fragment,
 }
 
-impl Into<u32> for ShaderType {
-    fn into(self) -> u32 {
+impl From<ShaderType> for u32 {
+    fn from(val: ShaderType) -> Self {
         use ShaderType::*;
 
-        match self {
+        match val {
             Vertex   => WebGl2RenderingContext::VERTEX_SHADER,
             Fragment => WebGl2RenderingContext::FRAGMENT_SHADER,
         }
