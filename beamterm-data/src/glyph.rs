@@ -50,6 +50,7 @@ pub struct Glyph {
     pub is_emoji: bool,
 }
 
+#[rustfmt::skip]
 impl Glyph {
     /// The ID is used as a short-lived placeholder until the actual ID is assigned.
     pub const UNASSIGNED_ID: u16 = 0xFFFF;
@@ -67,8 +68,9 @@ impl Glyph {
     pub const UNDERLINE_FLAG: u16     = 0b0001_0000_0000_0000; // 0x0800
     /// Strikethrough flag - renders a horizontal line through the middle of the character.
     pub const STRIKETHROUGH_FLAG: u16 = 0b0010_0000_0000_0000; // 0x1000
+}
 
-
+impl Glyph {
     /// Creates a new glyph with the specified symbol and pixel coordinates.
     pub fn new(symbol: &str, style: FontStyle, pixel_coords: (i32, i32)) -> Self {
         let first_char = symbol.chars().next().unwrap();
@@ -87,7 +89,7 @@ impl Glyph {
             is_emoji: false,
         }
     }
-    
+
     pub fn new_with_id(
         base_id: u16,
         symbol: &str,
@@ -102,11 +104,10 @@ impl Glyph {
             is_emoji: false,
         }
     }
-    
+
     /// Returns true if this glyph represents a single ASCII character.
     pub fn is_ascii(&self) -> bool {
-        self.symbol.len() == 1
-            && self.symbol.chars().next().unwrap().is_ascii()
+        self.symbol.len() == 1 && self.symbol.chars().next().unwrap().is_ascii()
     }
 }
 
@@ -123,7 +124,7 @@ pub enum GlyphEffect {
 impl GlyphEffect {
     pub fn from_u16(v: u16) -> GlyphEffect {
         match v {
-            0x0    => GlyphEffect::None,
+            0x0000 => GlyphEffect::None,
             0x1000 => GlyphEffect::Underline,
             0x2000 => GlyphEffect::Strikethrough,
             0x3000 => GlyphEffect::Strikethrough,
@@ -137,19 +138,15 @@ impl GlyphEffect {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FontStyle {
-    Normal     = 0x0000,
-    Bold       = 0x0200,
-    Italic     = 0x0400,
+    Normal = 0x0000,
+    Bold = 0x0200,
+    Italic = 0x0400,
     BoldItalic = 0x0600,
 }
 
 impl FontStyle {
-    pub const ALL: [FontStyle; 4] = [
-        FontStyle::Normal,
-        FontStyle::Bold,
-        FontStyle::Italic,
-        FontStyle::BoldItalic,
-    ];
+    pub const ALL: [FontStyle; 4] =
+        [FontStyle::Normal, FontStyle::Bold, FontStyle::Italic, FontStyle::BoldItalic];
 
     pub fn from_u16(v: u16) -> FontStyle {
         match v {
@@ -170,12 +167,12 @@ impl FontStyle {
             _ => panic!("Invalid font style ordinal: {}", ordinal),
         }
     }
-    
+
     pub(super) const fn ordinal(&self) -> usize {
         match self {
-            FontStyle::Normal     => 0,
-            FontStyle::Bold       => 1,
-            FontStyle::Italic     => 2,
+            FontStyle::Normal => 0,
+            FontStyle::Bold => 1,
+            FontStyle::Italic => 2,
             FontStyle::BoldItalic => 3,
         }
     }

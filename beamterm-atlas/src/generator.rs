@@ -1,10 +1,13 @@
-use crate::coordinate::GlyphCoordinate;
-use crate::font_discovery::{FontDiscovery, FontFamily};
-use crate::grapheme::GraphemeSet;
-use crate::raster_config::RasterizationConfig;
-use crate::BitmapFont;
-use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
 use beamterm_data::{FontAtlasData, FontStyle, Glyph};
+use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Style, SwashCache, Weight};
+
+use crate::{
+    coordinate::GlyphCoordinate,
+    font_discovery::{FontDiscovery, FontFamily},
+    grapheme::GraphemeSet,
+    raster_config::RasterizationConfig,
+    BitmapFont,
+};
 
 const WHITE: Color = Color::rgb(0xff, 0xff, 0xff);
 
@@ -53,7 +56,10 @@ impl BitmapFontGenerator {
         let (cell_w, cell_h) = self.calculate_cell_dimensions(&test_glyphs);
 
         let config = RasterizationConfig::new(cell_w, cell_h, &glyphs);
-        println!("Font: {} @ {}pt (line height: {})", self.font_family_name, self.font_size, self.line_height);
+        println!(
+            "Font: {} @ {}pt (line height: {})",
+            self.font_family_name, self.font_size, self.line_height
+        );
         println!("{:?}", &config);
 
         // allocate 3d rgba texture data
@@ -64,12 +70,7 @@ impl BitmapFontGenerator {
         for glyph in glyphs.into_iter() {
             let coord = GlyphCoordinate::from_glyph_id(glyph.id);
 
-            self.place_glyph_in_3d_texture(
-                &glyph,
-                &config,
-                &mut texture_data,
-                coord,
-            );
+            self.place_glyph_in_3d_texture(&glyph, &config, &mut texture_data, coord);
 
             // update glyph with actual texture coordinates
             let mut updated_glyph = glyph;
@@ -124,7 +125,13 @@ impl BitmapFontGenerator {
         let cell_offset = coord.cell_offset_in_px(config);
 
         // collect pixels and optionally calculate centering
-        let pixels = Self::collect_glyph_pixels(&mut buffer, &mut self.cache, glyph.is_emoji, inner_cell_w, inner_cell_h);
+        let pixels = Self::collect_glyph_pixels(
+            &mut buffer,
+            &mut self.cache,
+            glyph.is_emoji,
+            inner_cell_w,
+            inner_cell_h,
+        );
 
         // render pixels to texture
         let cell_offset = (cell_offset.0, cell_offset.1);
@@ -207,7 +214,8 @@ impl BitmapFontGenerator {
     }
 
     fn texture_index(&self, x: i32, y: i32, slice: i32, config: &RasterizationConfig) -> usize {
-        (slice * config.texture_width * config.texture_height + y * config.texture_width + x) as usize
+        (slice * config.texture_width * config.texture_height + y * config.texture_width + x)
+            as usize
     }
 
     fn rasterize_glyph(
@@ -231,12 +239,7 @@ impl BitmapFontGenerator {
         buffer
     }
 
-    fn rasterize_emoji(
-        &mut self,
-        emoji: &str,
-        inner_cell_w: f32,
-        inner_cell_h: f32,
-    ) -> Buffer {
+    fn rasterize_emoji(&mut self, emoji: &str, inner_cell_w: f32, inner_cell_h: f32) -> Buffer {
         let f = &mut self.font_system;
 
         // First pass: measure at default size
@@ -271,7 +274,12 @@ impl BitmapFontGenerator {
 
         if !has_content {
             // Fallback for emojis that don't render
-            return self.rasterize_glyph(emoji, FontStyle::Normal, inner_cell_w as i32, inner_cell_h as i32);
+            return self.rasterize_glyph(
+                emoji,
+                FontStyle::Normal,
+                inner_cell_w as i32,
+                inner_cell_h as i32,
+            );
         }
 
         // calculate actual dimensions
@@ -347,13 +355,7 @@ impl BitmapFontGenerator {
     }
 }
 
-
-
-
-fn attrs(
-    font_family: &str,
-    style: FontStyle
-) -> Attrs {
+fn attrs(font_family: &str, style: FontStyle) -> Attrs {
     let default_weight = Weight((Weight::NORMAL.0 + Weight::MEDIUM.0) / 2);
     let attrs = Attrs::new()
         .family(Family::Name(font_family))
@@ -361,12 +363,11 @@ fn attrs(
         .family(Family::Monospace)
         .weight(default_weight);
 
-
     use FontStyle::*;
     match style {
-        Normal     => attrs,
-        Bold       => attrs.weight(Weight::BOLD),
-        Italic     => attrs.style(Style::Italic),
+        Normal => attrs,
+        Bold => attrs.weight(Weight::BOLD),
+        Italic => attrs.style(Style::Italic),
         BoldItalic => attrs.style(Style::Italic).weight(Weight::BOLD),
     }
 }
@@ -423,11 +424,8 @@ fn create_test_glyphs_for_cell_calculation() -> Vec<Glyph> {
         // "j",
         // "Q",
         // "b"
-    ].into_iter()
-        .flat_map(|ch| {
-            FontStyle::ALL.iter().map(move |style| {
-                Glyph::new(ch, *style, (0, 0))
-            })
-        })
-        .collect()
+    ]
+    .into_iter()
+    .flat_map(|ch| FontStyle::ALL.iter().map(move |style| Glyph::new(ch, *style, (0, 0))))
+    .collect()
 }

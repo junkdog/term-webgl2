@@ -1,6 +1,7 @@
 use std::collections::HashSet;
-use unicode_segmentation::UnicodeSegmentation;
+
 use beamterm_data::{FontStyle, Glyph};
+use unicode_segmentation::UnicodeSegmentation;
 
 pub struct GraphemeSet<'a> {
     ascii: Vec<&'a str>,
@@ -13,7 +14,6 @@ impl<'a> GraphemeSet<'a> {
         let mut graphemes = chars.graphemes(true).collect::<Vec<&str>>();
         graphemes.sort();
         graphemes.dedup();
-
 
         let mut ascii = vec![];
         let mut unicode = vec![];
@@ -63,10 +63,7 @@ impl<'a> GraphemeSet<'a> {
     }
 }
 
-fn assign_missing_glyph_ids(
-    used_ids: HashSet<u16>,
-    symbols: &[&str]
-) -> Vec<Glyph> {
+fn assign_missing_glyph_ids(used_ids: HashSet<u16>, symbols: &[&str]) -> Vec<Glyph> {
     let mut next_id: i32 = -1; // initial value to -1
     let mut next_glyph_id = || {
         let mut id = next_id;
@@ -78,7 +75,8 @@ fn assign_missing_glyph_ids(
         id as u16
     };
 
-    symbols.iter()
+    symbols
+        .iter()
         .flat_map(|c| {
             let base_id = next_glyph_id();
             [

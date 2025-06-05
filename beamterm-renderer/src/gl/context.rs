@@ -23,10 +23,8 @@ impl GlState {
     /// Create a new GLState object with WebGL defaults
     pub fn new(gl: &GL) -> Self {
         // Get max vertex attributes
-        let max_vertex_attribs = gl.get_parameter(GL::MAX_VERTEX_ATTRIBS)
-            .unwrap()
-            .as_f64()
-            .unwrap() as usize;
+        let max_vertex_attribs =
+            gl.get_parameter(GL::MAX_VERTEX_ATTRIBS).unwrap().as_f64().unwrap() as usize;
 
         Self {
             viewport: [0, 0, 0, 0],
@@ -82,7 +80,6 @@ impl GlState {
 
     /// Reset all tracked state to WebGL defaults
     pub fn reset(&mut self, gl: &GL) {
-
         // Reset blend function
         if self.blend_func != (GL::ONE, GL::ZERO) {
             gl.blend_func(GL::ONE, GL::ZERO);
@@ -106,7 +103,7 @@ impl GlState {
         // Note: We don't reset viewport or clear_color as these are typically
         // set based on canvas dimensions or application needs
     }
-    
+
     fn capability(&self, gl: &GL, capability: u32, enable: bool) {
         if enable {
             gl.enable(capability);

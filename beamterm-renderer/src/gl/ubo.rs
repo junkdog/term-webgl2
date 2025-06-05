@@ -1,6 +1,9 @@
-use crate::error::Error;
-use crate::gl::{buffer_upload_struct, ShaderProgram, GL};
 use std::fmt::Debug;
+
+use crate::{
+    error::Error,
+    gl::{buffer_upload_struct, ShaderProgram, GL},
+};
 
 #[derive(Debug)]
 pub struct UniformBufferObject {
@@ -10,13 +13,9 @@ pub struct UniformBufferObject {
 
 impl UniformBufferObject {
     pub fn new(gl: &GL, binding_point: u32) -> Result<Self, Error> {
-        let buffer = gl.create_buffer()
-            .ok_or(Error::buffer_creation_failed("ubo"))?;
+        let buffer = gl.create_buffer().ok_or(Error::buffer_creation_failed("ubo"))?;
 
-        Ok(Self {
-            buffer,
-            binding_point,
-        })
+        Ok(Self { buffer, binding_point })
     }
 
     pub fn bind(&self, gl: &GL) {
@@ -31,7 +30,7 @@ impl UniformBufferObject {
         &self,
         gl: &GL,
         shader: &ShaderProgram,
-        block_name: &'static str
+        block_name: &'static str,
     ) -> Result<(), Error> {
         let block_index = gl.get_uniform_block_index(&shader.program, block_name);
         if block_index == GL::INVALID_INDEX {

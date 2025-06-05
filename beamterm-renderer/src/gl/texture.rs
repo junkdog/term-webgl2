@@ -1,6 +1,6 @@
-use crate::error::Error;
-use crate::gl::GL;
 use beamterm_data::FontAtlasData;
+
+use crate::{error::Error, gl::GL};
 
 #[derive(Debug)]
 pub(super) struct Texture {
@@ -22,17 +22,16 @@ impl Texture {
         let (width, height, layers) = (
             atlas.texture_width as i32,
             atlas.texture_height as i32,
-            atlas.texture_layers as i32
+            atlas.texture_layers as i32,
         );
 
         // prepare texture
-        let gl_texture = gl.create_texture()
-            .ok_or(Error::texture_creation_failed())?;
+        let gl_texture = gl.create_texture().ok_or(Error::texture_creation_failed())?;
         gl.bind_texture(GL::TEXTURE_2D_ARRAY, Some(&gl_texture));
         gl.tex_storage_3d(GL::TEXTURE_2D_ARRAY, 1, GL::RGBA8, width, height, layers);
 
-
         // upload the texture data; convert to u8 array
+        #[rustfmt::skip]
         gl.tex_sub_image_3d_with_opt_u8_array_and_src_offset(
             GL::TEXTURE_2D_ARRAY,
             0, // level
@@ -46,7 +45,12 @@ impl Texture {
 
         Self::setup_mipmap(gl);
 
-        Ok(Self { gl_texture, format, width: cell_width, height: cell_height })
+        Ok(Self {
+            gl_texture,
+            format,
+            width: cell_width,
+            height: cell_height,
+        })
     }
 
     pub fn bind(&self, gl: &web_sys::WebGl2RenderingContext, texture_unit: u32) {

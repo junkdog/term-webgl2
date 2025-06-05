@@ -1,5 +1,6 @@
-use cosmic_text::{fontdb, FontSystem, Style, Weight};
 use std::collections::HashMap;
+
+use cosmic_text::{fontdb, FontSystem, Style, Weight};
 
 #[derive(Debug, Clone)]
 pub struct FontFamily {
@@ -37,7 +38,9 @@ impl FontDiscovery {
 
         // group fonts by family name
         for face in db.faces().filter(|f| f.monospaced) {
-            let family_name = face.families.first()
+            let family_name = face
+                .families
+                .first()
                 .map(|(name, _)| name.clone())
                 .unwrap_or_else(|| "Unknown".to_string());
 
@@ -52,22 +55,17 @@ impl FontDiscovery {
         let mut complete_families = Vec::new();
 
         for (name, variants) in families {
-            
             let regular = variants.get(&(Weight::NORMAL, Style::Normal));
             let bold = variants.get(&(Weight::BOLD, Style::Normal));
             let italic = variants.get(&(Weight::NORMAL, Style::Italic));
             let bold_italic = variants.get(&(Weight::BOLD, Style::Italic));
 
             if let (Some(&regular), Some(&bold), Some(&italic), Some(&bold_italic)) =
-                (regular, bold, italic, bold_italic) {
+                (regular, bold, italic, bold_italic)
+            {
                 complete_families.push(FontFamily {
                     name,
-                    fonts: FontVariants {
-                        regular,
-                        bold,
-                        italic,
-                        bold_italic,
-                    },
+                    fonts: FontVariants { regular, bold, italic, bold_italic },
                 });
             }
         }
@@ -84,12 +82,12 @@ impl FontDiscovery {
         let db = font_system.db();
 
         let all_fonts = [
-            family.fonts.regular, 
-            family.fonts.bold, 
-            family.fonts.italic, 
-            family.fonts.bold_italic, 
+            family.fonts.regular,
+            family.fonts.bold,
+            family.fonts.italic,
+            family.fonts.bold_italic,
         ];
-        
+
         // verify all fonts exist
         for id in all_fonts.into_iter() {
             if db.face(id).is_none() {

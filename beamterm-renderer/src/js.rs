@@ -1,5 +1,6 @@
 use js_sys::wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlCanvasElement};
+
 use crate::error::Error;
 
 pub(crate) fn document() -> Result<Document, Error> {
@@ -8,11 +9,10 @@ pub(crate) fn document() -> Result<Document, Error> {
         .and_then(|w| w.document().ok_or(Error::document_not_found()))
 }
 
-pub(crate) fn get_canvas_by_id(
-    canvas_id: &str,
-) -> Result<HtmlCanvasElement, Error> {
+pub(crate) fn get_canvas_by_id(canvas_id: &str) -> Result<HtmlCanvasElement, Error> {
     let document = document()?;
-    document.query_selector(canvas_id)
+    document
+        .query_selector(canvas_id)
         .map_err(|_| Error::canvas_not_found())?
         .ok_or(Error::canvas_not_found())?
         .dyn_into::<web_sys::HtmlCanvasElement>()
@@ -22,10 +22,10 @@ pub(crate) fn get_canvas_by_id(
 pub(crate) fn get_webgl2_context(
     canvas: &HtmlCanvasElement,
 ) -> Result<web_sys::WebGl2RenderingContext, Error> {
-    canvas.get_context("webgl2")
+    canvas
+        .get_context("webgl2")
         .map_err(|_| Error::canvas_context_failed())?
         .ok_or(Error::webgl_context_failed())?
         .dyn_into::<web_sys::WebGl2RenderingContext>()
         .map_err(|_| Error::webgl_context_failed())
 }
-

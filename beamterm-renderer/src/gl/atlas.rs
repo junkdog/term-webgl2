@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+
+use beamterm_data::{FontAtlasData, FontStyle};
 use compact_str::{CompactString, ToCompactString};
 use web_sys::console;
-use beamterm_data::{FontAtlasData, FontStyle};
-use crate::error::Error;
-use crate::gl::GL;
+
+use crate::{error::Error, gl::GL};
 
 /// A texture atlas containing font glyphs for efficient WebGL text rendering.
 ///
@@ -29,12 +30,9 @@ pub struct FontAtlas {
     pub(super) num_slices: u32,
 }
 
-
 impl FontAtlas {
     /// Loads the default embedded font atlas.
-    pub fn load_default(
-        gl: &web_sys::WebGl2RenderingContext,
-    ) -> Result<Self, Error> {
+    pub fn load_default(gl: &web_sys::WebGl2RenderingContext) -> Result<Self, Error> {
         let config = FontAtlasData::default();
         Self::load(gl, config)
     }
@@ -46,11 +44,13 @@ impl FontAtlas {
     ) -> Result<Self, Error> {
         let texture = crate::gl::texture::Texture::from_font_atlas_data(gl, GL::RGBA, &config)?;
         let num_slices = config.texture_layers;
-        
+
         let texture_layers = config.glyphs.iter().map(|g| g.id as i32).max().unwrap_or(0) + 1;
-        console::log_1(&format!("Creating atlas grid with {}/{texture_layers} layers",
-            config.glyphs.len()).into());
-        
+        console::log_1(
+            &format!("Creating atlas grid with {}/{texture_layers} layers", config.glyphs.len())
+                .into(),
+        );
+
         let (cell_width, cell_height) = (config.cell_width, config.cell_height);
         let mut layers = HashMap::new();
 
@@ -86,28 +86,27 @@ impl FontAtlas {
     pub(super) fn get_glyph_coord(&self, key: &str, font_style: FontStyle) -> Option<u16> {
         if key.len() == 1 {
             let ch = key.chars().next().unwrap();
-            if ch.is_ascii() { // 0x00..0x7f double as layer
+            if ch.is_ascii() {
+                // 0x00..0x7f double as layer
                 let id = ch as u16 | font_style.style_mask();
                 return Some(id);
             }
         }
 
-        self.glyph_coords.get(key)
-            .copied()
-            .map(|id| id | font_style.style_mask())
+        self.glyph_coords.get(key).copied().map(|id| id | font_style.style_mask())
     }
 
     /// Returns the base glyph identifier for the given key
     pub(super) fn get_base_glyph_id(&self, key: &str) -> Option<u16> {
         if key.len() == 1 {
             let ch = key.chars().next().unwrap();
-            if ch.is_ascii() { // 0x00..0x7f double as layer
+            if ch.is_ascii() {
+                // 0x00..0x7f double as layer
                 let id = ch as u16;
                 return Some(id);
             }
         }
 
-        self.glyph_coords.get(key)
-            .copied()
+        self.glyph_coords.get(key).copied()
     }
 }

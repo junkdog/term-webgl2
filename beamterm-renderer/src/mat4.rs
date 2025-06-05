@@ -14,20 +14,17 @@ impl Mat4 {
         Self { data }
     }
 
-    pub fn orthographic_from_size(
-        width: f32,
-        height: f32,
-    ) -> Self {
+    pub fn orthographic_from_size(width: f32, height: f32) -> Self {
         Self::new_orthographic(0.0, width, height, 0.0, -1.0, 1.0)
     }
-    
+
     pub fn new_orthographic(
         left: f32,
         right: f32,
         bottom: f32,
         top: f32,
         near: f32,
-        far: f32
+        far: f32,
     ) -> Self {
         let mut result = Self::new_identity();
         let data = &mut result.data;

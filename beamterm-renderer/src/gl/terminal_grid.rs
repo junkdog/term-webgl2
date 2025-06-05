@@ -1,11 +1,16 @@
-use std::cmp::min;
-use crate::error::Error;
-use crate::gl::ubo::UniformBufferObject;
-use crate::gl::{buffer_upload_array, Drawable, FontAtlas, RenderContext, ShaderProgram, GL};
-use crate::mat4::Mat4;
-use std::fmt::Debug;
-use web_sys::{console, WebGl2RenderingContext};
+use std::{cmp::min, fmt::Debug};
+
 use beamterm_data::{FontAtlasData, FontStyle, GlyphEffect};
+use web_sys::{console, WebGl2RenderingContext};
+
+use crate::{
+    error::Error,
+    gl::{
+        buffer_upload_array, ubo::UniformBufferObject, Drawable, FontAtlas, RenderContext,
+        ShaderProgram, GL,
+    },
+    mat4::Mat4,
+};
 
 /// A high-performance terminal grid renderer using instanced rendering.
 ///
@@ -27,7 +32,7 @@ pub struct TerminalGrid {
     buffers: TerminalBuffers,
     /// shared state for the vertex shader
     ubo_vertex: UniformBufferObject,
-    /// shared state for the fragment shader 
+    /// shared state for the fragment shader
     ubo_fragment: UniformBufferObject,
     /// Font atlas for rendering text.
     atlas: FontAtlas,
@@ -45,20 +50,15 @@ struct TerminalBuffers {
 }
 
 impl TerminalBuffers {
-    fn upload_instance_data<T>(
-        &self,
-        gl: &WebGl2RenderingContext,
-        cell_data: &[T],
-    ) {
+    fn upload_instance_data<T>(&self, gl: &WebGl2RenderingContext, cell_data: &[T]) {
         gl.bind_vertex_array(Some(&self.vao));
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&self.instance_cell));
-        
+
         buffer_upload_array(gl, GL::ARRAY_BUFFER, cell_data, GL::DYNAMIC_DRAW);
 
         gl.bind_vertex_array(None);
     }
 }
-
 
 impl TerminalGrid {
     const FRAGMENT_GLSL: &'static str = include_str!("../shaders/cell.frag");
@@ -94,11 +94,12 @@ impl TerminalGrid {
         let ubo_fragment = UniformBufferObject::new(gl, CellFragmentUbo::BINDING_POINT)?;
         ubo_fragment.bind_to_shader(gl, &shader, "FragUbo")?;
 
-        let sampler_loc = gl.get_uniform_location(&shader.program, "u_sampler")
+        let sampler_loc = gl
+            .get_uniform_location(&shader.program, "u_sampler")
             .ok_or(Error::uniform_location_failed("u_sampler"))?;
 
         console::log_2(&"terminal cells".into(), &cell_data.len().into());
-        
+
         let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
         console::log_1(&format!("terminal size {cols}x{rows}").into());
         let grid = Self {
@@ -114,14 +115,14 @@ impl TerminalGrid {
         };
 
         grid.upload_ubo_data(gl);
-        
+
         Ok(grid)
     }
 
     pub fn cell_size(&self) -> (i32, i32) {
         self.atlas.cell_size()
     }
-    
+
     pub fn terminal_size(&self) -> (u16, u16) {
         self.terminal_size
     }
@@ -134,12 +135,9 @@ impl TerminalGrid {
     ///
     /// # Parameters
     /// * `gl` - WebGL2 rendering context
-    pub fn upload_ubo_data(
-        &self,
-        gl: &WebGl2RenderingContext,
-    ) {
+    pub fn upload_ubo_data(&self, gl: &WebGl2RenderingContext) {
         let cell_size = self.cell_size();
-        
+
         let vertex_ubo = CellVertexUbo::new(self.canvas_size_px, cell_size);
         self.ubo_vertex.upload_data(gl, &vertex_ubo);
 
@@ -174,63 +172,60 @@ impl TerminalGrid {
         let atlas = &self.atlas;
 
         let fallback_glyph = atlas.get_glyph_coord(" ", FontStyle::Normal).unwrap_or(0);
-        self.cells.iter_mut()
-            .zip(cells)
-            .for_each(|(cell, data)| {
-                let glyph_id = atlas.get_base_glyph_id(data.symbol)
-                    .unwrap_or(fallback_glyph);
+        self.cells.iter_mut().zip(cells).for_each(|(cell, data)| {
+            let glyph_id = atlas.get_base_glyph_id(data.symbol).unwrap_or(fallback_glyph);
 
-                *cell = CellDynamic::new(glyph_id | data.style_bits, data.fg, data.bg);
-            });
+            *cell = CellDynamic::new(glyph_id | data.style_bits, data.fg, data.bg);
+        });
 
         self.buffers.upload_instance_data(gl, &self.cells);
 
         Ok(())
     }
-    
+
     pub fn resize(
         &mut self,
         gl: &WebGl2RenderingContext,
         canvas_size: (i32, i32),
     ) -> Result<(), Error> {
         self.canvas_size_px = canvas_size;
-        
+
         // update the UBO with new screen size
         self.upload_ubo_data(gl);
-        
+
         let cell_size = self.atlas.cell_size();
         let cols = canvas_size.0 / cell_size.0;
         let rows = canvas_size.1 / cell_size.1;
         if self.terminal_size == (cols as u16, rows as u16) {
             return Ok(()); // no change in terminal size
         }
-        
+
         // update buffers; bind VAO to ensure correct state
         gl.bind_vertex_array(Some(&self.buffers.vao));
-        
+
         // delete old cell instance buffers
         gl.delete_buffer(Some(&self.buffers.instance_cell));
         gl.delete_buffer(Some(&self.buffers.instance_pos));
-        
+
         // resize cell data vector
         let current_size = (self.terminal_size.0 as i32, self.terminal_size.1 as i32);
         let cell_data = resize_cell_grid(&self.cells, current_size, (cols, rows));
         self.cells = cell_data;
-        
+
         let cell_pos = CellStatic::create_grid(cols, rows);
-        
+
         // re-create buffers with new data
         self.buffers.instance_cell = create_dynamic_instance_buffer(gl, &self.cells)?;
         self.buffers.instance_pos = create_static_instance_buffer(gl, &cell_pos)?;
-        
+
         // unbind VAO
         gl.bind_vertex_array(None);
-        
+
         self.terminal_size = (cols as u16, rows as u16);
-        
+
         Ok(())
     }
-    
+
     fn fill_glyphs(atlas: &FontAtlas) -> Vec<u16> {
         [
             ("🤫", FontStyle::Normal),
@@ -261,10 +256,11 @@ impl TerminalGrid {
             ("c", FontStyle::BoldItalic),
             ("🤪", FontStyle::Normal),
             ("🤩", FontStyle::Normal),
-        ].into_iter()
-            .map(|(symbol, style)| atlas.get_glyph_coord(symbol, style))
-            .map(|g| g.unwrap_or(' ' as u16))
-            .collect()
+        ]
+        .into_iter()
+        .map(|(symbol, style)| atlas.get_glyph_coord(symbol, style))
+        .map(|g| g.unwrap_or(' ' as u16))
+        .collect()
     }
 }
 
@@ -274,12 +270,12 @@ fn resize_cell_grid(
     new_size: (i32, i32),
 ) -> Vec<CellDynamic> {
     let new_len = new_size.0 * new_size.1;
-    
+
     let mut new_cells = Vec::with_capacity(new_len as usize);
     for _ in 0..new_len {
         new_cells.push(CellDynamic::new(' ' as u16, 0xFFFFFF, 0x000000));
     }
-    
+
     for y in 0..min(old_size.1, new_size.1) {
         for x in 0..min(old_size.0, new_size.0) {
             let new_idx = (y * new_size.0 + x) as usize;
@@ -291,10 +287,8 @@ fn resize_cell_grid(
     new_cells
 }
 
-
 fn create_vao(gl: &WebGl2RenderingContext) -> Result<web_sys::WebGlVertexArrayObject, Error> {
-    gl.create_vertex_array()
-        .ok_or(Error::vertex_array_creation_failed())
+    gl.create_vertex_array().ok_or(Error::vertex_array_creation_failed())
 }
 
 fn setup_buffers(
@@ -308,6 +302,7 @@ fn setup_buffers(
 
     // let overlap = 0.5;
     let overlap = 0.0; // no overlap for now, can be adjusted later
+    #[rustfmt::skip]
     let vertices = [
         //    x            y       u    v
         w + overlap,    -overlap, 1.0, 0.0, // top-right
@@ -330,10 +325,9 @@ fn create_buffer_u8(
     gl: &WebGl2RenderingContext,
     target: u32,
     data: &[u8],
-    usage: u32
+    usage: u32,
 ) -> Result<web_sys::WebGlBuffer, Error> {
-    let index_buf = gl.create_buffer()
-        .ok_or(Error::buffer_creation_failed("vbo-u8"))?;
+    let index_buf = gl.create_buffer().ok_or(Error::buffer_creation_failed("vbo-u8"))?;
     gl.bind_buffer(target, Some(&index_buf));
 
     gl.buffer_data_with_u8_array(target, data, usage);
@@ -345,10 +339,9 @@ fn create_buffer_f32(
     gl: &WebGl2RenderingContext,
     target: u32,
     data: &[f32],
-    usage: u32
+    usage: u32,
 ) -> Result<web_sys::WebGlBuffer, Error> {
-    let buffer = gl.create_buffer()
-        .ok_or(Error::buffer_creation_failed("vbo-f32"))?;
+    let buffer = gl.create_buffer().ok_or(Error::buffer_creation_failed("vbo-f32"))?;
 
     gl.bind_buffer(target, Some(&buffer));
 
@@ -360,19 +353,18 @@ fn create_buffer_f32(
     // vertex attributes \\
     const STRIDE: i32 = (2 + 2) * 4; // 4 floats per vertex
     enable_vertex_attrib(gl, attrib::POS, 2, GL::FLOAT, 0, STRIDE);
-    enable_vertex_attrib(gl, attrib::UV,  2, GL::FLOAT, 8, STRIDE);
+    enable_vertex_attrib(gl, attrib::UV, 2, GL::FLOAT, 8, STRIDE);
 
     Ok(buffer)
 }
-
 
 fn create_static_instance_buffer(
     gl: &WebGl2RenderingContext,
     instance_data: &[CellStatic],
 ) -> Result<web_sys::WebGlBuffer, Error> {
-    let instance_buf = gl.create_buffer()
+    let instance_buf = gl
+        .create_buffer()
         .ok_or(Error::buffer_creation_failed("static-instance-buffer"))?;
-
 
     gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
     buffer_upload_array(gl, GL::ARRAY_BUFFER, instance_data, GL::STATIC_DRAW);
@@ -387,12 +379,13 @@ fn create_dynamic_instance_buffer(
     gl: &WebGl2RenderingContext,
     instance_data: &[CellDynamic],
 ) -> Result<web_sys::WebGlBuffer, Error> {
-    let instance_buf = gl.create_buffer()
+    let instance_buf = gl
+        .create_buffer()
         .ok_or(Error::buffer_creation_failed("dynamic-instance-buffer"))?;
-    
+
     gl.bind_buffer(GL::ARRAY_BUFFER, Some(&instance_buf));
     buffer_upload_array(gl, GL::ARRAY_BUFFER, instance_data, GL::DYNAMIC_DRAW);
-    
+
     let stride = size_of::<CellDynamic>() as i32;
 
     // setup instance attributes (while VAO is bound)
@@ -429,7 +422,6 @@ fn enable_vertex_attrib(
     }
 }
 
-
 impl Drawable for TerminalGrid {
     fn prepare(&self, context: &mut RenderContext) {
         let gl = context.gl;
@@ -460,7 +452,6 @@ impl Drawable for TerminalGrid {
     }
 }
 
-
 /// Data for a single terminal cell including character and colors.
 ///
 /// `CellData` represents the visual content of one terminal cell, including
@@ -473,7 +464,8 @@ impl Drawable for TerminalGrid {
 /// - GG: Green component  
 /// - BB: Blue component
 #[derive(Debug)]
-pub struct CellData<'a> { // todo: try to pre-pack the available glyph id bits
+pub struct CellData<'a> {
+    // todo: try to pre-pack the available glyph id bits
     symbol: &'a str,
     style_bits: u16,
     fg: u32,
@@ -481,7 +473,6 @@ pub struct CellData<'a> { // todo: try to pre-pack the available glyph id bits
 }
 
 impl<'a> CellData<'a> {
-
     /// Creates new cell data with the specified character and colors.
     ///
     /// # Parameters
@@ -493,27 +484,15 @@ impl<'a> CellData<'a> {
     ///
     /// # Returns
     /// New `CellData` instance
-    pub fn new(
-        symbol: &'a str,
-        style: FontStyle,
-        effect: GlyphEffect,
-        fg: u32,
-        bg: u32
-    ) -> Self {
+    pub fn new(symbol: &'a str, style: FontStyle, effect: GlyphEffect, fg: u32, bg: u32) -> Self {
         let style_bits = style.style_mask() | effect as u16;
         Self { symbol, style_bits, fg, bg }
     }
-    
-    pub fn new_with_style_bits(
-        symbol: &'a str,
-        style_bits: u16,
-        fg: u32,
-        bg: u32
-    ) -> Self {
+
+    pub fn new_with_style_bits(symbol: &'a str, style_bits: u16, fg: u32, bg: u32) -> Self {
         Self { symbol, style_bits, fg, bg }
     }
 }
-
 
 /// Static instance data for terminal cell positioning.
 ///
@@ -571,9 +550,8 @@ struct CellStatic {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, align(4))]
 struct CellDynamic {
-    
     /// Packed cell data:
-    /// 
+    ///
     /// # Byte Layout
     /// - `data[0]`: Lower 8 bits of glyph depth/layer index
     /// - `data[1]`: Upper 8 bits of glyph depth/layer index  
@@ -590,7 +568,7 @@ impl CellStatic {
     fn create_grid(cols: i32, rows: i32) -> Vec<Self> {
         debug_assert!(cols > 0 && cols < u16::MAX as i32, "cols: {cols}");
         debug_assert!(rows > 0 && rows < u16::MAX as i32, "rows: {rows}");
-        
+
         (0..rows)
             .flat_map(|row| (0..cols).map(move |col| (col, row)))
             .map(|(col, row)| Self { grid_xy: [col as u16, row as u16] })
@@ -599,29 +577,30 @@ impl CellStatic {
 }
 
 impl CellDynamic {
-    pub(crate) fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
+
+    #[rustfmt::skip]
+    fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
         let mut data = [0; 8];
 
         data[0] = (glyph_id & 0xFF) as u8;
         data[1] = ((glyph_id >> 8) & 0xFF) as u8;
 
         data[2] = ((fg >> 16) & 0xFF) as u8; // R
-        data[3] = ((fg >> 8)  & 0xFF) as u8; // G
-        data[4] = ((fg)       & 0xFF) as u8; // B
+        data[3] = ((fg >> 8) & 0xFF) as u8;  // G
+        data[4] = ((fg) & 0xFF) as u8;       // B
 
         data[5] = ((bg >> 16) & 0xFF) as u8; // R
-        data[6] = ((bg >> 8)  & 0xFF) as u8; // G
-        data[7] = ((bg)       & 0xFF) as u8; // B
+        data[6] = ((bg >> 8) & 0xFF) as u8;  // G
+        data[7] = ((bg) & 0xFF) as u8;       // B
 
         Self { data }
     }
 }
 
-
 #[repr(C, align(16))] // std140 layout requires proper alignment
 struct CellVertexUbo {
-    pub projection: [f32; 16],     // mat4
-    pub cell_size: [f32; 2],       // vec2 - screen cell size
+    pub projection: [f32; 16], // mat4
+    pub cell_size: [f32; 2],   // vec2 - screen cell size
     pub _padding: [f32; 2],
 }
 
@@ -631,15 +610,12 @@ struct CellFragmentUbo {
     pub _padding: [f32; 2],
 }
 
-
 impl CellVertexUbo {
     pub const BINDING_POINT: u32 = 0;
-    
+
     fn new(canvas_size: (i32, i32), cell_size: (i32, i32)) -> Self {
-        let projection = Mat4::orthographic_from_size(
-            canvas_size.0 as f32,
-            canvas_size.1 as f32
-        ).data;
+        let projection =
+            Mat4::orthographic_from_size(canvas_size.0 as f32, canvas_size.1 as f32).data;
         Self {
             projection,
             cell_size: [cell_size.0 as f32, cell_size.1 as f32],
@@ -662,14 +638,16 @@ impl CellFragmentUbo {
     }
 }
 
-fn create_terminal_cell_data(
-    cols: i32,
-    rows: i32,
-    fill_glyph: &[u16],
-) -> Vec<CellDynamic> {
+fn create_terminal_cell_data(cols: i32, rows: i32, fill_glyph: &[u16]) -> Vec<CellDynamic> {
     let glyph_len = fill_glyph.len();
     (0..cols * rows)
-        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as u16, 0xffff_ff, 0x0000_00))
+        .map(|i| {
+            CellDynamic::new(
+                fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as u16,
+                0xffff_ff,
+                0x0000_00,
+            )
+        })
         .collect()
 }
 

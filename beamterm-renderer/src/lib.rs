@@ -1,21 +1,24 @@
 mod error;
-mod mat4;
 mod gl;
+mod mat4;
 
 pub(crate) mod js;
 
-pub use ::beamterm_data::FontAtlasData;
-pub use ::beamterm_data::GlyphEffect;
-pub use crate::error::Error;
-pub use crate::gl::{CellData, FontAtlas, Renderer, TerminalGrid};
-pub use mat4::Mat4;
+pub use ::beamterm_data::{FontAtlasData, GlyphEffect};
 pub use beamterm_data::FontStyle;
+pub use mat4::Mat4;
+
+pub use crate::{
+    error::Error,
+    gl::{CellData, FontAtlas, Renderer, TerminalGrid},
+};
 
 pub const DEFAULT_FONT_ATLAS_BLOB: &[u8] = include_bytes!("../../data/bitmap_font.atlas");
 
 #[cfg(test)]
 mod tests {
     use beamterm_data::FontAtlasData;
+
     use crate::DEFAULT_FONT_ATLAS_BLOB;
 
     #[test]

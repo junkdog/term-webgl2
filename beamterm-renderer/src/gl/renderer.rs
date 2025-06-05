@@ -1,8 +1,10 @@
-use crate::error::Error;
-use crate::gl::context::GlState;
-use crate::gl::GL;
-use crate::js;
 use web_sys::HtmlCanvasElement;
+
+use crate::{
+    error::Error,
+    gl::{context::GlState, GL},
+    js,
+};
 
 /// Rendering context that provides access to WebGL state.
 pub struct RenderContext<'a> {
@@ -35,7 +37,7 @@ impl Renderer {
     /// # Returns
     /// * `Ok(Renderer)` - Successfully created renderer
     /// * `Err(Error)` - Failed to find canvas, create WebGL context, or initialize renderer
-    /// 
+    ///
     /// # Errors
     /// * `Error::UnableToRetrieveCanvas` - Canvas element not found
     /// * `Error::FailedToRetrieveWebGl2RenderingContext` - WebGL2 not supported or failed to initialize
@@ -90,7 +92,7 @@ impl Renderer {
     ///
     /// # Parameters
     /// * `r` - Red component (0.0 to 1.0)
-    /// * `g` - Green component (0.0 to 1.0) 
+    /// * `g` - Green component (0.0 to 1.0)
     /// * `b` - Blue component (0.0 to 1.0)
     pub fn clear(&mut self, r: f32, g: f32, b: f32) {
         self.state.clear_color(&self.gl, r, g, b, 1.0);
@@ -110,10 +112,7 @@ impl Renderer {
     /// # Parameters
     /// * `drawable` - Object implementing the `Drawable` trait
     pub fn render(&mut self, drawable: &impl Drawable) {
-        let mut context = RenderContext {
-            gl: &self.gl,
-            state: &mut self.state,
-        };
+        let mut context = RenderContext { gl: &self.gl, state: &mut self.state };
 
         drawable.prepare(&mut context);
         drawable.draw(&mut context);
@@ -149,7 +148,6 @@ impl Renderer {
 
 /// Trait for objects that can be rendered by the renderer.
 pub(crate) trait Drawable {
-    
     /// Prepares the object for rendering.
     ///
     /// This method should set up all necessary OpenGL state, bind shaders,
@@ -178,5 +176,3 @@ pub(crate) trait Drawable {
     /// * `context` - Mutable reference to the render context
     fn cleanup(&self, context: &mut RenderContext);
 }
-
-

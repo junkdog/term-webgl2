@@ -1,5 +1,7 @@
 use std::fmt::Debug;
+
 use compact_str::CompactString;
+
 use crate::{Deserializer, FontAtlasDeserializationError, Glyph, Serializable};
 
 #[derive(PartialEq)]
@@ -40,28 +42,22 @@ impl Debug for FontAtlasData {
     }
 }
 
-
 impl FontAtlasData {
     pub const PADDING: i32 = 1;
     pub const CELLS_PER_SLICE: i32 = 16;
 
     pub fn from_binary(serialized: &[u8]) -> Result<Self, FontAtlasDeserializationError> {
         let mut deserializer = Deserializer::new(serialized);
-        FontAtlasData::deserialize(&mut deserializer)
-            .map_err(|e| FontAtlasDeserializationError {
-                message: format!("Failed to deserialize font atlas: {}", e.message),
-            })
+        FontAtlasData::deserialize(&mut deserializer).map_err(|e| FontAtlasDeserializationError {
+            message: format!("Failed to deserialize font atlas: {}", e.message),
+        })
     }
-    
+
     pub fn to_binary(&self) -> Vec<u8> {
         self.serialize()
     }
 
-    pub fn terminal_size(
-        &self,
-        viewport_width: i32,
-        viewport_height: i32
-    ) -> (i32, i32) {
+    pub fn terminal_size(&self, viewport_width: i32, viewport_height: i32) -> (i32, i32) {
         (viewport_width / self.cell_width, viewport_height / self.cell_height)
     }
 
@@ -70,10 +66,8 @@ impl FontAtlasData {
     }
 }
 
-
 impl Default for FontAtlasData {
     fn default() -> Self {
-        Self::from_binary(include_bytes!("../../data/bitmap_font.atlas"))
-            .unwrap()
+        Self::from_binary(include_bytes!("../../data/bitmap_font.atlas")).unwrap()
     }
 }

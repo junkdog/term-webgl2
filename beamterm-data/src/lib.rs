@@ -1,13 +1,12 @@
+mod atlas;
 mod glyph;
 mod serialization;
-mod atlas;
 
-pub use glyph::{Glyph, GlyphEffect, FontStyle};
 pub use atlas::FontAtlasData;
+pub use glyph::{FontStyle, Glyph, GlyphEffect};
 use serialization::*;
 
 #[derive(Debug)]
 pub struct FontAtlasDeserializationError {
     pub message: String,
 }
-

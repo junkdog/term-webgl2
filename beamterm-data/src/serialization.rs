@@ -1,6 +1,6 @@
 use compact_str::{format_compact, CompactString};
-use crate::{FontAtlasData, FontStyle, Glyph};
 
+use crate::{FontAtlasData, FontStyle, Glyph};
 
 const ATLAS_HEADER: [u8; 4] = [0xBA, 0xB1, 0xF0, 0xA5];
 const ATLAS_VERSION: u8 = 0x01; // dictates the format of the serialized data
@@ -13,9 +13,9 @@ pub struct SerializationError {
 pub(crate) trait Serializable {
     fn serialize(&self) -> Vec<u8>;
 
-    fn deserialize(
-        deser: &mut Deserializer
-    ) -> Result<Self, SerializationError> where Self: Sized;
+    fn deserialize(deser: &mut Deserializer) -> Result<Self, SerializationError>
+    where
+        Self: Sized;
 }
 
 pub(crate) struct Deserializer<'a> {
@@ -43,7 +43,7 @@ impl Serializer {
     pub fn write_u32(&mut self, value: u32) {
         self.data.extend(&value.to_le_bytes());
     }
-    
+
     pub fn write_f32(&mut self, value: f32) {
         self.data.extend(&value.to_le_bytes());
     }
@@ -66,7 +66,7 @@ impl Serializer {
     }
 }
 
-impl <'a> Deserializer<'a> {
+impl<'a> Deserializer<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         Self { data, position: 0 }
     }
@@ -88,7 +88,7 @@ impl <'a> Deserializer<'a> {
 
         Ok(u16::from_le_bytes(bytes.try_into().unwrap()))
     }
-    
+
     pub fn read_f32(&mut self) -> Result<f32, SerializationError> {
         self.verify_offset_in_bounds(4)?;
 
@@ -197,12 +197,12 @@ impl Serializable for FontAtlasData {
         ser.write_u8(ATLAS_HEADER[1]);
         ser.write_u8(ATLAS_HEADER[2]);
         ser.write_u8(ATLAS_HEADER[3]);
-        
+
         ser.write_u8(ATLAS_VERSION);
-        
+
         ser.write_string(&self.font_name);
         ser.write_f32(self.font_size);
-        
+
         ser.write_u32(self.texture_width);
         ser.write_u32(self.texture_height);
         ser.write_u32(self.texture_layers);
@@ -222,28 +222,23 @@ impl Serializable for FontAtlasData {
     }
 
     fn deserialize(deser: &mut Deserializer) -> Result<Self, SerializationError> {
-        let header = [
-            deser.read_u8()?,
-            deser.read_u8()?,
-            deser.read_u8()?,
-            deser.read_u8()?,
-        ];
+        let header = [deser.read_u8()?, deser.read_u8()?, deser.read_u8()?, deser.read_u8()?];
         if header != ATLAS_HEADER {
             return Err(SerializationError {
                 message: CompactString::const_new("Invalid font atlas header (wrong file format?)"),
             });
         }
-        
+
         let version = deser.read_u8()?;
         if version != ATLAS_VERSION {
             return Err(SerializationError {
                 message: format_compact!("Unsupported font atlas version 0x{:02x}", version),
             });
         }
-        
+
         let font_name = deser.read_string()?;
         let font_size = deser.read_f32()?;
-        
+
         let texture_width = deser.read_u32()?;
         let texture_height = deser.read_u32()?;
         let texture_depth = deser.read_u32()?;
@@ -260,9 +255,11 @@ impl Serializable for FontAtlasData {
 
         // deserialize texture data
         let packed_texture_data = deser.read_u8_slice()?;
-        let texture_data = miniz_oxide::inflate::decompress_to_vec(&packed_texture_data)
-            .map_err(|_| SerializationError {
-                message: CompactString::const_new("Failed to decompress texture data"),
+        let texture_data =
+            miniz_oxide::inflate::decompress_to_vec(&packed_texture_data).map_err(|_| {
+                SerializationError {
+                    message: CompactString::const_new("Failed to decompress texture data"),
+                }
             })?;
 
         Ok(FontAtlasData {
@@ -278,7 +275,6 @@ impl Serializable for FontAtlasData {
         })
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -398,13 +394,7 @@ mod tests {
     #[test]
     fn test_compact_string_round_trip() {
         let aaaaaa = "A".repeat(255);
-        let test_cases = [
-            "",
-            "Hello",
-            "World!",
-            "🚀 Unicode works! 🎉",
-            aaaaaa.as_str(),
-        ];
+        let test_cases = ["", "Hello", "World!", "🚀 Unicode works! 🎉", aaaaaa.as_str()];
 
         for original in &test_cases {
             let compact_str = CompactString::from(*original);
@@ -442,11 +432,11 @@ mod tests {
     fn test_mixed_serialization() {
         // Test reading different types in sequence
         let mut data = Vec::new();
-        data.push(42u8);                           // u8
-        data.extend(&100u16.to_le_bytes());        // u16
+        data.push(42u8); // u8
+        data.extend(&100u16.to_le_bytes()); // u16
         data.extend(&0x12345678u32.to_le_bytes()); // u32
-        data.push(5);                              // string length
-        data.extend(b"Hello");                     // string data
+        data.push(5); // string length
+        data.extend(b"Hello"); // string data
 
         let mut serialized = Deserializer::new(&data);
 

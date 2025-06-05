@@ -1,14 +1,17 @@
-mod generator;
 mod coordinate;
-mod raster_config;
-mod grapheme;
 mod font_discovery;
+mod generator;
+mod grapheme;
+mod raster_config;
 
-use crate::font_discovery::FontDiscovery;
-use crate::generator::BitmapFontGenerator;
+use std::{
+    fs::File,
+    io::{self, Write},
+};
+
 use beamterm_data::*;
-use std::fs::File;
-use std::io::{self, Write};
+
+use crate::{font_discovery::FontDiscovery, generator::BitmapFontGenerator};
 
 const GLYPHS: &str = r#"
 !"$#%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop
@@ -53,7 +56,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if available_fonts.is_empty() {
         eprintln!("No complete monospace font families found!");
-        eprintln!("A complete font family must have: Regular, Bold, Italic, and Bold+Italic variants");
+        eprintln!(
+            "A complete font family must have: Regular, Bold, Italic, and Bold+Italic variants"
+        );
         return Ok(());
     }
 
@@ -65,20 +70,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let selected_font = if args.len() > 1 {
         // try to parse font from command line
         match args[1].parse::<usize>() {
-            Ok(idx) if idx > 0 && idx <= available_fonts.len() => {
-                &available_fonts[idx - 1]
-            }
+            Ok(idx) if idx > 0 && idx <= available_fonts.len() => &available_fonts[idx - 1],
             _ => {
                 // Try to find by name
-                available_fonts.iter()
+                available_fonts
+                    .iter()
                     .find(|f| f.name.to_lowercase().contains(&args[1].to_lowercase()))
                     .unwrap_or_else(|| {
                         eprintln!("Font '{}' not found, using first available", args[1]);
                         &available_fonts[0]
                     })
-            }
+            },
         }
-    } else { // interactive selection
+    } else {
+        // interactive selection
         println!("\nSelect a font (1-{}) or press Enter for default:", available_fonts.len());
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
@@ -94,7 +99,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &available_fonts[0]
         } else {
             // Try to find by name
-            available_fonts.iter()
+            available_fonts
+                .iter()
                 .find(|f| f.name.to_lowercase().contains(&input.trim().to_lowercase()))
                 .unwrap_or(&available_fonts[0])
         }
@@ -124,33 +130,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Line height: {}", line_height);
 
     // Generate the font
-    let bitmap_font = BitmapFontGenerator::new_with_family(
-        selected_font.clone(),
-        font_size,
-        line_height
-    )?.generate(GLYPHS);
+    let bitmap_font =
+        BitmapFontGenerator::new_with_family(selected_font.clone(), font_size, line_height)?
+            .generate(GLYPHS);
 
     bitmap_font.save("./data/bitmap_font.atlas")?;
 
     println!("\nBitmap font generated!");
-    println!("Texture size: {}x{}x{}",
+    println!(
+        "Texture size: {}x{}x{}",
         bitmap_font.atlas_data.texture_width,
         bitmap_font.atlas_data.texture_height,
-        bitmap_font.atlas_data.texture_layers);
-    println!("Cell size: {}x{}",
-        bitmap_font.atlas_data.cell_width,
-        bitmap_font.atlas_data.cell_height);
+        bitmap_font.atlas_data.texture_layers
+    );
+    println!(
+        "Cell size: {}x{}",
+        bitmap_font.atlas_data.cell_width, bitmap_font.atlas_data.cell_height
+    );
     println!("Total glyph count: {}", bitmap_font.atlas_data.glyphs.len());
-    println!("Glyph count per variant: {}/{} (emoji: {})",
+    println!(
+        "Glyph count per variant: {}/{} (emoji: {})",
         bitmap_font.atlas_data.glyphs.iter().filter(|g| !g.is_emoji).count() / FontStyle::ALL.len(),
         Glyph::GLYPH_ID_MASK + 1, // zero-based id/index
         bitmap_font.atlas_data.glyphs.iter().filter(|g| g.is_emoji).count()
     );
-    println!("Longest grapheme in bytes: {}",
-        bitmap_font.atlas_data.glyphs.iter()
-            .map(|g| g.symbol.len())
-            .max()
-            .unwrap_or(0)
+    println!(
+        "Longest grapheme in bytes: {}",
+        bitmap_font.atlas_data.glyphs.iter().map(|g| g.symbol.len()).max().unwrap_or(0)
     );
 
     Ok(())
