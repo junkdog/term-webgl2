@@ -111,6 +111,7 @@ impl Renderer {
     ///
     /// # Parameters
     /// * `drawable` - Object implementing the `Drawable` trait
+    #[allow(private_bounds)]
     pub fn render(&mut self, drawable: &impl Drawable) {
         let mut context = RenderContext { gl: &self.gl, state: &mut self.state };
 

@@ -6,8 +6,6 @@ use crate::{error::Error, gl::GL};
 pub(super) struct Texture {
     gl_texture: web_sys::WebGlTexture,
     pub(super) format: u32,
-    width: i32,
-    height: i32,
 }
 
 impl Texture {
@@ -16,9 +14,6 @@ impl Texture {
         format: u32,
         atlas: &FontAtlasData,
     ) -> Result<Self, Error> {
-        let cell_width = atlas.cell_width;
-        let cell_height = atlas.cell_height;
-
         let (width, height, layers) = (
             atlas.texture_width as i32,
             atlas.texture_height as i32,
@@ -45,12 +40,7 @@ impl Texture {
 
         Self::setup_mipmap(gl);
 
-        Ok(Self {
-            gl_texture,
-            format,
-            width: cell_width,
-            height: cell_height,
-        })
+        Ok(Self { gl_texture, format })
     }
 
     pub fn bind(&self, gl: &web_sys::WebGl2RenderingContext, texture_unit: u32) {
@@ -74,15 +64,5 @@ impl Texture {
         gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_BASE_LEVEL, 0);
         gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
         gl.tex_parameteri(GL::TEXTURE_2D_ARRAY, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
-    }
-
-    fn setup_mipmap_3d(gl: &web_sys::WebGl2RenderingContext) {
-        // gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
-        // gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MIN_FILTER, GL::NEAREST as i32);
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_MAG_FILTER, GL::NEAREST as i32);
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
-        gl.tex_parameteri(GL::TEXTURE_3D, GL::TEXTURE_WRAP_R, GL::CLAMP_TO_EDGE as i32);
     }
 }

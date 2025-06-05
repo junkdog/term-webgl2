@@ -643,8 +643,8 @@ fn create_terminal_cell_data(cols: i32, rows: i32, fill_glyph: &[u16]) -> Vec<Ce
         .map(|i| {
             CellDynamic::new(
                 fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as u16,
-                0xffff_ff,
-                0x0000_00,
+                0x00ff_ffff,
+                0x0000_0000,
             )
         })
         .collect()
