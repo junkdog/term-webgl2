@@ -84,10 +84,6 @@ jobs:
       # Generate font atlas
       - name: 🎨 Generate font atlas
         run: |
-          cd beamterm-atlas
-          # Build the atlas generator
-          cargo build --release --bin beamterm-atlas
-          # Generate atlas (using first available font)
           cargo run --release --bin beamterm-atlas -- 1 15 1.0
 
       # Build WASM renderer
