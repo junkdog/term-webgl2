@@ -136,7 +136,7 @@ The atlas uses a versioned binary format with header validation:
 
 ```
 Header (5 bytes)
-├─ Magic: [0xBA, 0xB1, 0xF0, 0xA5]
+├─ Magic: [0xBA, 0xB1, 0xF0, 0xA7]
 └─ Version: 0x01
 
 Metadata Section

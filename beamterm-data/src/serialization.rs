@@ -2,7 +2,7 @@ use compact_str::{format_compact, CompactString};
 
 use crate::{FontAtlasData, FontStyle, Glyph, LineDecoration};
 
-const ATLAS_HEADER: [u8; 4] = [0xBA, 0xB1, 0xF0, 0xA5];
+const ATLAS_HEADER: [u8; 4] = [0xBA, 0xB1, 0xF0, 0xA7];
 const ATLAS_VERSION: u8 = 0x01; // dictates the format of the serialized data
 
 #[derive(Debug)]
