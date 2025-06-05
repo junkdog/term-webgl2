@@ -270,7 +270,6 @@ impl BitmapFontGenerator {
                 max_y = max_y.max(y);
             }
         });
-        drop(measure_buffer);
 
         if !has_content {
             // Fallback for emojis that don't render

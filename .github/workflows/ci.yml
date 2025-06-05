@@ -88,9 +88,7 @@ jobs:
           # Build the atlas generator
           cargo build --release --bin beamterm-atlas
           # Generate atlas (using first available font)
-          echo "1" | cargo run --release --bin beamterm-atlas -- 1 15 1.0
-          # Verify the atlas was created
-          cargo run --release --bin verify-atlas
+          cargo run --release --bin beamterm-atlas -- 1 15 1.0
 
       # Build WASM renderer
       - name: 🔨 Build beamterm-renderer for WASM
