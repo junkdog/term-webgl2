@@ -119,7 +119,7 @@ git commit -m "chore: bump version to $NEW_VERSION"
 # Create tag
 echo ""
 echo "${fg[cyan]}🏷️  Creating tag v$NEW_VERSION...${reset_color}"
-git tag -a "beamterm-v$NEW_VERSION" -m "Release v$NEW_VERSION"
+git tag -a "beamterm-$NEW_VERSION" -m "Release v$NEW_VERSION"
 
 # Show summary
 echo ""
@@ -137,5 +137,5 @@ echo "  ${fg[white]}3.${reset_color} The release workflow will automatically cre
 echo ""
 echo "${fg[red]}⚠️  To undo:${reset_color}"
 echo "  ${fg[gray]}git reset --hard HEAD~1${reset_color}"
-echo "  ${fg[gray]}git tag -d beamterm-v$NEW_VERSION${reset_color}"
+echo "  ${fg[gray]}git tag -d beamterm-$NEW_VERSION${reset_color}"
 

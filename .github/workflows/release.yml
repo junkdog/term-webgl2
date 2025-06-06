@@ -3,7 +3,7 @@ name: 📦 Release
 on:
   push:
     tags:
-      - 'beamterm-v*'
+      - 'beamterm-*'
 
 env:
   CARGO_TERM_COLOR: always
