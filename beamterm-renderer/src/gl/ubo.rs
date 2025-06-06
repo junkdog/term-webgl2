@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct UniformBufferObject {
+pub(super) struct UniformBufferObject {
     buffer: web_sys::WebGlBuffer,
     binding_point: u32,
 }
@@ -45,7 +45,7 @@ impl UniformBufferObject {
 
     pub fn upload_data<T>(&self, gl: &GL, data: &T) {
         self.bind(gl);
-        buffer_upload_struct(gl, GL::UNIFORM_BUFFER, data, GL::DYNAMIC_DRAW);
+        buffer_upload_struct(gl, GL::UNIFORM_BUFFER, data, GL::STATIC_DRAW);
         self.unbind(gl);
     }
 }

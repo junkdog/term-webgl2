@@ -2,7 +2,7 @@ use crate::gl::GL;
 
 /// Manages simple WebGL state to reduce redundant state changes
 #[derive(Debug)]
-pub struct GlState {
+pub(super) struct GlState {
     // Viewport dimensions
     viewport: [i32; 4], // [x, y, width, height]
 

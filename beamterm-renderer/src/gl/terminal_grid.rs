@@ -135,7 +135,7 @@ impl TerminalGrid {
     ///
     /// # Parameters
     /// * `gl` - WebGL2 rendering context
-    pub fn upload_ubo_data(&self, gl: &WebGl2RenderingContext) {
+    fn upload_ubo_data(&self, gl: &WebGl2RenderingContext) {
         let cell_size = self.cell_size();
 
         let vertex_ubo = CellVertexUbo::new(self.canvas_size_px, cell_size);
@@ -485,11 +485,12 @@ impl<'a> CellData<'a> {
     /// # Returns
     /// New `CellData` instance
     pub fn new(symbol: &'a str, style: FontStyle, effect: GlyphEffect, fg: u32, bg: u32) -> Self {
-        let style_bits = style.style_mask() | effect as u16;
-        Self { symbol, style_bits, fg, bg }
+        Self::new_with_style_bits(symbol, style.style_mask() | effect as u16, fg, bg)
     }
 
     pub fn new_with_style_bits(symbol: &'a str, style_bits: u16, fg: u32, bg: u32) -> Self {
+        // make sure encoding looks ok; glyph base mask should not intersect with style bits
+        debug_assert!(0x01FF & style_bits == 0, "Invalid style bits: {style_bits:#04x}");
         Self { symbol, style_bits, fg, bg }
     }
 }

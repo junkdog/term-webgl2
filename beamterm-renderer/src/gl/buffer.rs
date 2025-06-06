@@ -19,7 +19,7 @@ use crate::gl::GL;
 /// - Has a stable memory layout (use #[repr(C)] or #[repr(transparent)])
 /// - Contains only copy types
 /// - Has no padding issues that would cause UB
-pub(crate) fn buffer_upload_struct<T>(gl: &GL, target: u32, data: &T, usage: u32) {
+pub(super) fn buffer_upload_struct<T>(gl: &GL, target: u32, data: &T, usage: u32) {
     unsafe {
         let data_ptr = data as *const T as *const u8;
         let size = size_of::<T>();
@@ -41,7 +41,7 @@ pub(crate) fn buffer_upload_struct<T>(gl: &GL, target: u32, data: &T, usage: u32
 /// - Has a stable memory layout (use #[repr(C)] or #[repr(transparent)])
 /// - Contains only copy types
 /// - Has no padding issues that would cause UB
-pub(crate) fn buffer_upload_array<T>(gl: &GL, target: u32, data: &[T], usage: u32) {
+pub(super) fn buffer_upload_array<T>(gl: &GL, target: u32, data: &[T], usage: u32) {
     unsafe {
         let data_ptr = data.as_ptr() as *const u8;
         let size = std::mem::size_of_val(data);

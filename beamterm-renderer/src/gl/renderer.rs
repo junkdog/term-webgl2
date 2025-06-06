@@ -7,7 +7,7 @@ use crate::{
 };
 
 /// Rendering context that provides access to WebGL state.
-pub struct RenderContext<'a> {
+pub(super) struct RenderContext<'a> {
     pub gl: &'a web_sys::WebGl2RenderingContext,
     pub state: &'a mut GlState,
 }
@@ -148,7 +148,7 @@ impl Renderer {
 }
 
 /// Trait for objects that can be rendered by the renderer.
-pub(crate) trait Drawable {
+pub(super) trait Drawable {
     /// Prepares the object for rendering.
     ///
     /// This method should set up all necessary OpenGL state, bind shaders,

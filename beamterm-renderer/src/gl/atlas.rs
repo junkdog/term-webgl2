@@ -27,7 +27,7 @@ pub struct FontAtlas {
     /// The size of each character cell in pixels
     cell_size: (i32, i32),
     /// The number of slices in the atlas texture
-    pub(super) num_slices: u32,
+    num_slices: u32,
 }
 
 impl FontAtlas {

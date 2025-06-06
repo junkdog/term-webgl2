@@ -23,13 +23,19 @@ The crate consists of:
 
 The system uses a 16-bit glyph ID that encodes both the base character and its style variations:
 
+
 | Bit Range | Purpose       | Description                            |
 |-----------|---------------|----------------------------------------|
 | 0-8       | Base Glyph ID | 512 possible base glyphs (0x000-0x1FF) |
 | 9         | Bold Flag     | Selects bold variant (0x0200)          |
 | 10        | Italic Flag   | Selects italic variant (0x0400)        |
 | 11        | Emoji Flag    | Indicates emoji glyph (0x0800)         |
-| 12-15     | N/A           |                                        |
+| 12        | Underline     | Underline effect (0x1000)              |
+| 13        | Strikethrough | Strikethrough effect (0x2000)          |
+| 14-15     | Reserved      | Reserved for future use                |
+
+The atlas only encodes glyphs with the first 12 bits. Bits 12 and 13 are applied
+at runtime for text decoration effects, while bits 14-15 are reserved for future extensions.
 
 ### Font Style Encoding
 

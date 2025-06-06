@@ -6,7 +6,6 @@ pub(crate) mod js;
 
 pub use ::beamterm_data::{FontAtlasData, GlyphEffect};
 pub use beamterm_data::FontStyle;
-pub use mat4::Mat4;
 
 pub use crate::{
     error::Error,

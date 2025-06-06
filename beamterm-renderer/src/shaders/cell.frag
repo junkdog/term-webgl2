@@ -9,7 +9,7 @@ layout(std140) uniform FragUbo {
 };
 
 
-// packs 8b: 2b layer, 3b fg.rgb, 3b bg.rgb
+// packs 8b: 2b glyph id, 3b fg.rgb, 3b bg.rgb
 // ref: https://github.com/junkdog/term-webgl2?tab=readme-ov-file#glyph-id-bit-layout-16-bit
 flat in uvec2 v_packed_data;
 in vec2 v_tex_coord;

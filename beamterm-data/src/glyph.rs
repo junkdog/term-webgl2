@@ -12,16 +12,16 @@ use compact_str::{CompactString, ToCompactString};
 /// characters are assigned sequential IDs starting from a base value.
 ///
 /// # Glyph ID Bit Layout (16-bit)
-/// todo: update representation to match the new style
+/// 
 /// | Bit(s) | Flag Name     | Hex Mask | Binary Mask           | Description               |
 /// |--------|---------------|----------|-----------------------|---------------------------|
-/// | 0-8    | GLYPH_ID      | `0x01FF` | `0000_0001_1111_1111` | Base glyph id             |
+/// | 0-8    | GLYPH_ID      | `0x01FF` | `0000_0001_1111_1111` | Base glyph identifier     |
 /// | 9      | BOLD          | `0x0200` | `0000_0010_0000_0000` | Bold font style           |
 /// | 10     | ITALIC        | `0x0400` | `0000_0100_0000_0000` | Italic font style         |
-/// | 11     | UNDERLINE     | `0x0800` | `0000_1000_0000_0000` | Underline text effect     |
-/// | 12     | STRIKETHROUGH | `0x1000` | `0001_0000_0000_0000` | Strikethrough text effect |
-/// | 13-14  | RESERVED      | `0x6000` | `0110_0000_0000_0000` | Reserved for future use   |
-/// | 15     | EMOJI         | `0x8000` | `1000_0000_0000_0000` | Emoji character           |
+/// | 11     | EMOJI         | `0x0800` | `0000_1000_0000_0000` | Emoji character flag      |
+/// | 12     | UNDERLINE     | `0x1000` | `0001_0000_0000_0000` | Underline effect          |
+/// | 13     | STRIKETHROUGH | `0x2000` | `0010_0000_0000_0000` | Strikethrough effect      |
+/// | 14-15  | RESERVED      | `0xC000` | `1100_0000_0000_0000` | Reserved for future use   |
 ///
 /// - The first 9 bits (0-8) represent the base glyph ID, allowing for 512 unique glyphs.
 /// - Emoji glyphs implicitly clear any other font style bits.
@@ -35,7 +35,7 @@ use compact_str::{CompactString, ToCompactString};
 /// | 'A' (0x41)  | Bold             | `0000_0010_0100_0001` | `0x0241`  | Bold 'A'            |
 /// | 'A' (0x41)  | Bold + Italic    | `0000_0110_0100_0001` | `0x0641`  | Bold italic 'A'     |
 /// | 'A' (0x41)  | Bold + Underline | `0000_1010_0100_0001` | `0x0A41`  | Bold underlined 'A' |
-/// | '🚀' (0x81) | Emoji            | `1000_0000_1000_0001` | `0x8081`  | "rocket" emoji      |
+/// | '🚀' (0x81) | Emoji            | `1000_0000_1000_0001` | `0x0881`  | "rocket" emoji      |
 #[derive(Debug, Eq, PartialEq)]
 pub struct Glyph {
     /// The glyph ID; encodes the 3d texture coordinates

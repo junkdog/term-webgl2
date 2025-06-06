@@ -20,7 +20,7 @@ For a typical 12×18 pixel font with ~2500 glyphs:
 |---------------------------------|-------------------------|
 | Render Time†                    | <1ms for 16,000 cells   |
 | Draw Calls                      | 1 per frame             |
-| Memory Usage                    | ~3.5MB total GPU memory |
+| Memory Usage                    | ~2.8MB total GPU memory |
 | Update Bandwidth (full refresh) | ~8 MB/s @ 60 FPS        |
 
 † Includes ratatui buffer translation, GPU buffer uploads, and draw call execution.
@@ -43,8 +43,10 @@ buffer management and state tracking for consistent sub-millisecond performance.
 ## Architecture Overview
 
 The architecture leverages GPU instancing to reuse a single quad geometry across all terminal cells,
-with per-instance data providing position, character, and color information. The 2D texture array
-maximizes cache efficiency by packing related glyphs into horizontal strips within each layer.
+with per-instance data providing position, character, and color information. All rendering state is
+encapsulated in a Vertex Array Object (VAO), enabling single-draw-call rendering with minimal CPU
+overhead. The 2D texture array maximizes cache efficiency by packing related glyphs into horizontal
+strips within each layer.
 
 ### Buffer Management Strategy
 
@@ -61,15 +63,15 @@ for large terminals (200×80 cells = 16,000 instances).
 
 ### Total Memory Requirements
 
-For a 200×80 terminal with 2048 glyphs:
+For a 200×80 terminal with 2560 glyphs:
 
-| Component      | Size      | Type                        |
-|----------------|-----------|-----------------------------|
-| Font Atlas     | 1.7 MB    | Texture memory              |
-| Static Buffers | 64 KB     | Vertex + Instance positions |
-| Dynamic Buffer | 128 KB    | Cell content                |
-| Overhead       | ~10 KB    | VAO, shaders, uniforms      |
-| **Total**      | **~2 MB** | GPU memory                  |
+| Component      | Size        | Type                        |
+|----------------|-------------|-----------------------------|
+| Font Atlas     | 2.73 MB     | Texture memory              |
+| Static Buffers | ~63 KB      | Vertex + Instance positions |
+| Dynamic Buffer | ~125 KB     | Cell content                |
+| Overhead       | ~10 KB      | VAO, shaders, uniforms      |
+| **Total**      | **~2.9 MB** | GPU memory                  |
 
 
 ## Terminal Grid Renderer API
@@ -137,7 +139,7 @@ The glyph ID is a 16-bit value that efficiently packs both the base glyph identi
 and style information (such as weight, style flags, etc.) into a single value. This
 packed representation is passed directly to the GPU.
 
-#### Glyph ID Bit Layout (16-bit)
+### Glyph ID Bit Layout (16-bit)
 
 | Bit(s) | Flag Name     | Hex Mask | Binary Mask           | Description               |
 |--------|---------------|----------|-----------------------|---------------------------|
@@ -183,7 +185,13 @@ rendering pipeline, with careful attention to memory alignment and update patter
 | **Index**             | IBO  | 6 bytes      | `STATIC_DRAW`  | Never       | Triangle indices    |
 | **Instance Position** | VBO  | 4 bytes/cell | `STATIC_DRAW`  | On resize   | Grid coordinates    |
 | **Instance Cell**     | VBO  | 8 bytes/cell | `DYNAMIC_DRAW` | Per frame   | Glyph ID + colors   |
-| **Uniform**           | UBO  | 80 bytes     | `DYNAMIC_DRAW` | On resize   | Projection + params |
+| **Vertex UBO**        | UBO  | 80 bytes     | `STATIC_DRAW`  | On resize   | Projection matrix   |
+| **Fragment UBO**      | UBO  | 16 bytes     | `STATIC_DRAW`  | On resize   | Padding parameters  |
+
+All vertex buffers are encapsulated within a single Vertex Array Object (VAO), enabling state-free
+rendering with a single draw call.
+
+The **Instance Position** and **Instance Cell** buffers are recreated when the terminal size changes,
 
 ### Vertex Attribute Bindings
 
@@ -211,14 +219,14 @@ Layout](#glyph-id-bit-layout-16-bit) section.
 
 ### Memory Layout and Performance
 
-For a typical 12×18 pixel font with 2048 glyphs:
+For a typical 12×18 pixel font with 2560 glyphs:
 
-| Component            | Size      | Details                           |
-|----------------------|-----------|-----------------------------------|
-| **2D Texture Array** | ~1.7 MB   | 192×18×128 RGBA (16 glyphs/layer) |
-| **Vertex Buffers**   | ~200 KB   | For 200×80 terminal               |
-| **Cache Efficiency** | Good      | Sequential glyphs in same layer   |
-| **Memory Access**    | Coalesced | 64-bit aligned instance data      |
+| Component            | Size      | Details                                    |
+|----------------------|-----------|--------------------------------------------|
+| **2D Texture Array** | ~2.73 MB  | 16(12+2)×(18+2)×128 RGBA (16 glyphs/layer) |
+| **Vertex Buffers**   | ~200 KB   | For 200×80 terminal                        |
+| **Cache Efficiency** | Good      | Sequential glyphs in same layer            |
+| **Memory Access**    | Coalesced | 64-bit aligned instance data               |
 
 The 16×1 grid layout ensures that adjacent terminal cells often access the same texture layer,
 maximizing GPU cache hits. ASCII characters (the most common) are packed into the first 8 layers,
@@ -230,20 +238,21 @@ The renderer uses a branchless shader pipeline optimized for instanced rendering
 
 #### Vertex Shader (`cell.vert`)
 Transforms cell geometry from grid space to screen space using per-instance attributes. The shader:
+
 - Calculates cell position by multiplying grid coordinates with cell size
 - Applies orthographic projection for pixel-perfect rendering
 - Passes packed instance data directly to fragment shader without unpacking
 
 #### Fragment Shader (`cell.frag`)
 Performs the core rendering logic with efficient 2D array texture lookups:
+
 - Extracts 16-bit glyph ID from packed instance data
-- Computes layer index and horizontal position using bit operations (glyph_id → layer/position)
+- Masks with 0x0FFF to exclude effect flags before computing layer index (glyph_id → layer/position)
+- Computes layer index and horizontal position using bit operations
 - Samples from 2D texture array using direct layer indexing
 - Detects emoji glyphs via bit 11 for special color handling
+- Applies underline/strikethrough effects via bits 12-13
 - Blends foreground/background colors with glyph alpha for anti-aliasing
-
-The key optimization is that all coordinate calculations use bit operations, avoiding expensive 
-conditionals or memory lookups in the hot path.
 
 
 ### WebGL2 Feature Dependencies
