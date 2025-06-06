@@ -126,7 +126,7 @@ jobs:
         run: |
           cd beamterm-atlas
           cargo build --release
-          echo "1" | cargo run --release -- 1 15 1.0
+          echo "1" | cargo run --release --bin beamterm-atlas -- 1 15 1.0
 
       # Build WASM with trunk
       - name: 🌐 Build WASM release
