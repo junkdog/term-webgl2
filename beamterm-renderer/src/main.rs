@@ -1,5 +1,4 @@
 use beamterm_data::FontAtlasData;
-use beamterm_renderer::DEFAULT_FONT_ATLAS_BLOB;
 use web_sys::console;
 
 use crate::{
@@ -21,8 +20,7 @@ fn run() -> Result<(), Error> {
     let mut renderer = Renderer::create("canvas")?;
     let gl = renderer.gl();
 
-    let atlas_data: FontAtlasData = FontAtlasData::from_binary(DEFAULT_FONT_ATLAS_BLOB)
-        .map_err(|e| Error::deserialization_failed(e.message))?;
+    let atlas_data: FontAtlasData = FontAtlasData::default();
 
     console::log_1(&format!("Font Atlas: {:?}", atlas_data).into());
 
