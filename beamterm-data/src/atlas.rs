@@ -68,7 +68,7 @@ impl FontAtlasData {
 
 impl Default for FontAtlasData {
     fn default() -> Self {
-        Self::from_binary(include_bytes!("../../data/bitmap_font.atlas")).unwrap()
+        Self::from_binary(include_bytes!("../atlas/bitmap_font.atlas")).unwrap()
     }
 }
 

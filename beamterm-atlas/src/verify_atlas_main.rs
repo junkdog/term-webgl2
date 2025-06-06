@@ -6,7 +6,7 @@ use beamterm_data::{FontAtlasData, Glyph};
 use colored::Colorize;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let atlas = FontAtlasData::from_binary(include_bytes!("../../data/bitmap_font.atlas")).unwrap();
+    let atlas = FontAtlasData::default();
 
     println!("=== Font Atlas Grid Viewer ===");
     println!(
