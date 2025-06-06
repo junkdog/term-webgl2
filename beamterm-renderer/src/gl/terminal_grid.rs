@@ -119,10 +119,12 @@ impl TerminalGrid {
         Ok(grid)
     }
 
+    /// Returns the unpadded cell dimensions in pixels.
     pub fn cell_size(&self) -> (i32, i32) {
         self.atlas.cell_size()
     }
 
+    /// Returns the size of the terminal grid in pixels.
     pub fn terminal_size(&self) -> (u16, u16) {
         self.terminal_size
     }
@@ -183,6 +185,21 @@ impl TerminalGrid {
         Ok(())
     }
 
+    /// Resizes the terminal grid to fit the new canvas dimensions.
+    ///
+    /// This method recalculates the terminal dimensions based on the canvas size and cell
+    /// dimensions, then recreates the necessary GPU buffers if the grid size changed.
+    /// Existing cell content is preserved where possible during resizing.
+    ///
+    /// # Parameters
+    ///
+    /// * `gl` - WebGL2 rendering context
+    /// * `canvas_size` - New canvas dimensions in pixels as `(width, height)`
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Successfully resized the terminal
+    /// * `Err(Error)` - Failed to recreate buffers or other WebGL error
     pub fn resize(
         &mut self,
         gl: &WebGl2RenderingContext,
@@ -499,7 +516,7 @@ impl<'a> CellData<'a> {
     /// * `style_bits` - Pre-encoded style flags. Must not overlap with base glyph ID bits (0x01FF).
     ///   Valid bits include:
     ///   - `0x0200` - Bold
-    ///   - `0x0400` - Italic  
+    ///   - `0x0400` - Italic
     ///   - `0x0800` - Emoji (set automatically by the renderer for emoji glyphs)
     ///   - `0x1000` - Underline
     ///   - `0x2000` - Strikethrough

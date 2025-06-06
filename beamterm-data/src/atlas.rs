@@ -4,6 +4,11 @@ use compact_str::CompactString;
 
 use crate::{Deserializer, FontAtlasDeserializationError, Glyph, Serializable};
 
+/// Font atlas data for GPU-accelerated terminal rendering.
+///
+/// Contains a pre-rasterized font atlas stored as a 2D texture array, where each layer
+/// holds 16 glyphs in a 16×1 grid. The atlas includes multiple font styles (normal, bold,
+/// italic, bold+italic) and full Unicode support including emoji.
 #[derive(PartialEq)]
 pub struct FontAtlasData {
     /// The name of the font
