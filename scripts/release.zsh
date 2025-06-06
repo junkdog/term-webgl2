@@ -66,7 +66,7 @@ cargo test --workspace --exclude beamterm-renderer || {
 # Check formatting
 echo ""
 echo "${fg[cyan]}🎨 Checking formatting...${reset_color}"
-cargo fmt --all -- --check || {
+cargo +nightly fmt --all -- --check || {
     echo "${fg_bold[red]}❌ Code is not formatted! Run 'cargo fmt' to fix.${reset_color}"
     exit 1
 }
