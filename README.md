@@ -14,8 +14,6 @@ layer while you provide the terminal logic.
 
 ## Performance
 
-[![waves](images/ratzilla_canvas_waves_426x106_s.png)](images/ratzilla_canvas_waves_426x106.png)
-
 beamterm targets sub-millisecond render times across a wide range of hardware:
 
 | Metric                          | Target (Low-end) | Achieved (2019 hardware) |
@@ -24,6 +22,8 @@ beamterm targets sub-millisecond render times across a wide range of hardware:
 | Draw Calls                      | 1 per frame      | 1 per frame              |
 | Memory Usage                    | ~2.8MB           | ~2.8MB                   |
 | Update Bandwidth (full refresh) | ~8 MB/s @ 60 FPS | ~22 MB/s @ 60 FPS        |
+
+[![waves](images/ratzilla_canvas_waves_426x106_s.png)](images/ratzilla_canvas_waves_426x106.png)
 
 The screenshot shows [Ratzilla's][rz] "canvas waves" demo running in a 426×106 terminal (45,156 cells),
 maintaining sub-millisecond render times on 2019-era hardware (i9-9900K / RTX 2070).
