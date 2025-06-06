@@ -12,7 +12,7 @@ use compact_str::{CompactString, ToCompactString};
 /// characters are assigned sequential IDs starting from a base value.
 ///
 /// # Glyph ID Bit Layout (16-bit)
-/// 
+///
 /// | Bit(s) | Flag Name     | Hex Mask | Binary Mask           | Description               |
 /// |--------|---------------|----------|-----------------------|---------------------------|
 /// | 0-8    | GLYPH_ID      | `0x01FF` | `0000_0001_1111_1111` | Base glyph identifier     |
