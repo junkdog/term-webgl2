@@ -14,16 +14,24 @@ layer while you provide the terminal logic.
 
 ## Performance
 
-For a typical 12×18 pixel font with ~2500 glyphs:
+<img src="images/ratzilla_canvas_waves_426x106_s.png" alt="Ratzilla canvas waves demo" align="right" width="426">
 
-| Metric                          | Value                   |
-|---------------------------------|-------------------------|
-| Render Time†                    | <1ms for 16,000 cells   |
-| Draw Calls                      | 1 per frame             |
-| Memory Usage                    | ~2.8MB total GPU memory |
-| Update Bandwidth (full refresh) | ~8 MB/s @ 60 FPS        |
+beamterm targets sub-millisecond render times across a wide range of hardware:
 
-† Includes ratatui buffer translation, GPU buffer uploads, and draw call execution.
+| Metric                          | Target (Low-end) | Achieved (2019 hardware) |
+|---------------------------------|------------------|--------------------------|
+| Render Time†                    | <1ms @ 16k cells | <1ms @ 45k cells         |
+| Draw Calls                      | 1 per frame      | 1 per frame              |
+| Memory Usage                    | ~2.8MB           | ~2.8MB                   |
+| Update Bandwidth (full refresh) | ~8 MB/s @ 60 FPS | ~22 MB/s @ 60 FPS        |
+
+The screenshot shows [Ratzilla's][rz] "canvas waves" demo running in a 426×106 terminal (45,156 cells),
+maintaining sub-millisecond render times on 2019-era hardware (i9-9900K / RTX 2070).
+
+† *Includes ratatui buffer translation, GPU buffer uploads, and draw call execution.*
+
+ [rz]: https://github.com/orhun/ratzilla
+
 
 ## System Architecture
 
