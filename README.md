@@ -14,7 +14,7 @@ layer while you provide the terminal logic.
 
 ## Performance
 
-<img src="images/ratzilla_canvas_waves_426x106_s.png" alt="Ratzilla canvas waves demo" align="right" width="426">
+![![waves](images/ratzilla_canvas_waves_426x106.png)](images/ratzilla_canvas_waves_426x106_s.png)
 
 beamterm targets sub-millisecond render times across a wide range of hardware:
 
