@@ -644,10 +644,10 @@ struct CellVertexUbo {
 
 #[repr(C, align(16))] // std140 layout requires proper alignment
 struct CellFragmentUbo {
-    pub padding_frac: [f32; 2], // padding as a fraction of cell size
-    pub underline_pos: f32,      // underline position (0.0 = top, 1.0 = bottom)
-    pub underline_thickness: f32, // underline thickness as fraction of cell height
-    pub strikethrough_pos: f32,   // strikethrough position (0.0 = top, 1.0 = bottom)
+    pub padding_frac: [f32; 2],       // padding as a fraction of cell size
+    pub underline_pos: f32,           // underline position (0.0 = top, 1.0 = bottom)
+    pub underline_thickness: f32,     // underline thickness as fraction of cell height
+    pub strikethrough_pos: f32,       // strikethrough position (0.0 = top, 1.0 = bottom)
     pub strikethrough_thickness: f32, // strikethrough thickness as fraction of cell height
     pub _padding: [f32; 2],
 }

@@ -40,4 +40,4 @@ cargo = true
 # Ensure font atlas exists before building
 stage = "pre_build"
 command = "sh"
-command_arguments = ["-c", "[ -f data/bitmap_font.atlas ] || (cd beamterm-atlas && cargo run --release -- 1 15 1.0)"]
+command_arguments = ["-c", "[ -f data/bitmap_font.atlas ] || (cd beamterm-atlas && cargo run --release --bin beamterm-atlas -- 1 --line-height 1.1 --font-size 18)"]
