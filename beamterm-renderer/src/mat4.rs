@@ -1,4 +1,3 @@
-// Add this to your project, perhaps in a new file src/math.rs
 #[derive(Debug, Clone)]
 pub(crate) struct Mat4 {
     pub data: [f32; 16],
@@ -38,9 +37,5 @@ impl Mat4 {
         data[14] = -(far + near) / (far - near);
 
         result
-    }
-
-    pub fn as_slice(&self) -> &[f32] {
-        &self.data
     }
 }

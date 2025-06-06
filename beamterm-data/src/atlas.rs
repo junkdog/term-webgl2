@@ -75,9 +75,9 @@ impl Default for FontAtlasData {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct LineDecoration {
     /// 0.0 to 1.0, where 0.0 is the top of the text line and 1.0 is the bottom.
-    pub(super) position: f32,
+    pub position: f32,
     /// Thickness of the line as a fraction of the cell height (0.0 to 1.0)
-    pub(super) thickness: f32,
+    pub thickness: f32,
 }
 
 impl LineDecoration {

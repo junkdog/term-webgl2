@@ -6,6 +6,10 @@ precision mediump float;
 uniform mediump sampler2DArray u_sampler;
 layout(std140) uniform FragUbo {
     vec2 u_padding_frac; // padding as fraction of cell size
+    float u_underline_pos; // underline position (0.0 = top, 1.0 = bottom)
+    float u_underline_thickness; // underline thickness as fraction of cell height
+    float u_strikethrough_pos; // strikethrough position (0.0 = top, 1.0 = bottom)
+    float u_strikethrough_thickness; // strikethrough thickness as fraction of cell height
 };
 
 
@@ -35,8 +39,8 @@ void main() {
     // apply strikethrough or underline if the glyph has either bit set
     // (it's easier to do this before we recalculate the tex_coord)
     float line_alpha = max(
-        horizontal_line(v_tex_coord, 0.80, 0.05) * float((glyph_index >> 12) & 0x1u),
-        horizontal_line(v_tex_coord, 0.50, 0.05) * float((glyph_index >> 13) & 0x1u)
+        horizontal_line(v_tex_coord, u_underline_pos, u_underline_thickness) * float((glyph_index >> 12) & 0x1u),
+        horizontal_line(v_tex_coord, u_strikethrough_pos, u_strikethrough_thickness) * float((glyph_index >> 13) & 0x1u)
     );
 
     vec2 inner_tex_coord = v_tex_coord * (1.0 - 2.0 * u_padding_frac) + u_padding_frac;

@@ -187,14 +187,14 @@ rendering pipeline, with careful attention to memory alignment and update patter
 
 ### Buffer Layout Summary
 
-| Buffer                | Type | Size         | Usage          | Update Freq | Purpose             |
-|-----------------------|------|--------------|----------------|-------------|---------------------|
-| **Vertex**            | VBO  | 64 bytes     | `STATIC_DRAW`  | Never       | Quad geometry       |
-| **Index**             | IBO  | 6 bytes      | `STATIC_DRAW`  | Never       | Triangle indices    |
-| **Instance Position** | VBO  | 4 bytes/cell | `STATIC_DRAW`  | On resize   | Grid coordinates    |
-| **Instance Cell**     | VBO  | 8 bytes/cell | `DYNAMIC_DRAW` | Per frame   | Glyph ID + colors   |
-| **Vertex UBO**        | UBO  | 80 bytes     | `STATIC_DRAW`  | On resize   | Projection matrix   |
-| **Fragment UBO**      | UBO  | 16 bytes     | `STATIC_DRAW`  | On resize   | Padding parameters  |
+| Buffer                | Type | Size         | Usage          | Update Freq | Purpose           |
+|-----------------------|------|--------------|----------------|-------------|-------------------|
+| **Vertex**            | VBO  | 64 bytes     | `STATIC_DRAW`  | Never       | Quad geometry     |
+| **Index**             | IBO  | 6 bytes      | `STATIC_DRAW`  | Never       | Triangle indices  |
+| **Instance Position** | VBO  | 4 bytes/cell | `STATIC_DRAW`  | On resize   | Grid coordinates  |
+| **Instance Cell**     | VBO  | 8 bytes/cell | `DYNAMIC_DRAW` | Per frame   | Glyph ID + colors |
+| **Vertex UBO**        | UBO  | 80 bytes     | `STATIC_DRAW`  | On resize   | Projection matrix |
+| **Fragment UBO**      | UBO  | 32 bytes     | `STATIC_DRAW`  | On resize   | Cell metadata     |
 
 All vertex buffers are encapsulated within a single Vertex Array Object (VAO), enabling state-free
 rendering with a single draw call.

@@ -28,6 +28,10 @@ pub struct FontAtlas {
     cell_size: (i32, i32),
     /// The number of slices in the atlas texture
     num_slices: u32,
+    /// Underline configuration
+    underline: beamterm_data::LineDecoration,
+    /// Strikethrough configuration  
+    strikethrough: beamterm_data::LineDecoration,
 }
 
 impl FontAtlas {
@@ -68,6 +72,8 @@ impl FontAtlas {
             glyph_coords: layers,
             cell_size: (cell_width, cell_height),
             num_slices: num_slices as u32,
+            underline: config.underline,
+            strikethrough: config.strikethrough,
         })
     }
 
@@ -79,21 +85,21 @@ impl FontAtlas {
     pub fn cell_size(&self) -> (i32, i32) {
         let (w, h) = self.cell_size;
         (w - 2 * FontAtlasData::PADDING, h - 2 * FontAtlasData::PADDING)
-        // self.cell_size
+    }
+
+    /// Returns the underline configuration
+    pub fn underline(&self) -> beamterm_data::LineDecoration {
+        self.underline
+    }
+
+    /// Returns the strikethrough configuration
+    pub fn strikethrough(&self) -> beamterm_data::LineDecoration {
+        self.strikethrough
     }
 
     /// Returns the texture array z-offset for the given key
     pub(super) fn get_glyph_coord(&self, key: &str, font_style: FontStyle) -> Option<u16> {
-        if key.len() == 1 {
-            let ch = key.chars().next().unwrap();
-            if ch.is_ascii() {
-                // 0x00..0x7f double as layer
-                let id = ch as u16 | font_style.style_mask();
-                return Some(id);
-            }
-        }
-
-        self.glyph_coords.get(key).copied().map(|id| id | font_style.style_mask())
+        self.get_base_glyph_id(key).map(|id| id | font_style.style_mask())
     }
 
     /// Returns the base glyph identifier for the given key

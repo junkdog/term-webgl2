@@ -138,12 +138,10 @@ impl TerminalGrid {
     /// # Parameters
     /// * `gl` - WebGL2 rendering context
     fn upload_ubo_data(&self, gl: &WebGl2RenderingContext) {
-        let cell_size = self.cell_size();
-
-        let vertex_ubo = CellVertexUbo::new(self.canvas_size_px, cell_size);
+        let vertex_ubo = CellVertexUbo::new(self.canvas_size_px, self.cell_size());
         self.ubo_vertex.upload_data(gl, &vertex_ubo);
 
-        let fragment_ubo = CellFragmentUbo::new(cell_size);
+        let fragment_ubo = CellFragmentUbo::new(&self.atlas);
         self.ubo_fragment.upload_data(gl, &fragment_ubo);
     }
 
@@ -647,6 +645,10 @@ struct CellVertexUbo {
 #[repr(C, align(16))] // std140 layout requires proper alignment
 struct CellFragmentUbo {
     pub padding_frac: [f32; 2], // padding as a fraction of cell size
+    pub underline_pos: f32,      // underline position (0.0 = top, 1.0 = bottom)
+    pub underline_thickness: f32, // underline thickness as fraction of cell height
+    pub strikethrough_pos: f32,   // strikethrough position (0.0 = top, 1.0 = bottom)
+    pub strikethrough_thickness: f32, // strikethrough thickness as fraction of cell height
     pub _padding: [f32; 2],
 }
 
@@ -667,12 +669,19 @@ impl CellVertexUbo {
 impl CellFragmentUbo {
     pub const BINDING_POINT: u32 = 1;
 
-    fn new(cell_size: (i32, i32)) -> Self {
+    fn new(atlas: &FontAtlas) -> Self {
+        let cell_size = atlas.cell_size();
+        let underline = atlas.underline();
+        let strikethrough = atlas.strikethrough();
         Self {
             padding_frac: [
                 FontAtlasData::PADDING as f32 / cell_size.0 as f32,
                 FontAtlasData::PADDING as f32 / cell_size.1 as f32,
             ],
+            underline_pos: underline.position,
+            underline_thickness: underline.thickness,
+            strikethrough_pos: strikethrough.position,
+            strikethrough_thickness: strikethrough.thickness,
             _padding: [0.0; 2], // padding to ensure proper alignment
         }
     }
