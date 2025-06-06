@@ -488,9 +488,32 @@ impl<'a> CellData<'a> {
         Self::new_with_style_bits(symbol, style.style_mask() | effect as u16, fg, bg)
     }
 
+    /// Creates new cell data with pre-encoded style bits.
+    ///
+    /// This is a lower-level constructor that accepts pre-encoded style bits rather than
+    /// separate `FontStyle` and `GlyphEffect` parameters. Use this when you have already
+    /// combined the style flags or when working directly with the bit representation.
+    ///
+    /// # Parameters
+    /// * `symbol` - Character to display
+    /// * `style_bits` - Pre-encoded style flags. Must not overlap with base glyph ID bits (0x01FF).
+    ///   Valid bits include:
+    ///   - `0x0200` - Bold
+    ///   - `0x0400` - Italic  
+    ///   - `0x0800` - Emoji (set automatically by the renderer for emoji glyphs)
+    ///   - `0x1000` - Underline
+    ///   - `0x2000` - Strikethrough
+    /// * `fg` - Foreground color as RGB value (0xRRGGBB)
+    /// * `bg` - Background color as RGB value (0xRRGGBB)
+    ///
+    /// # Returns
+    /// New `CellData` instance
+    ///
+    /// # Panics
+    /// Debug builds will panic if `style_bits` contains any invalid bits.
     pub fn new_with_style_bits(symbol: &'a str, style_bits: u16, fg: u32, bg: u32) -> Self {
-        // make sure encoding looks ok; glyph base mask should not intersect with style bits
-        debug_assert!(0x01FF & style_bits == 0, "Invalid style bits: {style_bits:#04x}");
+        // emoji and glyph base mask should not intersect with style bits
+        debug_assert!(0x81FF & style_bits == 0, "Invalid style bits: {style_bits:#04x}");
         Self { symbol, style_bits, fg, bg }
     }
 }
