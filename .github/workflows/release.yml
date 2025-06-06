@@ -151,12 +151,12 @@ jobs:
           asset_content_type: application/gzip
 
       # Upload font atlas
-      - name: 📤 Upload font atlas
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./data/bitmap_font.atlas
-          asset_name: bitmap_font.atlas
-          asset_content_type: application/octet-stream
+#      - name: 📤 Upload font atlas
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ needs.create-release.outputs.upload_url }}
+#          asset_path: ./data/bitmap_font.atlas
+#          asset_name: bitmap_font.atlas
+#          asset_content_type: application/octet-stream
