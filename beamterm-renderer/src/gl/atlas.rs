@@ -97,11 +97,6 @@ impl FontAtlas {
         self.strikethrough
     }
 
-    /// Returns the texture array z-offset for the given key
-    pub(super) fn get_glyph_coord(&self, key: &str, font_style: FontStyle) -> Option<u16> {
-        self.get_base_glyph_id(key).map(|id| id | font_style.style_mask())
-    }
-
     /// Returns the base glyph identifier for the given key
     pub(super) fn get_base_glyph_id(&self, key: &str) -> Option<u16> {
         if key.len() == 1 {

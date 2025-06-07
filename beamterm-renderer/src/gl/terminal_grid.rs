@@ -171,7 +171,7 @@ impl TerminalGrid {
         // update instance buffer with new cell data
         let atlas = &self.atlas;
 
-        let fallback_glyph = atlas.get_glyph_coord(" ", FontStyle::Normal).unwrap_or(0);
+        let fallback_glyph = atlas.get_base_glyph_id(" ").unwrap_or(0);
         self.cells.iter_mut().zip(cells).for_each(|(cell, data)| {
             let glyph_id = atlas.get_base_glyph_id(data.symbol).unwrap_or(fallback_glyph);
 
@@ -273,7 +273,7 @@ impl TerminalGrid {
             ("🤩", FontStyle::Normal),
         ]
         .into_iter()
-        .map(|(symbol, style)| atlas.get_glyph_coord(symbol, style))
+        .map(|(symbol, style)| atlas.get_base_glyph_id(symbol).map(|g| g | style as u16))
         .map(|g| g.unwrap_or(' ' as u16))
         .collect()
     }
