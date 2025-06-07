@@ -240,6 +240,11 @@ impl TerminalGrid {
 
         Ok(())
     }
+    
+    /// Returns the base glyph identifier for a given symbol.
+    pub fn base_glyph_id(&self, symbol: &str) -> Option<u16> {
+        self.atlas.get_base_glyph_id(symbol)
+    }
 
     fn fill_glyphs(atlas: &FontAtlas) -> Vec<u16> {
         [
