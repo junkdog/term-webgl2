@@ -21,6 +21,7 @@ compact_str = { workspace = true }
 console_error_panic_hook = { workspace = true }
 thiserror = { workspace = true }
 js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
 
 [dependencies.web-sys]
 workspace = true

@@ -3,6 +3,7 @@ mod gl;
 mod mat4;
 
 pub(crate) mod js;
+pub mod wasm;
 
 pub use ::beamterm_data::{FontAtlasData, GlyphEffect};
 pub use beamterm_data::FontStyle;

@@ -24,6 +24,7 @@ web-sys = "0.3.77"
 js-sys = "0.3.77"
 console_error_panic_hook = "0.1.7"
 web-time = "1.1.0"
+wasm-bindgen = "0.2.77"
 
 [workspace.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
