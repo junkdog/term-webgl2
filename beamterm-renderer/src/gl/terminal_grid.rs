@@ -233,7 +233,8 @@ impl TerminalGrid {
         self.cells[idx] = CellDynamic::new(glyph_id | cell_data.style_bits, cell_data.fg, cell_data.bg);
     }
 
-    pub fn synchronize_cell_buffers(
+    /// Flushes pending cell updates to the GPU.
+    pub fn flush_cells(
         &mut self,
         gl: &WebGl2RenderingContext,
     ) -> Result<(), Error> {
