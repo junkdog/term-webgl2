@@ -36,7 +36,7 @@ yarn-error.log*
 Thumbs.db
 
 # Generated files
-/dist/
+dist/
 /bitmap_font.atlas
 /data/*.atlas
 

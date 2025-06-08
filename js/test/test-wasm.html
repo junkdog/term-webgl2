@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Beamterm WASM Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1b26;
+            color: #a9b1d6;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #414868;
+            background: #24283b;
+        }
+        .success { color: #9ece6a; }
+        .error { color: #f7768e; }
+        .info { color: #7aa2f7; }
+        canvas {
+            border: 1px solid #414868;
+            display: block;
+            margin: 20px 0;
+        }
+        pre {
+            background: #1a1b26;
+            padding: 10px;
+            border: 1px solid #414868;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Beamterm WASM Test</h1>
+
+    <div class="info">
+        <p>To run this test, use one of these servers that handle WASM correctly:</p>
+        <pre>
+# Option 1: serve (recommended)
+npx serve ..
+
+# Option 2: http-server
+npx http-server .. -c-1
+
+# Option 3: live-server (with auto-reload)
+npx live-server .. --port=8080
+
+# Option 4: Vite (if installed globally)
+npx vite .. --port 8080
+        </pre>
+        <p>Then open: <code>http://localhost:[PORT]/test/test-wasm.html</code></p>
+    </div>
+
+    <div id="status">Loading...</div>
+    <canvas id="terminal" width="400" height="300"></canvas>
+    
+    <script type="module">
+        const status = document.getElementById('status');
+        
+        function log(message, className = 'success') {
+            const p = document.createElement('p');
+            p.className = className;
+            p.textContent = message;
+            status.appendChild(p);
+        }
+        
+        try {
+            // Test importing the module
+            const module = await import('../dist/web/beamterm_renderer.js');
+            log('✓ Module imported successfully');
+            log(`  Exports: ${Object.keys(module).join(', ')}`, 'info');
+            
+            // Check for init function
+            if (typeof module.default === 'function') {
+                log('✓ Found init function (default export)');
+            } else {
+                log('✗ No init function found!', 'error');
+                log(`  default export type: ${typeof module.default}`, 'error');
+            }
+            
+            // Try to initialize
+            try {
+                await module.default();
+                log('✓ WASM initialized successfully');
+                
+                // Try to create renderer
+                console.log(module)
+                const renderer = new module.BeamtermRenderer('#terminal');
+                log('✓ Renderer created successfully');
+                
+                const size = renderer.terminal_size();
+                log(`✓ Terminal size: ${size[0]}x${size[1]}`);
+                
+                // Test rendering
+                const style = new module.CellStyle();
+                renderer.clear(0x1a1b26);
+                renderer.write_text(0, 0, "WASM OK!", style, 0x9ece6a, 0x1a1b26);
+                renderer.flush();
+                renderer.render();
+                log('✓ Rendering successful!');
+                
+            } catch (e) {
+                log(`✗ Initialization failed: ${e.message}`, 'error');
+                console.error(e);
+            }
+            
+        } catch (e) {
+            log(`✗ Failed to import module: ${e.message}`, 'error');
+            log('Make sure WASM is built: ./build.zsh build-wasm', 'error');
+            console.error(e);
+        }
+    </script>
+</body>
+</html>

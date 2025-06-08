@@ -1,0 +1,50 @@
+{
+  "name": "@beamterm/renderer",
+  "version": "0.1.1",
+  "description": "High-performance WebGL2 terminal renderer",
+  "main": "./dist/bundler/beamterm_renderer.js",
+  "module": "./dist/bundler/beamterm_renderer_bg.js",
+  "types": "./dist/bundler/beamterm_renderer.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/bundler/beamterm_renderer.d.ts",
+      "import": "./dist/bundler/beamterm_renderer_bg.js",
+      "require": "./dist/bundler/beamterm_renderer.js"
+    },
+    "./web": {
+      "types": "./dist/web/beamterm_renderer.d.ts",
+      "default": "./dist/web/beamterm_renderer.js"
+    },
+    "./cdn": {
+      "default": "./dist/cdn/beamterm.min.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "keywords": ["terminal", "webgl", "wasm", "renderer"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/junkdog/beamterm.git",
+    "directory": "js"
+  },
+  "bugs": {
+    "url": "https://github.com/junkdog/beamterm/issues"
+  },
+  "homepage": "https://github.com/junkdog/beamterm#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "test": "node test/test-node.js",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.0",
+    "@playwright/test": "^1.40.0",
+    "jsdom": "^23.0.0"
+  }
+}
