@@ -178,8 +178,66 @@ impl TerminalGrid {
             *cell = CellDynamic::new(glyph_id | data.style_bits, data.fg, data.bg);
         });
 
-        self.buffers.upload_instance_data(gl, &self.cells);
+        self.synchronize_cell_buffers(gl)?;
 
+        Ok(())
+    }
+
+    pub fn update_cells_by_position<'a>(
+        &mut self,
+        gl: &WebGl2RenderingContext,
+        cells: impl Iterator<Item = (u16, u16, CellData<'a>)>,
+    ) -> Result<(), Error> {
+        // update instance buffer with new cell data by position
+        let atlas = &self.atlas;
+
+        let cell_count = self.cells.len();
+        let fallback_glyph = atlas.get_base_glyph_id(" ").unwrap_or(0);
+        let w = self.terminal_size.0 as usize;
+        cells.map(|(x, y, cell)| (w * y as usize + x as usize, cell))
+            .filter(|(idx, _)| *idx < cell_count)
+            .for_each(|(idx, cell)| {
+                let glyph_id = atlas.get_base_glyph_id(cell.symbol).unwrap_or(fallback_glyph);
+                self.cells[idx] = CellDynamic::new(glyph_id | cell.style_bits, cell.fg, cell.bg);
+            });
+
+        self.synchronize_cell_buffers(gl)?;
+
+        Ok(())
+    }
+
+    pub fn update_cell<'a>(
+        &mut self,
+        row: u16,
+        col: u16,
+        cell_data: CellData<'a>,
+    ) {
+        let (cols, _) = self.terminal_size;
+        let idx = row as usize * cols as usize + col as usize;
+        self.update_cell_by_index(idx, cell_data);
+    }
+
+    pub fn update_cell_by_index<'a>(
+        &mut self,
+        idx: usize,
+        cell_data: CellData<'a>,
+    ) {
+        if idx >= self.cells.len() {
+            return;
+        }
+
+        let atlas = &self.atlas;
+        let fallback_glyph = atlas.get_base_glyph_id(" ").unwrap_or(0);
+        let glyph_id = atlas.get_base_glyph_id(cell_data.symbol).unwrap_or(fallback_glyph);
+
+        self.cells[idx] = CellDynamic::new(glyph_id | cell_data.style_bits, cell_data.fg, cell_data.bg);
+    }
+
+    pub fn synchronize_cell_buffers(
+        &mut self,
+        gl: &WebGl2RenderingContext,
+    ) -> Result<(), Error> {
+        self.buffers.upload_instance_data(gl, &self.cells);
         Ok(())
     }
 
