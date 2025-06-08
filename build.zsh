@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Main build script for Beamterm
+# Main build script for beamterm
 
 set -euo pipefail
 
@@ -28,6 +28,7 @@ typeset -A COMMANDS=(
     test         "Run all tests"
     test-native  "Run native Rust tests"
     test-wasm    "Run WASM/JS tests"
+    test-browser "Test WASM in browser with test page"
     atlas        "Generate font atlas"
     publish-npm  "Publish to NPM"
     dev          "Run development server"
@@ -125,6 +126,34 @@ cmd_test-wasm() {
     npm test
 
     print_msg ok "WASM tests passed"
+}
+
+# Test WASM in browser
+cmd_test-browser() {
+    print_msg info "Starting test server for browser testing..."
+
+    # Build if needed
+    if [[ ! -d "$ROOT_DIR/js/dist" ]]; then
+        cmd_build-wasm
+    fi
+
+    cd $ROOT_DIR/js
+
+    print_msg info "Starting server at http://localhost:8080/test/test-wasm.html"
+    print_msg info "Press Ctrl+C to stop"
+
+    # Try different servers in order of preference
+    if command -v serve &>/dev/null; then
+        npx serve . -l 8080
+    elif command -v http-server &>/dev/null; then
+        npx http-server . -c-1 -p 8080
+    elif command -v live-server &>/dev/null; then
+        npx live-server . --port=8080
+    else
+        print_msg warn "No suitable server found. Installing 'serve'..."
+        npm install -g serve
+        npx serve . -l 8080
+    fi
 }
 
 # Generate font atlas

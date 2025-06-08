@@ -25,6 +25,15 @@ pub struct JsCellData {
 
 #[wasm_bindgen]
 #[derive(Debug, Default)]
+pub struct JsSpan {
+    text: String,
+    style: CellStyle,
+    fg_color: Option<u32>,
+    bg_color: Option<u32>,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct CellStyle {
     bits: u16,
 }
@@ -69,6 +78,31 @@ impl CellStyle {
     #[wasm_bindgen(getter)]
     pub fn bits(&self) -> u16 {
         self.bits
+    }
+}
+
+#[wasm_bindgen]
+impl JsSpan {
+    /// Create a new styled text span
+    #[wasm_bindgen(constructor)]
+    pub fn new(text: String, style: CellStyle) -> JsSpan {
+        JsSpan {
+            text,
+            style,
+            ..Default::default()
+        }
+    }
+
+    #[wasm_bindgen]
+    pub fn fg(mut self, color: u32) -> JsSpan {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[wasm_bindgen]
+    pub fn bg(mut self, color: u32) -> JsSpan {
+        self.bg_color = Some(color);
+        self
     }
 }
 

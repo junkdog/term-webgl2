@@ -3,13 +3,13 @@
   "version": "0.1.1",
   "description": "High-performance WebGL2 terminal renderer",
   "main": "./dist/bundler/beamterm_renderer.js",
-  "module": "./dist/bundler/beamterm_renderer_bg.js",
   "types": "./dist/bundler/beamterm_renderer.d.ts",
   "exports": {
     ".": {
       "types": "./dist/bundler/beamterm_renderer.d.ts",
-      "import": "./dist/bundler/beamterm_renderer_bg.js",
-      "require": "./dist/bundler/beamterm_renderer.js"
+      "import": "./dist/bundler/beamterm_renderer.js",
+      "require": "./dist/bundler/beamterm_renderer.js",
+      "default": "./dist/bundler/beamterm_renderer.js"
     },
     "./web": {
       "types": "./dist/web/beamterm_renderer.d.ts",
