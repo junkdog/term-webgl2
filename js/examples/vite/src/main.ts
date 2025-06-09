@@ -1,0 +1,114 @@
+import { main as init, BeamtermRenderer, CellStyle } from '@beamterm/renderer';
+
+interface Theme {
+    bg: number;
+    fg: number;
+    primary: number;
+    secondary: number;
+    success: number;
+    error: number;
+    warning: number;
+}
+
+const tokyoNight: Theme = {
+    bg: 0x1a1b26,
+    fg: 0xc0caf5,
+    primary: 0x7aa2f7,
+    secondary: 0xbb9af7,
+    success: 0x9ece6a,
+    error: 0xf7768e,
+    warning: 0xe0af68,
+};
+
+class TerminalApp {
+    private renderer: BeamtermRenderer;
+    private cols: number;
+    private rows: number;
+
+    constructor(renderer: BeamtermRenderer) {
+        this.renderer = renderer;
+        const size = renderer.terminal_size();
+        this.cols = size[0];
+        this.rows = size[1];
+    }
+
+    public render(): void {
+        this.clear();
+        this.drawHeader();
+        this.drawMenu();
+        this.drawStatus();
+
+        this.renderer.flush();
+        this.renderer.render();
+    }
+
+    private clear(): void {
+        this.renderer.clear(tokyoNight.bg);
+    }
+
+    private drawHeader(): void {
+        const title = "🚀 Beamterm + Vite + TypeScript";
+        const style = new CellStyle().bold();
+        const x = Math.floor((this.cols - title.length) / 2);
+
+        this.renderer.write_text(1, x, title, style, tokyoNight.primary, tokyoNight.bg);
+    }
+
+    private drawMenu(): void {
+        const menuItems = [
+            { key: 'N', label: 'New', color: tokyoNight.success },
+            { key: 'O', label: 'Open', color: tokyoNight.primary },
+            { key: 'S', label: 'Save', color: tokyoNight.secondary },
+            { key: 'Q', label: 'Quit', color: tokyoNight.error },
+        ];
+
+        let x = 2;
+        const y = 3;
+
+        menuItems.forEach(item => {
+            const keyStyle = new CellStyle().bold().underline();
+            const labelStyle = new CellStyle();
+
+            this.renderer.write_text(y, x, `[${item.key}]`, keyStyle, item.color, tokyoNight.bg);
+            x += 3;
+            this.renderer.write_text(y, x, ` ${item.label}  `, labelStyle, tokyoNight.fg, tokyoNight.bg);
+            x += item.label.length + 3;
+        });
+    }
+
+    private drawStatus(): void {
+        const status = `Cols: ${this.cols} | Rows: ${this.rows} | Ready`;
+        const style = new CellStyle();
+        const y = this.rows - 2;
+
+        // Draw status bar background
+        const bgStyle = new CellStyle();
+        const bar = '─'.repeat(this.cols);
+        this.renderer.write_text(y, 0, bar, bgStyle, tokyoNight.fg, tokyoNight.bg);
+
+        // Draw status text
+        const x = this.cols - status.length - 2;
+        this.renderer.write_text(y, x, status, style, tokyoNight.secondary, tokyoNight.bg);
+    }
+}
+
+async function main() {
+    await init();
+
+    const renderer = new BeamtermRenderer('#terminal');
+    const app = new TerminalApp(renderer);
+
+    app.render();
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+        const canvas = document.getElementById('terminal') as HTMLCanvasElement;
+        canvas.width = window.innerWidth - 40;
+        canvas.height = window.innerHeight - 100;
+
+        renderer.resize(canvas.width, canvas.height);
+        app.render();
+    });
+}
+
+main();
