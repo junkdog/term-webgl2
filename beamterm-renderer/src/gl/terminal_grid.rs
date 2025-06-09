@@ -77,8 +77,9 @@ impl TerminalGrid {
         let cell_size = atlas.cell_size();
         let (cols, rows) = (screen_size.0 / cell_size.0, screen_size.1 / cell_size.1);
 
-        let fill_glyphs = Self::fill_glyphs(&atlas);
-        let cell_data = create_terminal_cell_data(cols, rows, &fill_glyphs);
+        // let fill_glyphs = Self::fill_glyphs(&atlas);
+        // let cell_data = create_terminal_cell_data(cols, rows, &fill_glyphs);
+        let cell_data = create_terminal_cell_data(cols, rows, &[' ' as u16]);
         let cell_pos = CellStatic::create_grid(cols, rows);
         let buffers = setup_buffers(gl, vao, &cell_pos, &cell_data, cell_size)?;
 
@@ -744,13 +745,7 @@ impl CellFragmentUbo {
 fn create_terminal_cell_data(cols: i32, rows: i32, fill_glyph: &[u16]) -> Vec<CellDynamic> {
     let glyph_len = fill_glyph.len();
     (0..cols * rows)
-        .map(|i| {
-            CellDynamic::new(
-                fill_glyph[i as usize % glyph_len] | GlyphEffect::Underline as u16,
-                0x00ff_ffff,
-                0x0000_0000,
-            )
-        })
+        .map(|i| CellDynamic::new(fill_glyph[i as usize % glyph_len], 0x00ff_ffff, 0x0000_0000))
         .collect()
 }
 

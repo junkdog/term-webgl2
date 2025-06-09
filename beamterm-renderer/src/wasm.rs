@@ -93,11 +93,7 @@ impl JsSpan {
     /// Create a new styled text span
     #[wasm_bindgen(constructor)]
     pub fn new(text: String, style: CellStyle) -> JsSpan {
-        JsSpan {
-            text,
-            style,
-            ..Default::default()
-        }
+        JsSpan { text, style, ..Default::default() }
     }
 
     #[wasm_bindgen]
@@ -184,10 +180,7 @@ impl BeamtermRenderer {
     #[wasm_bindgen]
     pub fn terminal_size(&self) -> Size {
         let (cols, rows) = self.terminal_grid.terminal_size();
-        Size {
-            width: cols,
-            height: rows,
-        }
+        Size { width: cols, height: rows }
     }
 
     /// Get the cell size in pixels
