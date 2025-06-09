@@ -26,10 +26,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
-      - name: Make build script executable
-        run: chmod +x build.zsh
       - name: Check formatting
-        run: ./build.zsh fmt -- --check
+        run: cargo fmt --all -- --check
 
   # Run clippy lints
   clippy:
@@ -41,10 +39,8 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Make build script executable
-        run: chmod +x build.zsh
       - name: Run clippy
-        run: ./build.zsh clippy  # Already includes -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   # Run tests for native targets
   test-native:
