@@ -12,6 +12,15 @@ documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
 
+# Exclude development files from package
+exclude = [
+    "index.html",
+    "src/main.rs",
+    "tests/**/*",
+    "benches/**/*",
+    ".gitignore",
+]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
