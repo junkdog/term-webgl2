@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'beamterm-*'
+      - 'v*'
 
 env:
   CARGO_TERM_COLOR: always
@@ -113,31 +114,39 @@ jobs:
       - name: 📦 Install tools
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-          wget -qO- https://github.com/trunk-rs/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
-          sudo mv trunk /usr/local/bin/
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
       - name: 🔧 Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y fontconfig libfontconfig-dev fonts-noto fonts-noto-color-emoji
 
-      # Generate default font atlas
-      - name: 🎨 Generate font atlas
+      # Make scripts executable
+      - name: 🔧 Make scripts executable
         run: |
-          cd beamterm-atlas
-          cargo build --release
-          echo "1" | cargo run --release --bin beamterm-atlas -- 1 --line-height 1.1 --font-size 18
+          chmod +x build.zsh
+          chmod +x scripts/*.zsh
 
-      # Build WASM with trunk
+      # Use build.zsh for complete build
+      - name: 🔧 Setup JS environment
+        run: ./build.zsh setup
+
+      - name: 🎨 Generate font atlas (baked into library)
+        run: ./build.zsh atlas
+
       - name: 🌐 Build WASM release
-        run: trunk build --release
+        run: ./build.zsh build-wasm
 
       # Package web build
       - name: 📦 Package web build
         run: |
           mkdir -p release
-          cd dist
-          tar czf ../release/beamterm-web-${{ needs.create-release.outputs.release_version }}.tar.gz *
+          cd js/dist
+          tar czf ../../release/beamterm-web-${{ needs.create-release.outputs.release_version }}.tar.gz *
 
       # Upload web build
       - name: 📤 Upload web build
@@ -150,13 +159,85 @@ jobs:
           asset_name: beamterm-web-${{ needs.create-release.outputs.release_version }}.tar.gz
           asset_content_type: application/gzip
 
-      # Upload font atlas
-#      - name: 📤 Upload font atlas
-#        uses: actions/upload-release-asset@v1
+#  publish-crates:
+#    name: 📦 Publish to crates.io
+#    needs: [build-release, build-wasm-release]
+#    runs-on: ubuntu-latest
+#    if: startsWith(github.ref, 'refs/tags/beamterm-')
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: dtolnay/rust-toolchain@stable
+#      - name: 🔧 Install system dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install -y fontconfig libfontconfig-dev
+#
+#      - name: Make build script executable
+#        run: chmod +x build.zsh
+#
+#      - name: Build Rust crates
+#        run: ./build.zsh build-rust
+#
+#      - name: ✅ Verify package contents
+#        run: |
+#          cd beamterm-renderer
+#          EXCLUDED_FILES=("index.html" "main.rs")
+#          for file in "${EXCLUDED_FILES[@]}"; do
+#            if cargo package --list 2>/dev/null | grep -q "^$file$"; then
+#              echo "❌ ERROR: $file would be included in the package!"
+#              exit 1
+#            fi
+#          done
+#
+#      - name: Publish beamterm-data
+#        run: cargo publish -p beamterm-data
 #        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+#
+#      - name: Wait for crates.io
+#        run: sleep 30
+#
+#      - name: Publish beamterm-renderer
+#        run: cargo publish -p beamterm-renderer
+#        env:
+#          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+#
+#  publish-npm:
+#    name: 📦 Publish to NPM
+#    needs: [build-release, build-wasm-release]
+#    runs-on: ubuntu-latest
+#    if: startsWith(github.ref, 'refs/tags/v')
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - uses: dtolnay/rust-toolchain@stable
 #        with:
-#          upload_url: ${{ needs.create-release.outputs.upload_url }}
-#          asset_path: ./bitmap_font.atlas
-#          asset_name: bitmap_font.atlas
-#          asset_content_type: application/octet-stream
+#          targets: wasm32-unknown-unknown
+#
+#      - name: 📦 Install wasm-pack
+#        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+#
+#      - name: 📦 Setup Node.js
+#        uses: actions/setup-node@v4
+#        with:
+#          node-version: '18'
+#          registry-url: 'https://registry.npmjs.org'
+#
+#      - name: 🔧 Install system dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install -y fontconfig libfontconfig-dev fonts-noto fonts-noto-color-emoji
+#
+#      - name: 🔧 Make scripts executable
+#        run: |
+#          chmod +x build.zsh
+#          chmod +x scripts/*.zsh
+#
+#      - name: 📦 Build and publish to NPM
+#        env:
+#          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+#        run: |
+#          ./build.zsh setup
+#          ./build.zsh atlas  # Baked into library
+#          ./build.zsh build-wasm
+#          ./build.zsh publish-npm

@@ -16,6 +16,25 @@ JS_DIR=$ROOT_DIR/js
 # Target configurations
 typeset -a TARGETS=(bundler web nodejs)
 
+# Build mode
+BUILD_MODE="debug"
+WASM_PACK_FLAGS=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --release)
+            BUILD_MODE="release"
+            WASM_PACK_FLAGS="--release"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
 # Print colored message
 log() {
     local level=$1
@@ -53,7 +72,7 @@ check_deps() {
 # Build WASM for a specific target
 build_target() {
     local target=$1
-    log info "Building $target package..."
+    log info "Building $target package in $BUILD_MODE mode..."
 
     local out_dir=$TARGET_DIR/$target
 
@@ -62,14 +81,15 @@ build_target() {
         --target $target \
         --out-dir $out_dir \
         --out-name beamterm_renderer \
-        --no-pack
+        --no-pack \
+        $WASM_PACK_FLAGS
 
     log ok "$target package built"
 }
 
 # Main build process
 main() {
-    log info "Starting WASM build..."
+    log info "Starting WASM build in $BUILD_MODE mode..."
 
     # Check dependencies
     check_deps
@@ -114,7 +134,7 @@ main() {
 
     # Show output summary
     echo
-    log info "Build outputs:"
+    log info "Build outputs ($BUILD_MODE mode):"
     echo "  NPM package:  $JS_DIR/dist/bundler/"
     echo "  Web package:  $JS_DIR/dist/web/"
     echo "  CDN bundle:   $JS_DIR/dist/cdn/beamterm.min.js"
@@ -126,4 +146,4 @@ main() {
 #else
 #    main
 #fi
-main
+main "$@"

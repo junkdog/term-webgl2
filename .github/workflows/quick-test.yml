@@ -4,7 +4,6 @@ on:
   push:
     branches-ignore:
       - main
-      - master
 
 env:
   CARGO_TERM_COLOR: always
@@ -29,9 +28,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fontconfig libfontconfig-dev
 
+      - name: Make build script executable
+        run: chmod +x build.zsh
+
       # Quick format check
       - name: 🎨 Check formatting
-        run: cargo fmt --all -- --check
+        run: ./build.zsh fmt -- --check
 
       # Run clippy on native target (faster than WASM)
       - name: 📎 Clippy check
@@ -43,4 +45,4 @@ jobs:
 
       # Run native tests only (faster)
       - name: 🧪 Run tests
-        run: cargo test --workspace --exclude beamterm-renderer
+        run: ./build.zsh test-native

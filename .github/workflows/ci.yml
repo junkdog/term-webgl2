@@ -20,8 +20,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
+      - name: Make build script executable
+        run: chmod +x build.zsh
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: ./build.zsh fmt -- --check
 
   # Run clippy lints
   clippy:
@@ -33,8 +35,10 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Make build script executable
+        run: chmod +x build.zsh
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: ./build.zsh clippy  # Already includes -D warnings
 
   # Run tests for native targets
   test-native:
@@ -52,8 +56,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y fontconfig libfontconfig-dev
+      - name: Make build script executable
+        run: chmod +x build.zsh
       - name: Run tests
-        run: cargo test --workspace --exclude beamterm-renderer
+        run: ./build.zsh test-native
 
   # Build and test WASM targets
   build-wasm:
@@ -70,10 +76,10 @@ jobs:
       - name: 📦 Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-      - name: 📦 Install trunk
-        run: |
-          wget -qO- https://github.com/trunk-rs/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
-          sudo mv trunk /usr/local/bin/
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       # Install system dependencies for font handling
       - name: 🔧 Install system dependencies
@@ -81,33 +87,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fontconfig libfontconfig-dev fonts-noto fonts-noto-color-emoji
 
-      # Generate font atlas
-      - name: 🎨 Generate font atlas
+      # Make scripts executable
+      - name: 🔧 Make scripts executable
         run: |
-          cargo run --release --bin beamterm-atlas -- 1 
+          chmod +x build.zsh
+          chmod +x scripts/*.zsh
 
-      # Build WASM renderer
-      - name: 🔨 Build beamterm-renderer for WASM
-        run: |
-          cd beamterm-renderer
-          cargo build --target wasm32-unknown-unknown --release
+      # Use build.zsh for setup and build
+      - name: 🔧 Setup JS environment
+        run: ./build.zsh setup
 
-      # Build with trunk for web deployment
-      - name: 🌐 Build with trunk
-        run: trunk build --release
+      - name: 🎨 Generate font atlas (baked into library)
+        run: ./build.zsh atlas
+
+      - name: 🔨 Build WASM
+        run: ./build.zsh build-wasm
+
+      # Run WASM tests
+      - name: 🧪 Test WASM
+        run: ./build.zsh test-wasm
 
       # Upload build artifacts
       - name: 📤 Upload WASM artifacts
         uses: actions/upload-artifact@v4
         with:
           name: wasm-build
-          path: dist/
-
-      - name: 📤 Upload font atlas
-        uses: actions/upload-artifact@v4
-        with:
-          name: font-atlas
-          path: data/bitmap_font.atlas
+          path: js/dist/
 
   # Documentation build
   docs:
@@ -136,17 +141,21 @@ jobs:
   # publish:
   #   name: 📦 Publish to crates.io
   #   runs-on: ubuntu-latest
-  #   needs: [fmt, clippy, test-native, build-wasm]
+  #   needs: [fmt, clippy, test-native, build-wasm, verify-package]
   #   if: startsWith(github.ref, 'refs/tags/v')
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: dtolnay/rust-toolchain@stable
-  #     - name: Install system dependencies
+  #     - name: 🔧 Install system dependencies
   #       run: |
   #         sudo apt-get update
   #         sudo apt-get install -y fontconfig libfontconfig-dev
-  #     - name: Publish beamterm-atlas
-  #       run: cargo publish -p beamterm-atlas
+  #     - name: Make build script executable
+  #       run: chmod +x build.zsh
+  #     - name: Build Rust crates
+  #       run: ./build.zsh build-rust
+  #     - name: Publish beamterm-data
+  #       run: cargo publish -p beamterm-data
   #       env:
   #         CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
   #     - name: Wait for crates.io

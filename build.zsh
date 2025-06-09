@@ -160,7 +160,12 @@ cmd_test-browser() {
 cmd_atlas() {
     print_msg info "Generating font atlas..."
 
-    cargo run --release --bin beamterm-atlas -- 1
+    # If no args provided, use default (1)
+    if [[ $# -eq 0 ]]; then
+        cargo run --release --bin beamterm-atlas -- 1
+    else
+        cargo run --release --bin beamterm-atlas -- "$@"
+    fi
 
     print_msg ok "Font atlas generated"
 }
@@ -189,7 +194,7 @@ cmd_dev() {
 cmd_fmt() {
     print_msg info "Formatting code..."
 
-    cargo fmt --all
+    cargo fmt --all "$@"
 
     print_msg ok "Formatting complete"
 }
@@ -198,7 +203,12 @@ cmd_fmt() {
 cmd_clippy() {
     print_msg info "Running clippy..."
 
-    cargo clippy --all-targets --all-features -- -D warnings
+    # If additional args are provided, use them; otherwise use default flags
+    if [[ $# -eq 0 ]]; then
+        cargo clippy --all-targets --all-features -- -D warnings
+    else
+        cargo clippy --all-targets --all-features "$@"
+    fi
 
     print_msg ok "Clippy complete"
 }
