@@ -65,7 +65,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y fontconfig libfontconfig-dev fonts-noto
+          sudo apt-get install -y fontconfig libfontconfig-dev zsh fonts-noto
 
       # Build font atlas generator
       - name: 🔨 Build beamterm-atlas
@@ -123,7 +123,7 @@ jobs:
       - name: 🔧 Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fontconfig libfontconfig-dev fonts-noto fonts-noto-color-emoji
+          sudo apt-get install -y fontconfig libfontconfig-dev zsh fonts-noto fonts-noto-color-emoji
 
       # Make scripts executable
       - name: 🔧 Make scripts executable
@@ -170,7 +170,7 @@ jobs:
 #      - name: 🔧 Install system dependencies
 #        run: |
 #          sudo apt-get update
-#          sudo apt-get install -y fontconfig libfontconfig-dev
+#          sudo apt-get install -y fontconfig libfontconfig-dev zsh
 #
 #      - name: Make build script executable
 #        run: chmod +x build.zsh
@@ -226,7 +226,7 @@ jobs:
 #      - name: 🔧 Install system dependencies
 #        run: |
 #          sudo apt-get update
-#          sudo apt-get install -y fontconfig libfontconfig-dev fonts-noto fonts-noto-color-emoji
+#          sudo apt-get install -y fontconfig libfontconfig-dev zsh fonts-noto fonts-noto-color-emoji
 #
 #      - name: 🔧 Make scripts executable
 #        run: |
