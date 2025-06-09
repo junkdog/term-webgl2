@@ -2,9 +2,15 @@ name: 🧪 CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      triggered_by:
+        description: 'Triggered by workflow'
+        required: false
+        default: 'manual'
 
 env:
   CARGO_TERM_COLOR: always
