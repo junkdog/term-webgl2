@@ -57,7 +57,7 @@ class TerminalApp {
     }
 
     private drawHeader(): void {
-        const title = "🚀 Beamterm + Vite + TypeScript";
+        const title = "🚀 beamterm + Vite + TypeScript";
         const style = new CellStyle().bold();
         const x = Math.floor((this.cols - title.length) / 2);
 

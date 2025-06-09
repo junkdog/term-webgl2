@@ -62,7 +62,7 @@ main() {
     check_wasm_built
 
     # Setup each example
-    local examples=(cdn webpack vite)
+    local examples=(webpack vite)
 
     for example in $examples; do
         if [[ -d $SCRIPT_DIR/$example ]]; then
