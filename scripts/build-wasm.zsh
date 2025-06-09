@@ -99,16 +99,10 @@ main() {
     rm -rf $TARGET_DIR
     mkdir -p $TARGET_DIR
 
-    # Build each target in parallel if possible
-    if command -v parallel &>/dev/null; then
-        log info "Building targets in parallel..."
-        print -l $TARGETS | parallel -j ${#TARGETS} build_target {}
-    else
-        # Build sequentially
-        for target in $TARGETS; do
-            build_target $target
-        done
-    fi
+    # Build sequentially
+    for target in $TARGETS; do
+        build_target $target
+    done
 
     # Copy to js/dist
     log info "Copying to js/dist..."
@@ -140,10 +134,4 @@ main() {
     echo "  CDN bundle:   $JS_DIR/dist/cdn/beamterm.min.js"
 }
 
-# Export function for parallel execution
-#if [[ $1 == "--build-target" ]]; then
-#    build_target $2
-#else
-#    main
-#fi
 main "$@"
