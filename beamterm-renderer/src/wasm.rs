@@ -39,6 +39,13 @@ pub struct CellStyle {
 }
 
 #[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Size {
+    pub width: u16,
+    pub height: u16,
+}
+
+#[wasm_bindgen]
 impl CellStyle {
     /// Create a new TextStyle with default (normal) style
     #[wasm_bindgen(constructor)]
@@ -175,16 +182,22 @@ impl BeamtermRenderer {
 
     /// Get the terminal dimensions in cells
     #[wasm_bindgen]
-    pub fn terminal_size(&self) -> Vec<u16> {
+    pub fn terminal_size(&self) -> Size {
         let (cols, rows) = self.terminal_grid.terminal_size();
-        vec![cols, rows]
+        Size {
+            width: cols,
+            height: rows,
+        }
     }
 
     /// Get the cell size in pixels
     #[wasm_bindgen]
-    pub fn cell_size(&self) -> Vec<i32> {
+    pub fn cell_size(&self) -> Size {
         let (width, height) = self.terminal_grid.cell_size();
-        vec![width, height]
+        Size {
+            width: width as u16,
+            height: height as u16,
+        }
     }
 
     /// Update a single cell (in memory only - call synchronize() to upload to GPU)
@@ -296,6 +309,8 @@ impl BeamtermRenderer {
     /// Resize the terminal to fit new canvas dimensions
     #[wasm_bindgen]
     pub fn resize(&mut self, width: i32, height: i32) -> Result<(), JsValue> {
+        self.renderer.resize(width, height);
+
         let gl = self.renderer.gl();
         self.terminal_grid
             .resize(gl, (width, height))

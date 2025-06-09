@@ -1,4 +1,4 @@
-import { main as init, BeamtermRenderer, CellStyle } from '@beamterm/renderer';
+import { main as init, BeamtermRenderer, CellStyle, Size } from '@beamterm/renderer';
 
 interface Theme {
     bg: number;
@@ -40,6 +40,16 @@ class TerminalApp {
 
         this.renderer.flush();
         this.renderer.render();
+    }
+
+    public resize_terminal(width_px: number, height_px: number): void {
+        this.renderer.resize(width_px, height_px);
+        let size = this.renderer.terminal_size()
+
+        this.cols = size.width;
+        this.rows = size.height;
+
+        this.render();
     }
 
     private clear(): void {
@@ -98,17 +108,32 @@ async function main() {
     const renderer = new BeamtermRenderer('#terminal');
     const app = new TerminalApp(renderer);
 
-    app.render();
+    let {width, height} = calculateCanvasSize();
+    app.resize_terminal(width, height); // triggers rendering
+
+    function animate() {
+        renderer.render();
+        requestAnimationFrame(animate);
+    }
+    animate();
 
     // Handle resize
     window.addEventListener('resize', () => {
-        const canvas = document.getElementById('terminal') as HTMLCanvasElement;
-        canvas.width = window.innerWidth - 40;
-        canvas.height = window.innerHeight - 100;
+        let {width, height} = calculateCanvasSize();
 
-        renderer.resize(canvas.width, canvas.height);
-        app.render();
+        const canvas = document.getElementById('terminal') as HTMLCanvasElement;
+        canvas.width = width;
+        canvas.height = height;
+
+        app.resize_terminal(width, height);
     });
+}
+
+function calculateCanvasSize(): { width: number; height: number } {
+    const width = window.innerWidth - 40;
+    const height = window.innerHeight - 100;
+
+    return { width, height };
 }
 
 main();
