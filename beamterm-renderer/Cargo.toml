@@ -30,7 +30,22 @@ compact_str = { workspace = true }
 console_error_panic_hook = { workspace = true }
 thiserror = { workspace = true }
 js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
+
+[dependencies.wasm-bindgen]
+workspace = true
+optional = true
+
+[dependencies.serde]
+optional = true
+workspace = true
+
+[dependencies.serde_json]
+workspace = true
+optional = true
+
+[dependencies.serde-wasm-bindgen]
+optional = true
+version = "0.6.5"
 
 [dependencies.web-sys]
 workspace = true
@@ -57,6 +72,16 @@ features = [
     'WebGlUniformLocation',
     'WebGlVertexArrayObject',
     'Window',
+]
+
+[features]
+js-api = [
+    "compact_str/serde",
+
+    "dep:serde",
+    "dep:serde_json",
+    "dep:serde-wasm-bindgen",
+    "dep:wasm-bindgen",
 ]
 
 [[bin]]

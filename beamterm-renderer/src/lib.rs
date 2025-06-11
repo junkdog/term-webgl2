@@ -3,6 +3,8 @@ mod gl;
 mod mat4;
 
 pub(crate) mod js;
+
+#[cfg(feature = "js-api")]
 pub mod wasm;
 
 pub use ::beamterm_data::{FontAtlasData, GlyphEffect};

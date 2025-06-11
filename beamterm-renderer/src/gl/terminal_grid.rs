@@ -40,6 +40,11 @@ pub struct TerminalGrid {
     sampler_loc: web_sys::WebGlUniformLocation,
 }
 
+pub(crate) struct Batch<'a> {
+    grid: &'a mut TerminalGrid,
+    gl: &'a WebGl2RenderingContext,
+}
+
 #[derive(Debug)]
 struct TerminalBuffers {
     vao: web_sys::WebGlVertexArrayObject,
@@ -132,7 +137,7 @@ impl TerminalGrid {
 
     /// Uploads uniform buffer data for screen and cell dimensions.
     ///
-    /// This method updates the shader uniform buffer with the current screen
+    /// This method updates the shader uniform buffers with the current screen
     /// size and cell dimensions. Must be called when the screen size changes
     /// or when initializing the grid.
     ///
@@ -184,7 +189,7 @@ impl TerminalGrid {
         Ok(())
     }
 
-    pub fn update_cells_by_position<'a>(
+    pub(crate) fn update_cells_by_position<'a>(
         &mut self,
         gl: &WebGl2RenderingContext,
         cells: impl Iterator<Item = (u16, u16, CellData<'a>)>,
@@ -208,13 +213,13 @@ impl TerminalGrid {
         Ok(())
     }
 
-    pub fn update_cell<'a>(&mut self, row: u16, col: u16, cell_data: CellData<'a>) {
+    pub(crate) fn update_cell(&mut self, row: u16, col: u16, cell_data: CellData) {
         let (cols, _) = self.terminal_size;
         let idx = row as usize * cols as usize + col as usize;
         self.update_cell_by_index(idx, cell_data);
     }
 
-    pub fn update_cell_by_index<'a>(&mut self, idx: usize, cell_data: CellData<'a>) {
+    pub(crate) fn update_cell_by_index(&mut self, idx: usize, cell_data: CellData) {
         if idx >= self.cells.len() {
             return;
         }
@@ -228,7 +233,7 @@ impl TerminalGrid {
     }
 
     /// Flushes pending cell updates to the GPU.
-    pub fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
+    pub(crate) fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
         self.buffers.upload_instance_data(gl, &self.cells);
         Ok(())
     }
@@ -331,6 +336,49 @@ impl TerminalGrid {
         .map(|(symbol, style)| atlas.get_base_glyph_id(symbol).map(|g| g | style as u16))
         .map(|g| g.unwrap_or(' ' as u16))
         .collect()
+    }
+}
+
+impl<'a> Batch<'a> {
+    pub fn new(grid: &'a mut TerminalGrid, gl: &'a WebGl2RenderingContext) -> Self {
+        Self { grid, gl }
+    }
+
+    pub fn put_cell(
+        &mut self,
+        row: u16,
+        col: u16,
+        cell_data: CellData<'a>,
+    ) -> Result<(), Error> {
+        self.grid.update_cell(row, col, cell_data);
+        Ok(())
+    }
+
+    pub fn put_cell_by_index(
+        &mut self,
+        idx: usize,
+        cell_data: CellData<'a>,
+    ) -> Result<(), Error> {
+        self.grid.update_cell_by_index(idx, cell_data);
+        Ok(())
+    }
+
+    pub fn put_cells(
+        &mut self,
+        cells: impl Iterator<Item = (u16, u16, CellData<'a>)>,
+    ) -> Result<(), Error> {
+        self.grid.update_cells_by_position(self.gl, cells)
+    }
+
+    pub fn flush(&mut self) -> Result<(), Error> {
+        self.grid.flush_cells(self.gl)
+    }
+}
+
+impl<'a> Drop for Batch<'a> {
+    fn drop(&mut self) {
+        self.grid.flush_cells(self.gl)
+            .unwrap_or_default();
     }
 }
 
@@ -674,7 +722,9 @@ impl CellDynamic {
     #[rustfmt::skip]
     fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
         let mut data = [0; 8];
+        debug_assert!(glyph_id < 0x0100, "Glyph ID {glyph_id} exceeds 8-bit limit");
 
+        // todo: compare against .to_le_bytes()?
         data[0] = (glyph_id & 0xFF) as u8;
         data[1] = ((glyph_id >> 8) & 0xFF) as u8;
 

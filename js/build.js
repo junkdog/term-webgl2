@@ -72,7 +72,10 @@ const Beamterm = {
         await ensureInitialized();
         return new BeamtermExports.BeamtermRenderer(canvasId);
     },
+    Batch: BeamtermExports.Batch,
     CellStyle: BeamtermExports.CellStyle,
+    Size: BeamtermExports.Size,
+    Span: BeamtermExports.Span,
     // Re-export other classes as needed
 };
 

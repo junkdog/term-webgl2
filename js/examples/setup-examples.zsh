@@ -74,7 +74,6 @@ main() {
 
     echo
     log info "To run an example:"
-    echo "  CDN:     cd $SCRIPT_DIR/cdn && npm start"
     echo "  Webpack: cd $SCRIPT_DIR/webpack && npm start"
     echo "  Vite:    cd $SCRIPT_DIR/vite && npm run dev"
 }
