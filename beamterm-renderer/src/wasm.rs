@@ -251,7 +251,7 @@ impl JsBeamtermRenderer {
         }
     }
 
-    /// Update a single cell (in memory only - call synchronize() to upload to GPU)
+    /// Update a single cell (in memory only - call flush() to upload to GPU)
     #[wasm_bindgen]
     pub fn update_cell(
         &mut self,
@@ -276,7 +276,7 @@ impl JsBeamtermRenderer {
         Ok(())
     }
 
-    /// Write text to the terminal starting at the specified position (in memory only - call synchronize() to upload to GPU)
+    /// Write text to the terminal starting at the specified position (in memory only - call flush() to upload to GPU)
     #[wasm_bindgen]
     pub fn write_text(
         &mut self,
@@ -372,7 +372,7 @@ impl JsBeamtermRenderer {
         Ok(())
     }
 
-    /// Clear the terminal with the specified background color (in memory only - call synchronize() to upload to GPU)
+    /// Clear the terminal with the specified background color (in memory only - call flush() to upload to GPU)
     #[wasm_bindgen]
     pub fn clear(&mut self, bg_color: u32) -> Result<(), JsValue> {
         let (cols, rows) = self.terminal_grid.borrow().terminal_size();
