@@ -68,7 +68,7 @@ class TerminalApp {
         const style = new CellStyle().bold();
         const x = Math.floor((this.cols - title.length) / 2);
 
-        batch.writeText(1, x, title, style, tokyoNight.primary, tokyoNight.bg);
+        batch.writeText(x, 1, title, style, tokyoNight.primary, tokyoNight.bg);
     }
 
     private drawMenu(batch: Batch): void {
@@ -86,9 +86,9 @@ class TerminalApp {
             const keyStyle = new CellStyle().bold().underline();
             const labelStyle = new CellStyle();
 
-            batch.writeText(y, x, `[${item.key}]`, keyStyle, item.color, tokyoNight.bg);
+            batch.writeText(x, y, `[${item.key}]`, keyStyle, item.color, tokyoNight.bg);
             x += 3;
-            batch.writeText(y, x, ` ${item.label}  `, labelStyle, tokyoNight.fg, tokyoNight.bg);
+            batch.writeText(x, y, ` ${item.label}  `, labelStyle, tokyoNight.fg, tokyoNight.bg);
             x += item.label.length + 3;
         });
     }
@@ -116,7 +116,7 @@ class TerminalApp {
 
         demoLines.forEach((line, i) => {
             if (i < windowHeight - 2) {
-                batch.writeText(windowY + 1 + i, 4, line.text, new CellStyle(), line.color, tokyoNight.bg);
+                batch.writeText(4, windowY + 1 + i, line.text, new CellStyle(), line.color, tokyoNight.bg);
             }
         });
     }
@@ -129,11 +129,11 @@ class TerminalApp {
         // Draw status bar background
         const bgStyle = new CellStyle();
         const bar = '─'.repeat(this.cols);
-        batch.writeText(y, 0, bar, bgStyle, tokyoNight.fg, tokyoNight.bg);
+        batch.writeText(0, y, bar, bgStyle, tokyoNight.fg, tokyoNight.bg);
 
         // Draw status text
         const x = this.cols - status.length - 2;
-        batch.writeText(y, x, status, style, tokyoNight.secondary, tokyoNight.bg);
+        batch.writeText(x, y, status, style, tokyoNight.secondary, tokyoNight.bg);
     }
 }
 
