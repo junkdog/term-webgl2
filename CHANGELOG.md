@@ -4,13 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### 🚀 Features
+
+- *(js-api)* Basic JS API locked behind "js-api" feature
+
 ### 🐛 Bug Fixes
 
 - *(shader)* Propagate LineEffects from `FontAtlasData` to fragment shader
 
+### 💼 Other
+
+- *(renderer)* Add TerminalGrid::base_glyph_id(&str)
+- *(renderer)* Add TerminalGrid::flush_cells
+- *(renderer)* Add experimental JS support
+- *(js)* Add webpack example
+- *(js)* Add vite+typescript example
+- *(renderer)* Replace bit ops in `CellDynamic` with `to_le_bytes()`
+
 ### ⚙️ Miscellaneous Tasks
 
 - Start using git-cliff
+- Add developer-facing build.zsh and supporting scripts
+- *(renderer)* Omit local main.rs/index.html from published files
 
 ## [beamterm-0.1.1] - 2025-06-06
 
