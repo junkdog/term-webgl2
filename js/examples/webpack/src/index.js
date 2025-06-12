@@ -229,7 +229,7 @@ class TerminalDemo {
 
         // Right-aligned info
         const info = "Press F11 for fullscreen ";
-        batch.writeText(this.size.width - info.length - 2, y, info, new CellStyle(), 0xa9b1d6, 0x24283b);
+        batch.writeText(this.size.width - info.length - 3, y, info, new CellStyle(), 0xa9b1d6, 0x24283b);
     }
 
     startAnimation() {
@@ -238,7 +238,7 @@ class TerminalDemo {
 
             // Animated spinner
             const spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-            const spinnerChar = spinnerChars[this.frame % spinnerChars.length];
+            const spinnerChar = spinnerChars[(this.frame >> 3) % spinnerChars.length];
             batch.putCell(this.size.width - 4, this.size.height - 2, new Cell(spinnerChar, new CellStyle(), 0x7aa2f7, 0x24283b));
 
             // Animated wave effect
