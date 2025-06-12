@@ -20,7 +20,7 @@ TARGETS.forEach(target => {
     const outDir = path.join(TARGET_DIR, 'wasm-pack', target);
 
     // Run wasm-pack with output to target directory
-    execSync(`wasm-pack build ${RENDERER_DIR} --target ${target} --out-dir ${outDir} --no-pack`, {
+    execSync(`wasm-pack build ${RENDERER_DIR} --target ${target} --out-dir ${outDir} --no-pack --features js-api`, {
         stdio: 'inherit',
         cwd: ROOT_DIR
     });

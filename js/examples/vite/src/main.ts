@@ -1,4 +1,4 @@
-import { main as init, BeamtermRenderer, CellStyle, Size } from '@beamterm/renderer';
+import { main as init, BeamtermRenderer, CellStyle, Batch } from '@beamterm/renderer';
 
 interface Theme {
     bg: number;
@@ -27,24 +27,31 @@ class TerminalApp {
 
     constructor(renderer: BeamtermRenderer) {
         this.renderer = renderer;
-        const size = renderer.terminal_size();
-        this.cols = size[0];
-        this.rows = size[1];
+        const size = renderer.terminalSize();
+        this.cols = size.width;
+        this.rows = size.height;
     }
 
     public render(): void {
-        this.clear();
-        this.drawHeader();
-        this.drawMenu();
-        this.drawStatus();
+        // Create a batch for all updates
+        const batch = this.renderer.batch();
 
-        this.renderer.flush();
+        this.clear(batch);
+        this.drawHeader(batch);
+        this.drawMenu(batch);
+        this.drawContent(batch);
+        this.drawStatus(batch);
+
+        // Synchronize all updates to GPU
+        batch.flush();
+
+        // Render the frame
         this.renderer.render();
     }
 
-    public resize_terminal(width_px: number, height_px: number): void {
+    public resizeTerminal(width_px: number, height_px: number): void {
         this.renderer.resize(width_px, height_px);
-        let size = this.renderer.terminal_size()
+        const size = this.renderer.terminalSize();
 
         this.cols = size.width;
         this.rows = size.height;
@@ -52,19 +59,19 @@ class TerminalApp {
         this.render();
     }
 
-    private clear(): void {
-        this.renderer.clear(tokyoNight.bg);
+    private clear(batch: Batch): void {
+        batch.clear(tokyoNight.bg);
     }
 
-    private drawHeader(): void {
+    private drawHeader(batch: Batch): void {
         const title = "🚀 beamterm + Vite + TypeScript";
         const style = new CellStyle().bold();
         const x = Math.floor((this.cols - title.length) / 2);
 
-        this.renderer.write_text(1, x, title, style, tokyoNight.primary, tokyoNight.bg);
+        batch.writeText(1, x, title, style, tokyoNight.primary, tokyoNight.bg);
     }
 
-    private drawMenu(): void {
+    private drawMenu(batch: Batch): void {
         const menuItems = [
             { key: 'N', label: 'New', color: tokyoNight.success },
             { key: 'O', label: 'Open', color: tokyoNight.primary },
@@ -79,61 +86,121 @@ class TerminalApp {
             const keyStyle = new CellStyle().bold().underline();
             const labelStyle = new CellStyle();
 
-            this.renderer.write_text(y, x, `[${item.key}]`, keyStyle, item.color, tokyoNight.bg);
+            batch.writeText(y, x, `[${item.key}]`, keyStyle, item.color, tokyoNight.bg);
             x += 3;
-            this.renderer.write_text(y, x, ` ${item.label}  `, labelStyle, tokyoNight.fg, tokyoNight.bg);
+            batch.writeText(y, x, ` ${item.label}  `, labelStyle, tokyoNight.fg, tokyoNight.bg);
             x += item.label.length + 3;
         });
     }
 
-    private drawStatus(): void {
-        const status = `Cols: ${this.cols} | Rows: ${this.rows} | Ready`;
+    private drawContent(batch: Batch): void {
+        // Draw a demo terminal window
+        const windowY = 6;
+        const windowHeight = this.rows - 10;
+        const windowWidth = this.cols - 4;
+
+        // Demo content inside window
+        const demoLines = [
+            { text: "$ npm create beamterm-app my-terminal", color: tokyoNight.fg },
+            { text: "✓ Created project structure", color: tokyoNight.success },
+            { text: "✓ Installed dependencies", color: tokyoNight.success },
+            { text: "✓ Generated WebGL shaders", color: tokyoNight.success },
+            { text: "", color: tokyoNight.fg },
+            { text: "$ cd my-terminal && npm run dev", color: tokyoNight.fg },
+            { text: "  VITE v5.0.0  ready in 324 ms", color: tokyoNight.secondary },
+            { text: "", color: tokyoNight.fg },
+            { text: "  ➜  Local:   http://localhost:5173/", color: tokyoNight.primary },
+            { text: "  ➜  Network: use --host to expose", color: tokyoNight.primary },
+            { text: "  ➜  press h + enter to show help", color: tokyoNight.fg },
+        ];
+
+        demoLines.forEach((line, i) => {
+            if (i < windowHeight - 2) {
+                batch.writeText(windowY + 1 + i, 4, line.text, new CellStyle(), line.color, tokyoNight.bg);
+            }
+        });
+    }
+
+    private drawStatus(batch: Batch): void {
+        const status = `Cols: ${this.cols} | Rows: ${this.rows} | Batch API | Ready`;
         const style = new CellStyle();
         const y = this.rows - 2;
 
         // Draw status bar background
         const bgStyle = new CellStyle();
         const bar = '─'.repeat(this.cols);
-        this.renderer.write_text(y, 0, bar, bgStyle, tokyoNight.fg, tokyoNight.bg);
+        batch.writeText(y, 0, bar, bgStyle, tokyoNight.fg, tokyoNight.bg);
 
         // Draw status text
         const x = this.cols - status.length - 2;
-        this.renderer.write_text(y, x, status, style, tokyoNight.secondary, tokyoNight.bg);
+        batch.writeText(y, x, status, style, tokyoNight.secondary, tokyoNight.bg);
     }
 }
 
+// Animation controller for smooth updates
+class AnimationController {
+    private app: TerminalApp;
+    private lastTime: number = 0;
+    private updateInterval: number = 16; // ~60fps
+
+    constructor(app: TerminalApp) {
+        this.app = app;
+    }
+
+    start(): void {
+        this.animate(0);
+    }
+
+    private animate = (currentTime: number): void => {
+        if (currentTime - this.lastTime >= this.updateInterval) {
+            this.app.render();
+            this.lastTime = currentTime;
+        }
+        requestAnimationFrame(this.animate);
+    };
+}
+
 async function main() {
+    // Initialize WASM module
     await init();
 
+    // Create renderer
     const renderer = new BeamtermRenderer('#terminal');
     const app = new TerminalApp(renderer);
 
-    let {width, height} = calculateCanvasSize();
-    app.resize_terminal(width, height); // triggers rendering
+    // Set initial canvas size
+    const { width, height } = calculateCanvasSize();
+    const canvas = document.getElementById('terminal') as HTMLCanvasElement;
+    canvas.width = width;
+    canvas.height = height;
 
-    function animate() {
-        renderer.render();
-        requestAnimationFrame(animate);
-    }
-    animate();
+    app.resizeTerminal(width, height);
 
-    // Handle resize
+    // Start animation loop
+    const animationController = new AnimationController(app);
+    animationController.start();
+
+    // Handle window resize
+    let resizeTimeout: number;
     window.addEventListener('resize', () => {
-        let {width, height} = calculateCanvasSize();
-
-        const canvas = document.getElementById('terminal') as HTMLCanvasElement;
-        canvas.width = width;
-        canvas.height = height;
-
-        app.resize_terminal(width, height);
+        clearTimeout(resizeTimeout);
+        resizeTimeout = window.setTimeout(() => {
+            const { width, height } = calculateCanvasSize();
+            canvas.width = width;
+            canvas.height = height;
+            app.resizeTerminal(width, height);
+        }, 100);
     });
 }
 
 function calculateCanvasSize(): { width: number; height: number } {
-    const width = window.innerWidth - 40;
-    const height = window.innerHeight - 100;
+    const width = Math.min(window.innerWidth - 40, 1200);
+    const height = Math.min(window.innerHeight - 100, 800);
 
     return { width, height };
 }
 
-main();
+// Start the application
+main().catch(error => {
+    console.error('Failed to initialize Beamterm:', error);
+});

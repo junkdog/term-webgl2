@@ -82,6 +82,7 @@ build_target() {
         --out-dir $out_dir \
         --out-name beamterm_renderer \
         --no-pack \
+        --features js-api \
         $WASM_PACK_FLAGS
 
     log ok "$target package built"

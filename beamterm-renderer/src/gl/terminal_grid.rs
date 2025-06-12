@@ -344,21 +344,12 @@ impl<'a> Batch<'a> {
         Self { grid, gl }
     }
 
-    pub fn put_cell(
-        &mut self,
-        row: u16,
-        col: u16,
-        cell_data: CellData<'a>,
-    ) -> Result<(), Error> {
+    pub fn put_cell(&mut self, row: u16, col: u16, cell_data: CellData<'a>) -> Result<(), Error> {
         self.grid.update_cell(row, col, cell_data);
         Ok(())
     }
 
-    pub fn put_cell_by_index(
-        &mut self,
-        idx: usize,
-        cell_data: CellData<'a>,
-    ) -> Result<(), Error> {
+    pub fn put_cell_by_index(&mut self, idx: usize, cell_data: CellData<'a>) -> Result<(), Error> {
         self.grid.update_cell_by_index(idx, cell_data);
         Ok(())
     }
@@ -377,8 +368,7 @@ impl<'a> Batch<'a> {
 
 impl<'a> Drop for Batch<'a> {
     fn drop(&mut self) {
-        self.grid.flush_cells(self.gl)
-            .unwrap_or_default();
+        self.grid.flush_cells(self.gl).unwrap_or_default();
     }
 }
 
