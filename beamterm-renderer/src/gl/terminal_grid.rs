@@ -671,22 +671,24 @@ impl CellStatic {
 }
 
 impl CellDynamic {
-    #[rustfmt::skip]
     fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
         let mut data = [0; 8];
         debug_assert!(glyph_id < 0x0100, "Glyph ID {glyph_id} exceeds 8-bit limit");
 
-        // todo: compare against .to_le_bytes()?
-        data[0] = (glyph_id & 0xFF) as u8;
-        data[1] = ((glyph_id >> 8) & 0xFF) as u8;
+        // pack glyph ID into the first two bytes
+        let glyph_id = glyph_id.to_le_bytes();
+        data[0] = glyph_id[0];
+        data[1] = glyph_id[1];
 
-        data[2] = ((fg >> 16) & 0xFF) as u8; // R
-        data[3] = ((fg >> 8) & 0xFF) as u8;  // G
-        data[4] = ((fg) & 0xFF) as u8;       // B
+        let fg = fg.to_le_bytes();
+        data[2] = fg[2]; // R
+        data[3] = fg[1]; // G
+        data[4] = fg[0]; // B
 
-        data[5] = ((bg >> 16) & 0xFF) as u8; // R
-        data[6] = ((bg >> 8) & 0xFF) as u8;  // G
-        data[7] = ((bg) & 0xFF) as u8;       // B
+        let bg = bg.to_le_bytes();
+        data[5] = bg[2]; // R
+        data[6] = bg[1]; // G
+        data[7] = bg[0]; // B
 
         Self { data }
     }

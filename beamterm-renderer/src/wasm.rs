@@ -123,14 +123,13 @@ impl Batch {
     #[wasm_bindgen(js_name = "putCells")]
     pub fn put_cells(&mut self, cells_json: JsValue) -> Result<(), JsValue> {
         self.dirty = true;
-        
+
         let updates = from_value::<Vec<(u16, u16, Cell)>>(cells_json)
             .map_err(|e| JsValue::from_str(&e.to_string()));
 
         match updates {
             Ok(cells) => {
-                let cell_data =
-                    cells.iter().map(|(x, y, data)| (*x, *y, data.as_cell_data()));
+                let cell_data = cells.iter().map(|(x, y, data)| (*x, *y, data.as_cell_data()));
 
                 let mut terminal_grid = self.terminal_grid.borrow_mut();
                 terminal_grid
@@ -153,7 +152,7 @@ impl Batch {
         bg: u32,
     ) -> Result<(), JsValue> {
         self.dirty = true;
-        
+
         let mut terminal_grid = self.terminal_grid.borrow_mut();
         let (cols, rows) = terminal_grid.terminal_size();
 
@@ -186,7 +185,7 @@ impl Batch {
         cell_data: &Cell,
     ) -> Result<(), JsValue> {
         self.dirty = true;
-        
+
         let mut terminal_grid = self.terminal_grid.borrow_mut();
         let (cols, rows) = terminal_grid.terminal_size();
 
@@ -207,7 +206,7 @@ impl Batch {
     #[wasm_bindgen]
     pub fn clear(&mut self, bg: u32) -> Result<(), JsValue> {
         self.dirty = true;
-        
+
         let mut terminal_grid = self.terminal_grid.borrow_mut();
         let (cols, rows) = terminal_grid.terminal_size();
 
@@ -231,7 +230,7 @@ impl Batch {
                 .flush_cells(&self.gl)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        
+
         Ok(())
     }
 }
