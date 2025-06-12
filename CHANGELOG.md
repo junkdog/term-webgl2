@@ -15,7 +15,6 @@ All notable changes to this project will be documented in this file.
 ### 💼 Other
 
 - *(renderer)* Add TerminalGrid::base_glyph_id(&str)
-- *(renderer)* Add TerminalGrid::flush_cells
 - *(renderer)* Add experimental JS support
 - *(js)* Add webpack example
 - *(js)* Add vite+typescript example
