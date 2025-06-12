@@ -54,6 +54,7 @@ pub struct Batch {
     // no functions exported when named `JsBatch`
     terminal_grid: Rc<RefCell<TerminalGrid>>,
     gl: web_sys::WebGl2RenderingContext,
+    dirty: bool,
 }
 
 #[wasm_bindgen]
@@ -103,13 +104,15 @@ impl CellStyle {
 impl Batch {
     /// Updates a single cell at the given position.
     #[wasm_bindgen(js_name = "putCell")]
-    pub fn put_cell(&self, row: u16, col: u16, cell_data: &Cell) {
-        self.terminal_grid.borrow_mut().update_cell(row, col, cell_data.as_cell_data());
+    pub fn put_cell(&mut self, x: u16, y: u16, cell_data: &Cell) {
+        self.dirty = true;
+        self.terminal_grid.borrow_mut().update_cell(x, y, cell_data.as_cell_data());
     }
 
     /// Updates a cell by its buffer index.
     #[wasm_bindgen(js_name = "putCellByIndex")]
-    pub fn put_cell_by_index(&self, idx: usize, cell_data: &Cell) {
+    pub fn put_cell_by_index(&mut self, idx: usize, cell_data: &Cell) {
+        self.dirty = true;
         self.terminal_grid
             .borrow_mut()
             .update_cell_by_index(idx, cell_data.as_cell_data());
@@ -119,13 +122,15 @@ impl Batch {
     /// Each element should be [row, col, cellData].
     #[wasm_bindgen(js_name = "putCells")]
     pub fn put_cells(&mut self, cells_json: JsValue) -> Result<(), JsValue> {
+        self.dirty = true;
+        
         let updates = from_value::<Vec<(u16, u16, Cell)>>(cells_json)
             .map_err(|e| JsValue::from_str(&e.to_string()));
 
         match updates {
             Ok(cells) => {
                 let cell_data =
-                    cells.iter().map(|(row, col, data)| (*row, *col, data.as_cell_data()));
+                    cells.iter().map(|(x, y, data)| (*x, *y, data.as_cell_data()));
 
                 let mut terminal_grid = self.terminal_grid.borrow_mut();
                 terminal_grid
@@ -139,30 +144,32 @@ impl Batch {
     /// Write text to the terminal
     #[wasm_bindgen(js_name = "writeText")]
     pub fn write_text(
-        &self,
-        row: u16,
-        col: u16,
+        &mut self,
+        x: u16,
+        y: u16,
         text: &str,
         style: &CellStyle,
         fg: u32,
         bg: u32,
     ) -> Result<(), JsValue> {
+        self.dirty = true;
+        
         let mut terminal_grid = self.terminal_grid.borrow_mut();
         let (cols, rows) = terminal_grid.terminal_size();
 
-        if row >= rows {
+        if y >= rows {
             return Err(JsValue::from_str("Row out of bounds"));
         }
 
         for (i, ch) in text.chars().enumerate() {
-            let current_col = col + i as u16;
+            let current_col = x + i as u16;
             if current_col >= cols {
                 break;
             }
 
             let ch_str = ch.to_string();
             let cell = CellData::new_with_style_bits(&ch_str, style.bits, fg, bg);
-            terminal_grid.update_cell(row, current_col, cell);
+            terminal_grid.update_cell(current_col, y, cell);
         }
 
         Ok(())
@@ -171,13 +178,15 @@ impl Batch {
     /// Fill a rectangular region
     #[wasm_bindgen(js_name = "fillRect")]
     pub fn fill_rect(
-        &self,
+        &mut self,
         row: u16,
         col: u16,
         width: u16,
         height: u16,
         cell_data: &Cell,
     ) -> Result<(), JsValue> {
+        self.dirty = true;
+        
         let mut terminal_grid = self.terminal_grid.borrow_mut();
         let (cols, rows) = terminal_grid.terminal_size();
 
@@ -185,9 +194,9 @@ impl Batch {
             return Err(JsValue::from_str("Rectangle extends beyond terminal bounds"));
         }
 
-        for r in row..row + height {
-            for c in col..col + width {
-                terminal_grid.update_cell(r, c, cell_data.as_cell_data());
+        for y in row..row + height {
+            for x in col..col + width {
+                terminal_grid.update_cell(x, y, cell_data.as_cell_data());
             }
         }
 
@@ -196,14 +205,16 @@ impl Batch {
 
     /// Clear the terminal with specified background color
     #[wasm_bindgen]
-    pub fn clear(&self, bg: u32) -> Result<(), JsValue> {
+    pub fn clear(&mut self, bg: u32) -> Result<(), JsValue> {
+        self.dirty = true;
+        
         let mut terminal_grid = self.terminal_grid.borrow_mut();
         let (cols, rows) = terminal_grid.terminal_size();
 
-        for row in 0..rows {
-            for col in 0..cols {
+        for y in 0..rows {
+            for x in 0..cols {
                 let cell = CellData::new_with_style_bits(" ", 0, 0xFFFFFF, bg);
-                terminal_grid.update_cell(row, col, cell);
+                terminal_grid.update_cell(x, y, cell);
             }
         }
 
@@ -212,11 +223,16 @@ impl Batch {
 
     /// Synchronize all pending updates to the GPU
     #[wasm_bindgen]
-    pub fn flush(&self) -> Result<(), JsValue> {
-        self.terminal_grid
-            .borrow_mut()
-            .flush_cells(&self.gl)
-            .map_err(|e| JsValue::from_str(&e.to_string()))
+    pub fn flush(&mut self) -> Result<(), JsValue> {
+        if self.dirty {
+            self.dirty = false;
+            self.terminal_grid
+                .borrow_mut()
+                .flush_cells(&self.gl)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        
+        Ok(())
     }
 }
 
@@ -308,7 +324,7 @@ impl BeamtermRenderer {
     pub fn new_render_batch(&mut self) -> Batch {
         let gl = self.renderer.gl().clone();
         let terminal_grid = self.terminal_grid.clone();
-        Batch { terminal_grid, gl }
+        Batch { terminal_grid, gl, dirty: false }
     }
 
     /// Get the terminal dimensions in cells

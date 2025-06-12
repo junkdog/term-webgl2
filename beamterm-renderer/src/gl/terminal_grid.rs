@@ -40,11 +40,6 @@ pub struct TerminalGrid {
     sampler_loc: web_sys::WebGlUniformLocation,
 }
 
-pub(crate) struct Batch<'a> {
-    grid: &'a mut TerminalGrid,
-    gl: &'a WebGl2RenderingContext,
-}
-
 #[derive(Debug)]
 struct TerminalBuffers {
     vao: web_sys::WebGlVertexArrayObject,
@@ -213,9 +208,9 @@ impl TerminalGrid {
         Ok(())
     }
 
-    pub(crate) fn update_cell(&mut self, row: u16, col: u16, cell_data: CellData) {
+    pub(crate) fn update_cell(&mut self, x: u16, y: u16, cell_data: CellData) {
         let (cols, _) = self.terminal_size;
-        let idx = row as usize * cols as usize + col as usize;
+        let idx = y as usize * cols as usize + x as usize;
         self.update_cell_by_index(idx, cell_data);
     }
 
@@ -336,39 +331,6 @@ impl TerminalGrid {
         .map(|(symbol, style)| atlas.get_base_glyph_id(symbol).map(|g| g | style as u16))
         .map(|g| g.unwrap_or(' ' as u16))
         .collect()
-    }
-}
-
-impl<'a> Batch<'a> {
-    pub fn new(grid: &'a mut TerminalGrid, gl: &'a WebGl2RenderingContext) -> Self {
-        Self { grid, gl }
-    }
-
-    pub fn put_cell(&mut self, row: u16, col: u16, cell_data: CellData<'a>) -> Result<(), Error> {
-        self.grid.update_cell(row, col, cell_data);
-        Ok(())
-    }
-
-    pub fn put_cell_by_index(&mut self, idx: usize, cell_data: CellData<'a>) -> Result<(), Error> {
-        self.grid.update_cell_by_index(idx, cell_data);
-        Ok(())
-    }
-
-    pub fn put_cells(
-        &mut self,
-        cells: impl Iterator<Item = (u16, u16, CellData<'a>)>,
-    ) -> Result<(), Error> {
-        self.grid.update_cells_by_position(self.gl, cells)
-    }
-
-    pub fn flush(&mut self) -> Result<(), Error> {
-        self.grid.flush_cells(self.gl)
-    }
-}
-
-impl<'a> Drop for Batch<'a> {
-    fn drop(&mut self) {
-        self.grid.flush_cells(self.gl).unwrap_or_default();
     }
 }
 
