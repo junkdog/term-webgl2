@@ -7,6 +7,8 @@ async function main() {
         await init();
         console.log('✅ WASM module initialized');
 
+        const fps = fpsCounter();
+
         // Create renderer instance
         const renderer = new BeamtermRenderer('#terminal');
         const size = renderer.terminalSize();
@@ -16,10 +18,10 @@ async function main() {
         const app = new TerminalDemo(renderer);
 
         // Initial render
-        app.render();
+        app.full_render(fps);
 
         // Start animation loop
-        app.startAnimation();
+        app.startAnimation(fps);
 
         // Handle window resize
         window.addEventListener('resize', () => {
@@ -29,7 +31,7 @@ async function main() {
 
             renderer.resize(canvas.width, canvas.height);
             app.updateSize();
-            app.render();
+            app.full_render(fps);
         });
 
     } catch (error) {
@@ -56,7 +58,7 @@ class TerminalDemo {
         this.size = this.renderer.terminalSize();
     }
 
-    render() {
+    full_render(fps) {
         // Create a new batch for this frame
         const batch = this.renderer.batch();
 
@@ -68,7 +70,23 @@ class TerminalDemo {
         this.drawHeader(batch);
         this.drawContent(batch);
         this.drawColorPalette(batch);
-        this.drawStatusBar(batch);
+        this.drawStatusBar(batch, fps);
+        this.drawWaveAnimation(batch)
+
+        // Synchronize all updates to GPU in one call
+        batch.flush();
+
+        // Render the frame
+        this.renderer.render();
+    }
+
+    render(fps) {
+        // Create a new batch for this frame
+        const batch = this.renderer.batch();
+
+        // Draw animated UI elements
+        this.drawStatusBar(batch, fps);
+        this.drawWaveAnimation(batch)
 
         // Synchronize all updates to GPU in one call
         batch.flush();
@@ -110,7 +128,7 @@ class TerminalDemo {
         });
 
         // Update all border cells in one efficient call
-        batch.putCells(borderCells);
+        batch.cells(borderCells);
     }
 
     drawHeader(batch) {
@@ -118,11 +136,11 @@ class TerminalDemo {
         const style = new CellStyle().bold();
         const startX = Math.floor((this.size.width - title.length) / 2);
 
-        batch.writeText(startX, 0, title, style, 0x7aa2f7, 0x1a1b26);
+        batch.text(startX, 0, title, style, 0x7aa2f7, 0x1a1b26);
 
         // Version info
         const version = "v0.1.0";
-        batch.writeText(this.size.width - version.length - 2, 0, version, new CellStyle(), 0x565f89, 0x1a1b26);
+        batch.text(this.size.width - version.length - 2, 0, version, new CellStyle(), 0x565f89, 0x1a1b26);
     }
 
     drawContent(batch) {
@@ -134,7 +152,7 @@ class TerminalDemo {
 
         content.forEach(({ text, y, style, color }) => {
             const x = Math.floor((this.size.width - text.length) / 2);
-            batch.writeText(x, y, text, style, color, 0x1a1b26);
+            batch.text(x, y, text, style, color, 0x1a1b26);
         });
 
         // Feature list
@@ -147,7 +165,7 @@ class TerminalDemo {
         ];
 
         features.forEach((feature, i) => {
-            batch.writeText(4, 7 + i, feature, new CellStyle(), 0xa9b1d6, 0x1a1b26);
+            batch.text(4, 7 + i, feature, new CellStyle(), 0xa9b1d6, 0x1a1b26);
         });
 
         // Style demonstrations
@@ -155,7 +173,7 @@ class TerminalDemo {
     }
 
     drawStyleDemo(batch, startY) {
-        batch.writeText(4, startY, "Text Styles:", new CellStyle().bold(), 0xc0caf5, 0x1a1b26);
+        batch.text(4, startY, "Text Styles:", new CellStyle().bold(), 0xc0caf5, 0x1a1b26);
 
         const styleDemo = [
             { text: "Normal", style: new CellStyle(), x: 4 },
@@ -166,12 +184,12 @@ class TerminalDemo {
         ];
 
         styleDemo.forEach(({ text, style, x }) => {
-            batch.writeText(x, startY + 2, text, style, 0x7aa2f7, 0x1a1b26);
+            batch.text(x, startY + 2, text, style, 0x7aa2f7, 0x1a1b26);
         });
 
         // Combined styles
         const combined = new CellStyle().bold().italic().underline();
-        batch.writeText(4, startY + 4, "Combined: Bold + Italic + Underline", combined, 0xbb9af7, 0x1a1b26);
+        batch.text(4, startY + 4, "Combined: Bold + Italic + Underline", combined, 0xbb9af7, 0x1a1b26);
     }
 
     drawColorPalette(batch) {
@@ -185,7 +203,7 @@ class TerminalDemo {
             { name: "Cyan", value: 0x7dcfff },
         ];
 
-        batch.writeText(4, startY, "Color Palette:", new CellStyle().bold(), 0xc0caf5, 0x1a1b26);
+        batch.text(4, startY, "Color Palette:", new CellStyle().bold(), 0xc0caf5, 0x1a1b26);
 
         // Collect all color block cells for batch update
         const colorCells = [];
@@ -205,14 +223,14 @@ class TerminalDemo {
             }
 
             // Color name
-            batch.writeText(x + 6, y, color.name, new CellStyle(), 0xa9b1d6, 0x1a1b26);
+            batch.text(x + 6, y, color.name, new CellStyle(), 0xa9b1d6, 0x1a1b26);
         });
 
         // Update all color cells at once for efficiency
-        batch.putCells(colorCells);
+        batch.cells(colorCells);
     }
 
-    drawStatusBar(batch) {
+    drawStatusBar(batch, fps) {
         const y = this.size.height - 2;
 
         // Status bar background
@@ -220,41 +238,31 @@ class TerminalDemo {
         for (let x = 1; x < this.size.width - 1; x++) {
             statusBg.push([x, y, { symbol: ' ', style: 0, fg: 0xc0caf5, bg: 0x24283b }]);
         }
-        batch.putCells(statusBg);
+        batch.cells(statusBg);
 
         // Status text
-        const fps = Math.round(1000 / 16); // Approximate FPS
-        const status = ` FPS: ${fps} | Cells: ${this.size.width * this.size.height} | Frame: ${this.frame} `;
-        batch.writeText(2, y, status, new CellStyle(), 0xc0caf5, 0x24283b);
+        const status = ` FPS: ${fps.tick().toFixed(1)} | Cells: ${this.size.width * this.size.height} | Frame: ${this.frame} `;
+        batch.text(2, y, status, new CellStyle(), 0xc0caf5, 0x24283b);
 
         // Right-aligned info
         const info = "Press F11 for fullscreen ";
-        batch.writeText(this.size.width - info.length - 3, y, info, new CellStyle(), 0xa9b1d6, 0x24283b);
+        batch.text(this.size.width - info.length - 3, y, info, new CellStyle(), 0xa9b1d6, 0x24283b);
     }
 
-    startAnimation() {
+    startAnimation(fps) {
         const animate = () => {
             const batch = this.renderer.batch();
 
             // Animated spinner
             const spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
             const spinnerChar = spinnerChars[(this.frame >> 3) % spinnerChars.length];
-            batch.putCell(this.size.width - 4, this.size.height - 2, new Cell(spinnerChar, new CellStyle(), 0x7aa2f7, 0x24283b));
-
-            // Animated wave effect
-            this.drawWaveAnimation(batch);
+            batch.cell(this.size.width - 4, this.size.height - 2, new Cell(spinnerChar, new CellStyle(), 0x7aa2f7, 0x24283b));
 
             // Update frame counter
             this.frame++;
 
-            // Only re-render the full screen every 60 frames
-            if (this.frame % 60 === 0) {
-                this.render();
-            } else {
-                // Otherwise just update the animated parts
-                batch.flush();
-                this.renderer.render();
-            }
+            batch.flush();
+            this.render(fps);
 
             requestAnimationFrame(animate);
         };
@@ -282,8 +290,41 @@ class TerminalDemo {
             }]);
         }
 
-        batch.putCells(waveCells);
+        batch.cells(waveCells);
     }
+}
+
+function fpsCounter() {
+    let samples = [];
+    let lastTime = performance.now();
+    let remaining_repeat = 0;
+    let reported = 0.0;
+
+    return {
+        tick() {
+            const now = performance.now();
+            const delta = now - lastTime;
+            lastTime = now;
+
+            // Keep last 3 samples
+            samples.push(1000 / delta);
+            if (samples.length > 3) samples.shift();
+
+            if (remaining_repeat > 0) {
+                remaining_repeat--;
+            } else {
+                remaining_repeat = 30;
+                if (samples.length === 3) {
+                    const sorted = [...samples].sort((a, b) => a - b);
+                    reported = sorted[1];
+                } else {
+                    reported = samples[samples.length - 1];
+                }
+            }
+
+            return reported;
+        }
+    };
 }
 
 // Start the application when DOM is ready

@@ -533,7 +533,7 @@ impl Drawable for TerminalGrid {
 /// - RR: Red component
 /// - GG: Green component  
 /// - BB: Blue component
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct CellData<'a> {
     // todo: try to pre-pack the available glyph id bits
     symbol: &'a str,
