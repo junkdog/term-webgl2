@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>beamterm Examples</title>
-    <meta name="description" content="Live demos of the beamterm WebGL2 terminal renderer - high-performance terminal rendering for web browsers">
+    <title>Beamterm Examples</title>
+    <meta name="description" content="Live demos of the Beamterm WebGL2 terminal renderer - high-performance terminal rendering for web browsers">
     <meta name="keywords" content="terminal, webgl, wasm, renderer, performance, typescript, javascript">
 
     <!-- Open Graph -->
-    <meta property="og:title" content="beamterm Examples">
+    <meta property="og:title" content="Beamterm Examples">
     <meta property="og:description" content="High-performance WebGL2 terminal renderer demos">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://junkdog.github.io/beamterm/">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="beamterm Examples">
+    <meta name="twitter:title" content="Beamterm Examples">
     <meta name="twitter:description" content="High-performance WebGL2 terminal renderer demos">
 
     <style>
@@ -56,6 +56,18 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             font-weight: bold;
+        }
+
+        h2 {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            margin: 3rem 0 1.5rem 0;
+            color: #c0caf5;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        h2:first-of-type {
+            margin-top: 2rem;
         }
 
         .subtitle {
@@ -105,6 +117,7 @@
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 2rem;
             margin-bottom: 3rem;
+            justify-items: center;
         }
 
         .example-card {
@@ -117,6 +130,8 @@
             color: inherit;
             position: relative;
             overflow: hidden;
+            width: 100%;
+            max-width: 500px;
         }
 
         .example-card::before {
@@ -202,6 +217,33 @@
             box-shadow: 0 4px 12px rgba(122, 162, 247, 0.5);
         }
 
+        .example-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .source-link {
+            color: #a9b1d6;
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            border: 1px solid #414868;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .source-link:hover {
+            color: #7aa2f7;
+            border-color: #7aa2f7;
+            background: rgba(122, 162, 247, 0.1);
+        }
+
         .links {
             display: flex;
             justify-content: center;
@@ -274,6 +316,11 @@
             margin-left: 0.5rem;
         }
 
+        .perf-indicator.external {
+            background: rgba(255, 158, 100, 0.2);
+            color: #ff9e64;
+        }
+
         .tech-badge {
             display: inline-block;
             background: rgba(187, 154, 247, 0.2);
@@ -289,7 +336,7 @@
 <body>
 <div class="container">
     <header class="header">
-        <h1>🚀 beamterm</h1>
+        <h1>🚀 Beamterm Examples</h1>
         <p class="subtitle">High-performance WebGL2 terminal renderer</p>
         <p class="tagline">Sub-millisecond render times through GPU-accelerated instanced rendering</p>
 
@@ -309,9 +356,40 @@
         </div>
     </header>
 
-    <h1>JS/TS Examples</h1>
+    <h2>Pure Rust/WASM Example</h2>
     <section class="examples">
-        <a href="./webpack/" class="example-card">
+        <div class="example-card">
+            <div class="example-title">
+                Ratzilla Canvas Waves
+                <span class="perf-indicator external">External Demo</span>
+            </div>
+            <div class="example-tech">
+                <span class="tech-badge">Pure Rust</span>
+                <span class="tech-badge">WASM</span>
+                <span class="tech-badge">No JavaScript</span>
+            </div>
+            <div class="example-description">
+                Full terminal application showcasing beamterm's performance with colorful animations.
+                Running at 60 FPS with sub-millisecond render times.
+            </div>
+            <ul class="example-features">
+                <li>100% Rust implementation</li>
+                <li>Sub-ms render performance</li>
+            </ul>
+            <div class="example-actions">
+                <a href="https://orhun.dev/ratzilla/canvas_waves/" class="cta" target="_blank" rel="noopener noreferrer">
+                    Launch Demo →
+                </a>
+                <a href="https://github.com/orhun/ratzilla/tree/main/examples/canvas_waves" class="source-link" target="_blank" rel="noopener noreferrer">
+                    📄 View Source
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <h2>JS/TS Examples</h2>
+    <section class="examples">
+        <div class="example-card">
             <div class="example-title">
                 Webpack Example
                 <span class="perf-indicator">Live Demo</span>
@@ -331,12 +409,17 @@
                 <li>Color palette showcase</li>
                 <li>Real-time FPS counter</li>
             </ul>
-            <div class="cta">
-                Launch Demo →
+            <div class="example-actions">
+                <a href="./webpack/" class="cta">
+                    Launch Demo →
+                </a>
+                <a href="https://github.com/junkdog/beamterm/tree/main/js/examples/webpack" class="source-link" target="_blank" rel="noopener noreferrer">
+                    📄 View Source
+                </a>
             </div>
-        </a>
+        </div>
 
-        <a href="./vite/" class="example-card">
+        <div class="example-card">
             <div class="example-title">
                 Vite + TypeScript
                 <span class="perf-indicator">Live Demo</span>
@@ -356,10 +439,15 @@
                 <li>Component architecture</li>
                 <li>Batch API demonstration</li>
             </ul>
-            <div class="cta">
-                Launch Demo →
+            <div class="example-actions">
+                <a href="./vite/" class="cta">
+                    Launch Demo →
+                </a>
+                <a href="https://github.com/junkdog/beamterm/tree/main/js/examples/vite" class="source-link" target="_blank" rel="noopener noreferrer">
+                    📄 View Source
+                </a>
             </div>
-        </a>
+        </div>
     </section>
 
     <section class="links">
