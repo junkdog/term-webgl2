@@ -69,7 +69,7 @@ function buildExample(exampleName) {
 }
 
 // Build all examples
-const examples = ['webpack', 'vite'];
+const examples = ['webpack', 'vite', 'api-demo'];
 const results = [];
 
 for (const example of examples) {
@@ -88,40 +88,8 @@ if (fs.existsSync(landingPageSrc)) {
     fs.copyFileSync(landingPageSrc, landingPageDest);
     console.log('✅ Landing page created');
 } else {
-    console.log('⚠️  Landing page template not found, creating basic one...');
-
-    // Fallback basic landing page
-    const basicLandingPage = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>beamterm Examples</title>
-    <style>
-        body { font-family: system-ui; max-width: 800px; margin: 50px auto; padding: 20px; }
-        .examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .example { border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
-        .example a { text-decoration: none; color: #0066cc; }
-    </style>
-</head>
-<body>
-    <h1>🚀 beamterm Examples</h1>
-    <p>High-performance WebGL2 terminal renderer demos</p>
-    <div class="examples">
-        <div class="example">
-            <h3><a href="./webpack/">Webpack Example</a></h3>
-            <p>Classic bundler setup with JavaScript</p>
-        </div>
-        <div class="example">
-            <h3><a href="./vite/">Vite + TypeScript</a></h3>
-            <p>Modern development with TypeScript</p>
-        </div>
-    </div>
-</body>
-</html>`;
-
-    fs.writeFileSync(landingPageDest, basicLandingPage);
-    console.log('✅ Basic landing page created');
+    console.log('⚠️  Landing page template not found, exiting...');
+    throw new Error('Landing page template missing');
 }
 
 console.log('');
@@ -167,6 +135,7 @@ console.log('\n🔍 Validating WASM files...');
 const wasmChecks = [
     'webpack/bundle.js',
     'vite/index.html',
+    'api-demo/index.html',
 ];
 
 let wasmValid = true;
