@@ -12,6 +12,7 @@ Cargo.lock
 /js/dist/
 /js/test-output.png
 /js/.parcel-cache/
+/js/examples-dist/
 /js/examples/*/node_modules/
 /js/examples/*/dist/
 /js/examples/*/.parcel-cache/
@@ -52,3 +53,5 @@ coverage/
 __pycache__/
 *.py[cod]
 *$py.class
+
+.vite

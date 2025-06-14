@@ -1,4 +1,4 @@
-import { main as init, style, BeamtermRenderer, CellStyle, Batch } from '@beamterm/renderer';
+import { main as init, style, BeamtermRenderer, Batch } from '@beamterm/renderer';
 
 interface Theme {
     bg: number;
@@ -96,7 +96,6 @@ class TerminalApp {
         // Draw a demo terminal window
         const windowY = 6;
         const windowHeight = this.rows - 10;
-        const windowWidth = this.cols - 4;
 
         // Demo content inside window
         const demoLines = [

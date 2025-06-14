@@ -39,6 +39,7 @@
   },
   "scripts": {
     "build": "node build.js",
+    "build:examples": "node scripts/build-examples.js",
     "test": "node test/test-node.js",
     "test:e2e": "playwright test"
   },

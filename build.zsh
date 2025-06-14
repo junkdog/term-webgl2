@@ -10,6 +10,7 @@ ERROR="$fg_bold[red]✗$reset_color"
 INFO="$fg_bold[blue]→$reset_color"
 WARN="$fg_bold[yellow]⚠$reset_color"
 
+SCRIPT_NAME=$(basename "$0")
 
 # Directory detection:
 # ${0:a:h} means:
@@ -25,6 +26,7 @@ typeset -A COMMANDS=(
     clean        "Clean all build artifacts"
     build-rust   "Build Rust crates"
     build-wasm   "Build WASM packages"
+    build-examples "Build all examples for deployment"
     test         "Run all tests"
     test-native  "Run native Rust tests"
     test-wasm    "Run WASM/JS tests"
@@ -57,6 +59,7 @@ cmd_clean() {
     cargo clean
     rm -rf $ROOT_DIR/target/wasm-pack
     rm -rf $ROOT_DIR/js/dist
+    rm -rf $ROOT_DIR/js/examples-dist
     rm -rf $ROOT_DIR/js/node_modules
     rm -f $ROOT_DIR/data/*.atlas
 
@@ -90,6 +93,22 @@ cmd_build-wasm() {
     $ROOT_DIR/scripts/build-wasm.zsh
 
     print_msg ok "WASM build complete"
+}
+
+# Build examples for deployment
+cmd_build-examples() {
+    print_msg info "Building examples for deployment..."
+
+    # Ensure WASM is built first
+    if [[ ! -d "$ROOT_DIR/js/dist" ]]; then
+        cmd_build-wasm
+    fi
+
+    cd $ROOT_DIR/js
+    npm run build:examples
+
+    print_msg ok "Examples build complete"
+    print_msg info "Output directory: $ROOT_DIR/js/examples-dist"
 }
 
 # Build everything
@@ -237,8 +256,14 @@ cmd_help() {
     done
 
     for cmd in $sorted_commands; do
-        printf "  %-12s %s\n" "$cmd" "$COMMANDS[$cmd]"
+        printf "  %-14s %s\n" "$cmd" "$COMMANDS[$cmd]"
     done
+
+    echo
+    echo "Examples:"
+    echo "  ./$SCRIPT_NAME all              # Build everything"
+    echo "  ./$SCRIPT_NAME build-examples   # Build examples for GitHub Pages"
+    echo "  ./$SCRIPT_NAME atlas jetbrains  # Generate atlas with JetBrains Mono"
 }
 
 # Main entry point
@@ -256,8 +281,9 @@ main() {
     # Change to root directory
     cd $ROOT_DIR
 
-    # Execute command
-    cmd_$cmd
+    # Execute command (shift away the command name)
+    shift
+    cmd_$cmd "$@"
 }
 
 # Run main with all arguments

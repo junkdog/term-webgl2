@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>beamterm Examples</title>
+    <meta name="description" content="Live demos of the beamterm WebGL2 terminal renderer - high-performance terminal rendering for web browsers">
+    <meta name="keywords" content="terminal, webgl, wasm, renderer, performance, typescript, javascript">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="beamterm Examples">
+    <meta property="og:description" content="High-performance WebGL2 terminal renderer demos">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://junkdog.github.io/beamterm/">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="beamterm Examples">
+    <meta name="twitter:description" content="High-performance WebGL2 terminal renderer demos">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f14 0%, #1a1b26 100%);
+            color: #c0caf5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .header {
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #7aa2f7, #bb9af7, #7dcfff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            color: #a9b1d6;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            color: #565f89;
+            margin-bottom: 2rem;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: rgba(36, 40, 59, 0.6);
+            border: 1px solid #414868;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            min-width: 120px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #7aa2f7;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #a9b1d6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .example-card {
+            background: rgba(36, 40, 59, 0.8);
+            border: 1px solid #414868;
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .example-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #7aa2f7, #bb9af7);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .example-card:hover {
+            transform: translateY(-4px);
+            border-color: #7aa2f7;
+            box-shadow: 0 8px 32px rgba(122, 162, 247, 0.3);
+        }
+
+        .example-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .example-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #7aa2f7;
+        }
+
+        .example-tech {
+            color: #bb9af7;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .example-description {
+            color: #c0caf5;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .example-features {
+            list-style: none;
+            text-align: left;
+            margin: 1rem 0;
+        }
+
+        .example-features li {
+            color: #a9b1d6;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            padding-left: 1.2rem;
+        }
+
+        .example-features li::before {
+            content: '→';
+            color: #7aa2f7;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(45deg, #7aa2f7, #bb9af7);
+            color: #1a1b26;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(122, 162, 247, 0.5);
+        }
+
+        .links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .link {
+            color: #7aa2f7;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border: 1px solid #414868;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .link:hover {
+            border-color: #7aa2f7;
+            background: rgba(122, 162, 247, 0.1);
+        }
+
+        .footer {
+            color: #565f89;
+            font-size: 0.9rem;
+            border-top: 1px solid #2a2e42;
+            padding-top: 2rem;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #7aa2f7;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .stats {
+                gap: 1rem;
+            }
+
+            .stat {
+                padding: 0.75rem 1rem;
+                min-width: 100px;
+            }
+
+            .links {
+                gap: 1rem;
+            }
+
+            .example-card {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Performance indicators */
+        .perf-indicator {
+            display: inline-block;
+            background: rgba(158, 206, 106, 0.2);
+            color: #9ece6a;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .tech-badge {
+            display: inline-block;
+            background: rgba(187, 154, 247, 0.2);
+            color: #bb9af7;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 0.2rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <h1>🚀 beamterm</h1>
+        <p class="subtitle">High-performance WebGL2 terminal renderer</p>
+        <p class="tagline">Sub-millisecond render times through GPU-accelerated instanced rendering</p>
+
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-number">&lt;1ms</span>
+                <span class="stat-label">Render Time</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">1</span>
+                <span class="stat-label">Draw Call</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">45k+</span>
+                <span class="stat-label">Cells</span>
+            </div>
+        </div>
+    </header>
+
+    <h1>JS/TS Examples</h1>
+    <section class="examples">
+        <a href="./webpack/" class="example-card">
+            <div class="example-title">
+                Webpack Example
+                <span class="perf-indicator">Live Demo</span>
+            </div>
+            <div class="example-tech">
+                <span class="tech-badge">Webpack 5</span>
+                <span class="tech-badge">JavaScript</span>
+                <span class="tech-badge">ES6</span>
+            </div>
+            <div class="example-description">
+                Classic bundler setup demonstrating beamterm integration with Webpack 5.
+                Features dynamic text rendering, color palettes, and smooth animation loops.
+            </div>
+            <ul class="example-features">
+                <li>Traditional webpack configuration</li>
+                <li>Dynamic terminal content</li>
+                <li>Color palette showcase</li>
+                <li>Real-time FPS counter</li>
+            </ul>
+            <div class="cta">
+                Launch Demo →
+            </div>
+        </a>
+
+        <a href="./vite/" class="example-card">
+            <div class="example-title">
+                Vite + TypeScript
+                <span class="perf-indicator">Live Demo</span>
+            </div>
+            <div class="example-tech">
+                <span class="tech-badge">Vite</span>
+                <span class="tech-badge">TypeScript</span>
+                <span class="tech-badge">ES Modules</span>
+            </div>
+            <div class="example-description">
+                Modern development setup with full TypeScript support, HMR, and
+                component-based architecture. Showcases advanced batch operations and type safety.
+            </div>
+            <ul class="example-features">
+                <li>Full TypeScript integration</li>
+                <li>Hot module replacement</li>
+                <li>Component architecture</li>
+                <li>Batch API demonstration</li>
+            </ul>
+            <div class="cta">
+                Launch Demo →
+            </div>
+        </a>
+    </section>
+
+    <section class="links">
+        <a href="https://github.com/junkdog/beamterm" class="link">
+            📦 View Source
+        </a>
+        <a href="https://docs.rs/beamterm-renderer" class="link">
+            📚 Documentation
+        </a>
+        <a href="https://crates.io/crates/beamterm-renderer" class="link">
+            🦀 Crates.io
+        </a>
+    </section>
+
+    <footer class="footer">
+        <p>
+            Built with 🦀 Rust + 🕸️ WebAssembly + ⚡ WebGL2
+        </p>
+        <p style="margin-top: 0.5rem;">
+            <a href="https://github.com/junkdog/beamterm/blob/main/LICENSE">MIT License</a> •
+            <a href="https://github.com/junkdog/beamterm/issues">Report Issues</a> •
+            <a href="https://github.com/junkdog/beamterm/discussions">Discussions</a>
+        </p>
+    </footer>
+</div>
+</body>
+</html>
