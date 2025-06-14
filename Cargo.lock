@@ -115,6 +115,7 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "thiserror",
+ "unicode-segmentation",
  "wasm-bindgen",
  "web-sys",
 ]
