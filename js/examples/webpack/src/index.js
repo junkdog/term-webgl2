@@ -1,4 +1,4 @@
-import { main as init, BeamtermRenderer, CellStyle, Cell } from '@beamterm/renderer';
+import {BeamtermRenderer, cell, main as init, style} from '@beamterm/renderer';
 
 // Initialize and run the terminal demo
 async function main() {
@@ -18,7 +18,7 @@ async function main() {
         const app = new TerminalDemo(renderer);
 
         // Initial render
-        app.full_render(fps);
+        app.fullRender(fps);
 
         // Start animation loop
         app.startAnimation(fps);
@@ -31,7 +31,7 @@ async function main() {
 
             renderer.resize(canvas.width, canvas.height);
             app.updateSize();
-            app.full_render(fps);
+            app.fullRender(fps);
         });
 
     } catch (error) {
@@ -58,7 +58,7 @@ class TerminalDemo {
         this.size = this.renderer.terminalSize();
     }
 
-    full_render(fps) {
+    fullRender(fps) {
         // Create a new batch for this frame
         const batch = this.renderer.batch();
 
@@ -88,6 +88,11 @@ class TerminalDemo {
         this.drawStatusBar(batch, fps);
         this.drawWaveAnimation(batch)
 
+        const spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        const spinnerChar = spinnerChars[(this.frame >> 3) % spinnerChars.length];
+        let spinnerStyle = style().fg(0x7aa2f7).bg(0x24283b);
+        batch.cell(this.size.width - 2, this.size.height - 2, cell(spinnerChar, spinnerStyle));
+
         // Synchronize all updates to GPU in one call
         batch.flush();
 
@@ -96,7 +101,7 @@ class TerminalDemo {
     }
 
     drawBorder(batch) {
-        const style = new CellStyle();
+        const borderStyle = style();
         const borderColor = 0x414868;
         const bgColor = 0x1a1b26;
 
@@ -105,14 +110,14 @@ class TerminalDemo {
 
         // Top and bottom borders
         for (let x = 0; x < this.size.width; x++) {
-            borderCells.push([x, 0, { symbol: '─', style: style.bits, fg: borderColor, bg: bgColor }]);
-            borderCells.push([x, this.size.height - 1, { symbol: '─', style: style.bits, fg: borderColor, bg: bgColor }]);
+            borderCells.push([x, 0, { symbol: '─', style: borderStyle.bits, fg: borderColor, bg: bgColor }]);
+            borderCells.push([x, this.size.height - 1, { symbol: '─', style: borderStyle.bits, fg: borderColor, bg: bgColor }]);
         }
 
         // Left and right borders
         for (let y = 0; y < this.size.height; y++) {
-            borderCells.push([0, y, { symbol: '│', style: style.bits, fg: borderColor, bg: bgColor }]);
-            borderCells.push([this.size.width - 1, y, { symbol: '│', style: style.bits, fg: borderColor, bg: bgColor }]);
+            borderCells.push([0, y, { symbol: '│', style: borderStyle.bits, fg: borderColor, bg: bgColor }]);
+            borderCells.push([this.size.width - 1, y, { symbol: '│', style: borderStyle.bits, fg: borderColor, bg: bgColor }]);
         }
 
         // Corners
@@ -124,7 +129,7 @@ class TerminalDemo {
         ];
 
         corners.forEach(({ pos: [x, y], char }) => {
-            borderCells.push([x, y, { symbol: char, style: style.bits, fg: borderColor, bg: bgColor }]);
+            borderCells.push([x, y, { symbol: char, style: borderStyle.bits, fg: borderColor, bg: bgColor }]);
         });
 
         // Update all border cells in one efficient call
@@ -132,27 +137,26 @@ class TerminalDemo {
     }
 
     drawHeader(batch) {
-        const title = " 🚀 BeamTERM Webpack Example ";
-        const style = new CellStyle().bold();
+        const title = " 🚀 beamterm Webpack Example ";
         const startX = Math.floor((this.size.width - title.length) / 2);
 
-        batch.text(startX, 0, title, style, 0x7aa2f7, 0x1a1b26);
+        batch.text(startX, 0, title, style().bold().fg(0x7aa2f7).bg(0x1a1b26));
 
         // Version info
         const version = "v0.1.0";
-        batch.text(this.size.width - version.length - 2, 0, version, new CellStyle(), 0x565f89, 0x1a1b26);
+        batch.text(this.size.width - version.length - 2, 0, version, style().bold().fg(0x7aa2f7).bg(0x1a1b26));
     }
 
     drawContent(batch) {
         // Welcome message with different styles
         const content = [
-            { text: "Welcome to BeamTERM!", y: 3, style: new CellStyle().bold(), color: 0x9ece6a },
-            { text: "High-performance WebGL2 terminal renderer", y: 5, style: new CellStyle(), color: 0xc0caf5 },
+            { text: "Welcome to beamterm!", y: 3, style: style().bold().fg(0x9ece6a) },
+            { text: "High-performance WebGL2 terminal renderer", y: 5, style: style().fg(0xc0caf5) },
         ];
 
-        content.forEach(({ text, y, style, color }) => {
+        content.forEach(({ text, y, style }) => {
             const x = Math.floor((this.size.width - text.length) / 2);
-            batch.text(x, y, text, style, color, 0x1a1b26);
+            batch.text(x, y, text, style.bg(0x1a1b26));
         });
 
         // Feature list
@@ -165,7 +169,7 @@ class TerminalDemo {
         ];
 
         features.forEach((feature, i) => {
-            batch.text(4, 7 + i, feature, new CellStyle(), 0xa9b1d6, 0x1a1b26);
+            batch.text(4, 7 + i, feature, style().fg(0xa9b1d6).bg(0x1a1b26));
         });
 
         // Style demonstrations
@@ -173,23 +177,23 @@ class TerminalDemo {
     }
 
     drawStyleDemo(batch, startY) {
-        batch.text(4, startY, "Text Styles:", new CellStyle().bold(), 0xc0caf5, 0x1a1b26);
+        batch.text(4, startY, "Text Styles:", style().bold().fg(0xc0caf5).bg(0x1a1b26));
 
         const styleDemo = [
-            { text: "Normal", style: new CellStyle(), x: 4 },
-            { text: "Bold", style: new CellStyle().bold(), x: 14 },
-            { text: "Italic", style: new CellStyle().italic(), x: 22 },
-            { text: "Underline", style: new CellStyle().underline(), x: 32 },
-            { text: "Strikethrough", style: new CellStyle().strikethrough(), x: 45 },
+            { text: "Normal", style: style(), x: 4 },
+            { text: "Bold", style: style().bold(), x: 14 },
+            { text: "Italic", style: style().italic(), x: 22 },
+            { text: "Underline", style: style().underline(), x: 32 },
+            { text: "Strikethrough", style: style().strikethrough(), x: 45 },
         ];
 
         styleDemo.forEach(({ text, style, x }) => {
-            batch.text(x, startY + 2, text, style, 0x7aa2f7, 0x1a1b26);
+            batch.text(x, startY + 2, text, style.fg(0x7aa2f7).bg(0x1a1b26));
         });
 
         // Combined styles
-        const combined = new CellStyle().bold().italic().underline();
-        batch.text(4, startY + 4, "Combined: Bold + Italic + Underline", combined, 0xbb9af7, 0x1a1b26);
+        const combined = style().bold().italic().underline().fg(0xbb9af7).bg(0x1a1b26)
+        batch.text(4, startY + 4, "Combined: Bold + Italic + Underline", combined);
     }
 
     drawColorPalette(batch) {
@@ -203,7 +207,7 @@ class TerminalDemo {
             { name: "Cyan", value: 0x7dcfff },
         ];
 
-        batch.text(4, startY, "Color Palette:", new CellStyle().bold(), 0xc0caf5, 0x1a1b26);
+        batch.text(4, startY, "Color Palette:", style().bold().fg(0xc0caf5).bg(0x1a1b26));
 
         // Collect all color block cells for batch update
         const colorCells = [];
@@ -216,14 +220,14 @@ class TerminalDemo {
             for (let j = 0; j < 5; j++) {
                 colorCells.push([x + j, y, {
                     symbol: '█',
-                    style: new CellStyle().bits,
+                    style: 0,
                     fg: color.value,
                     bg: 0x1a1b26
                 }]);
             }
 
             // Color name
-            batch.text(x + 6, y, color.name, new CellStyle(), 0xa9b1d6, 0x1a1b26);
+            batch.text(x + 6, y, color.name, style().fg(0xa9b1d6).bg(0x1a1b26));
         });
 
         // Update all color cells at once for efficiency
@@ -242,28 +246,17 @@ class TerminalDemo {
 
         // Status text
         const status = ` FPS: ${fps.tick().toFixed(1)} | Cells: ${this.size.width * this.size.height} | Frame: ${this.frame} `;
-        batch.text(2, y, status, new CellStyle(), 0xc0caf5, 0x24283b);
+        batch.text(2, y, status, style().fg(0xc0caf5).bg(0x24283b));
 
         // Right-aligned info
         const info = "Press F11 for fullscreen ";
-        batch.text(this.size.width - info.length - 3, y, info, new CellStyle(), 0xa9b1d6, 0x24283b);
+        batch.text(this.size.width - info.length - 3, y, info, style().fg(0xa9b1d6).bg(0x24283b));
     }
 
     startAnimation(fps) {
         const animate = () => {
-            const batch = this.renderer.batch();
-
-            // Animated spinner
-            const spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-            const spinnerChar = spinnerChars[(this.frame >> 3) % spinnerChars.length];
-            batch.cell(this.size.width - 4, this.size.height - 2, new Cell(spinnerChar, new CellStyle(), 0x7aa2f7, 0x24283b));
-
-            // Update frame counter
-            this.frame++;
-
-            batch.flush();
             this.render(fps);
-
+            this.frame++;
             requestAnimationFrame(animate);
         };
 
@@ -284,7 +277,7 @@ class TerminalDemo {
 
             waveCells.push([x , waveY, {
                 symbol: waveChars[charIndex],
-                style: new CellStyle().bits,
+                style: style().bits,
                 fg: waveColors[colorIndex],
                 bg: 0x1a1b26
             }]);

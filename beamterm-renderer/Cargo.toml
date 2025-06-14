@@ -31,6 +31,10 @@ console_error_panic_hook = { workspace = true }
 thiserror = { workspace = true }
 js-sys = { workspace = true }
 
+[dependencies.unicode-segmentation]
+workspace = true
+optional = true
+
 [dependencies.wasm-bindgen]
 workspace = true
 optional = true
@@ -81,6 +85,7 @@ js-api = [
     "dep:serde",
     "dep:serde_json",
     "dep:serde-wasm-bindgen",
+    "dep:unicode-segmentation",
     "dep:wasm-bindgen",
 ]
 

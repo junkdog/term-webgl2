@@ -1,4 +1,4 @@
-import { main as init, BeamtermRenderer, CellStyle, Batch } from '@beamterm/renderer';
+import { main as init, style, BeamtermRenderer, CellStyle, Batch } from '@beamterm/renderer';
 
 interface Theme {
     bg: number;
@@ -65,10 +65,9 @@ class TerminalApp {
 
     private drawHeader(batch: Batch): void {
         const title = "🚀 beamterm + Vite + TypeScript";
-        const style = new CellStyle().bold();
         const x = Math.floor((this.cols - title.length) / 2);
 
-        batch.text(x, 1, title, style, tokyoNight.primary, tokyoNight.bg);
+        batch.text(x, 1, title, style().bold().fg(tokyoNight.primary).bg(tokyoNight.bg));
     }
 
     private drawMenu(batch: Batch): void {
@@ -83,12 +82,12 @@ class TerminalApp {
         const y = 3;
 
         menuItems.forEach(item => {
-            const keyStyle = new CellStyle().bold().underline();
-            const labelStyle = new CellStyle();
+            const keyStyle = style().bold().underline().bg(tokyoNight.bg);
+            const labelStyle = style().bg(tokyoNight.bg);
 
-            batch.text(x, y, `[${item.key}]`, keyStyle, item.color, tokyoNight.bg);
+            batch.text(x, y, `[${item.key}]`, keyStyle.fg(item.color));
             x += 3;
-            batch.text(x, y, ` ${item.label}  `, labelStyle, tokyoNight.fg, tokyoNight.bg);
+            batch.text(x, y, ` ${item.label}  `, labelStyle.fg(tokyoNight.fg));
             x += item.label.length + 3;
         });
     }
@@ -116,24 +115,22 @@ class TerminalApp {
 
         demoLines.forEach((line, i) => {
             if (i < windowHeight - 2) {
-                batch.text(4, windowY + 1 + i, line.text, new CellStyle(), line.color, tokyoNight.bg);
+                batch.text(4, windowY + 1 + i, line.text, style().fg(line.color).bg(tokyoNight.bg));
             }
         });
     }
 
     private drawStatus(batch: Batch): void {
         const status = `Cols: ${this.cols} | Rows: ${this.rows} | Batch API | Ready`;
-        const style = new CellStyle();
         const y = this.rows - 2;
 
         // Draw status bar background
-        const bgStyle = new CellStyle();
         const bar = '─'.repeat(this.cols);
-        batch.text(0, y, bar, bgStyle, tokyoNight.fg, tokyoNight.bg);
+        batch.text(0, y, bar, style().fg(tokyoNight.fg).bg(tokyoNight.bg));
 
         // Draw status text
         const x = this.cols - status.length - 2;
-        batch.text(x, y, status, style, tokyoNight.secondary, tokyoNight.bg);
+        batch.text(x, y, status, style().fg(tokyoNight.secondary).bg(tokyoNight.bg));
     }
 }
 

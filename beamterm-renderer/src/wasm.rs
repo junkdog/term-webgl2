@@ -3,6 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use beamterm_data::{FontAtlasData, Glyph};
 use compact_str::CompactString;
 use serde_wasm_bindgen::from_value;
+use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
@@ -27,18 +28,11 @@ pub struct Cell {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Default)]
-pub struct Span {
-    text: String,
-    style: CellStyle,
-    fg: Option<u32>,
-    bg: Option<u32>,
-}
-
-#[wasm_bindgen]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CellStyle {
-    bits: u16,
+    fg: u32,
+    bg: u32,
+    style_bits: u16,
 }
 
 #[wasm_bindgen]
@@ -57,45 +51,74 @@ pub struct Batch {
 }
 
 #[wasm_bindgen]
+pub fn style() -> CellStyle {
+    CellStyle::new()
+}
+
+#[wasm_bindgen]
+pub fn cell(symbol: String, style: CellStyle) -> Cell {
+    Cell {
+        symbol: symbol.into(),
+        style: style.style_bits,
+        fg: style.fg,
+        bg: style.bg,
+    }
+}
+
+#[wasm_bindgen]
 impl CellStyle {
     /// Create a new TextStyle with default (normal) style
     #[wasm_bindgen(constructor)]
     pub fn new() -> CellStyle {
-        CellStyle { bits: 0x0000 }
+        Default::default()
+    }
+
+    /// Sets the foreground color
+    #[wasm_bindgen]
+    pub fn fg(mut self, color: u32) -> CellStyle {
+        self.fg = color;
+        self
+    }
+
+    /// Sets the background color
+    #[wasm_bindgen]
+    pub fn bg(mut self, color: u32) -> CellStyle {
+        self.bg = color;
+        self
     }
 
     /// Add bold style
     #[wasm_bindgen]
     pub fn bold(mut self) -> CellStyle {
-        self.bits |= Glyph::BOLD_FLAG;
+        self.style_bits |= Glyph::BOLD_FLAG;
         self
     }
 
     /// Add italic style
     #[wasm_bindgen]
     pub fn italic(mut self) -> CellStyle {
-        self.bits |= Glyph::ITALIC_FLAG;
+        self.style_bits |= Glyph::ITALIC_FLAG;
         self
     }
 
     /// Add underline effect
     #[wasm_bindgen]
     pub fn underline(mut self) -> CellStyle {
-        self.bits |= Glyph::UNDERLINE_FLAG;
+        self.style_bits |= Glyph::UNDERLINE_FLAG;
         self
     }
 
     /// Add strikethrough effect
     #[wasm_bindgen]
     pub fn strikethrough(mut self) -> CellStyle {
-        self.bits |= Glyph::STRIKETHROUGH_FLAG;
+        self.style_bits |= Glyph::STRIKETHROUGH_FLAG;
         self
     }
 
     /// Get the combined style bits
     #[wasm_bindgen(getter)]
     pub fn bits(&self) -> u16 {
-        self.bits
+        self.style_bits
     }
 }
 
@@ -141,15 +164,7 @@ impl Batch {
 
     /// Write text to the terminal
     #[wasm_bindgen(js_name = "text")]
-    pub fn text(
-        &mut self,
-        x: u16,
-        y: u16,
-        text: &str,
-        style: &CellStyle,
-        fg: u32,
-        bg: u32,
-    ) -> Result<(), JsValue> {
+    pub fn text(&mut self, x: u16, y: u16, text: &str, style: &CellStyle) -> Result<(), JsValue> {
         self.dirty = true;
 
         let mut terminal_grid = self.terminal_grid.borrow_mut();
@@ -159,14 +174,13 @@ impl Batch {
             return Err(JsValue::from_str("Row out of bounds"));
         }
 
-        for (i, ch) in text.chars().enumerate() {
+        for (i, ch) in text.graphemes(true).enumerate() {
             let current_col = x + i as u16;
             if current_col >= cols {
                 break;
             }
 
-            let ch_str = ch.to_string();
-            let cell = CellData::new_with_style_bits(&ch_str, style.bits, fg, bg);
+            let cell = CellData::new_with_style_bits(ch, style.style_bits, style.fg, style.bg);
             terminal_grid.update_cell(current_col, y, cell);
         }
 
@@ -237,12 +251,12 @@ impl Batch {
 #[wasm_bindgen]
 impl Cell {
     #[wasm_bindgen(constructor)]
-    pub fn new(symbol: String, style: &CellStyle, fg: u32, bg: u32) -> Cell {
+    pub fn new(symbol: String, style: &CellStyle) -> Cell {
         Cell {
             symbol: symbol.into(),
-            style: style.bits,
-            fg,
-            bg,
+            style: style.style_bits,
+            fg: style.fg,
+            bg: style.bg,
         }
     }
 
