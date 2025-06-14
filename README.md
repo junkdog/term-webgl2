@@ -7,6 +7,9 @@ A high-performance terminal rendering system for web browsers, targeting sub-mil
 times. **beamterm** is a terminal renderer, not a full terminal emulator - it handles the display
 layer while you provide the terminal logic.
 
+Completely new to beamterm? Have a look at the [live demos][demos], showing both pure Rust and
+JavaScript/TypeScript examples.
+
 ## Key Features
 
 - **Single Draw Call** - Renders entire terminal (e.g., 200×80 cells) in one instanced draw
@@ -335,3 +338,4 @@ improving texture cache hit rates
 [Crate]: https://crates.io/crates/beamterm-renderer
 [Deps.rs Badge]: https://deps.rs/repo/github/junkdog/beamterm-renderer/status.svg
 [Deps.rs]: https://deps.rs/repo/github/junkdog/beamterm-renderer
+[demos]: https://junkdog.github.io/beamterm/
