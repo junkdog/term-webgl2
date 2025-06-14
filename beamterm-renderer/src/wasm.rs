@@ -28,7 +28,7 @@ pub struct Cell {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct CellStyle {
     fg: u32,
     bg: u32,
@@ -125,8 +125,8 @@ impl CellStyle {
 impl Default for CellStyle {
     fn default() -> Self {
         CellStyle {
-            fg: 0xFFFFFF, // Default foreground color (white)
-            bg: 0x000000, // Default background color (black)
+            fg: 0xFFFFFF,  // Default foreground color (white)
+            bg: 0x000000,  // Default background color (black)
             style_bits: 0, // No styles applied
         }
     }

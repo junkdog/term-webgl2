@@ -1,5 +1,8 @@
 ## beamterm - A WebGL2 Terminal Renderer
 
+[![Crate Badge]][Crate] [![API Badge]][API] [![Deps.rs
+Badge]][Deps.rs]
+
 A high-performance terminal rendering system for web browsers, targeting sub-millisecond render 
 times. **beamterm** is a terminal renderer, not a full terminal emulator - it handles the display
 layer while you provide the terminal logic.
@@ -10,6 +13,7 @@ layer while you provide the terminal logic.
 - **Zero-Copy Updates** - Direct memory mapping for dynamic cell updates
 - **Unicode and Emoji Support** - Complete Unicode support with grapheme clustering
 - **ASCII Fast Path** - Direct bit operations for ASCII characters (no lookups)
+- **Optional JS/TS Bindings** - Provides a [JavaScript/TypeScript API](js/README.md) for easy integration
 
 
 ## Performance
@@ -28,7 +32,7 @@ beamterm targets sub-millisecond render times across a wide range of hardware:
 The screenshot shows [Ratzilla's][rz] "canvas waves" demo running in a 426×106 terminal (45,156 cells),
 maintaining sub-millisecond render times on 2019-era hardware (i9-9900K / RTX 2070).
 
-† *Includes ratatui buffer translation, GPU buffer uploads, and draw call execution.*
+† *Includes Ratatui buffer translation, GPU buffer uploads, and draw call execution.*
 
  [rz]: https://github.com/orhun/ratzilla
 
@@ -324,3 +328,10 @@ improving texture cache hit rates
 - [ ] **Dynamic Atlases**: Runtime glyph addition without regeneration
 - [ ] **Partial Updates**: Only update changed cells instead of full grid
 - [ ] **Context Loss Recovery**: Buffer architecture designed for WebGL context restoration
+
+[API Badge]: https://docs.rs/beamterm-renderer/badge.svg
+[API]: https://docs.rs/beamterm-renderer
+[Crate Badge]: https://img.shields.io/crates/v/beamterm-renderer.svg
+[Crate]: https://crates.io/crates/beamterm-renderer
+[Deps.rs Badge]: https://deps.rs/repo/github/junkdog/beamterm-renderer/status.svg
+[Deps.rs]: https://deps.rs/repo/github/junkdog/beamterm-renderer
