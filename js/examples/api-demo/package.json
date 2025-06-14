@@ -1,0 +1,27 @@
+{
+  "name": "beamterm-batch-api-example",
+  "version": "1.0.0",
+  "description": "Minimal example demonstrating all Beamterm Batch API methods",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@beamterm/renderer": "file:../../"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vite-plugin-wasm": "^3.3.0"
+  },
+  "keywords": [
+    "beamterm",
+    "terminal",
+    "webgl",
+    "wasm",
+    "batch-api",
+    "example"
+  ]
+}

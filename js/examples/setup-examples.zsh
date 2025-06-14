@@ -62,7 +62,7 @@ main() {
     check_wasm_built
 
     # Setup each example
-    local examples=(webpack vite)
+    local examples=(webpack vit api-demo)
 
     for example in $examples; do
         if [[ -d $SCRIPT_DIR/$example ]]; then
@@ -74,8 +74,9 @@ main() {
 
     echo
     log info "To run an example:"
-    echo "  Webpack: cd $SCRIPT_DIR/webpack && npm start"
-    echo "  Vite:    cd $SCRIPT_DIR/vite && npm run dev"
+    echo "  Webpack:  cd $SCRIPT_DIR/webpack && npm start"
+    echo "  Vite:     cd $SCRIPT_DIR/vite && npm run dev"
+    echo "  api-demo: cd $SCRIPT_DIR/api-demo && npm run dev"
 }
 
 main

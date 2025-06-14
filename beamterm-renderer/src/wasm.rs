@@ -56,7 +56,7 @@ pub fn style() -> CellStyle {
 }
 
 #[wasm_bindgen]
-pub fn cell(symbol: String, style: CellStyle) -> Cell {
+pub fn cell(symbol: &str, style: CellStyle) -> Cell {
     Cell {
         symbol: symbol.into(),
         style: style.style_bits,
@@ -181,7 +181,9 @@ impl Batch {
         let (cols, rows) = terminal_grid.terminal_size();
 
         if y >= rows {
-            return Err(JsValue::from_str("Row out of bounds"));
+            // todo: feature-toggle?
+            // return Err(JsValue::from_str("Row out of bounds"));
+            return Ok(())
         }
 
         for (i, ch) in text.graphemes(true).enumerate() {
