@@ -151,7 +151,7 @@ const batch = renderer.batch();
 Fluent API for text styling.
 
 ```javascript
-const myStyle = new style()
+const myStyle = style()
   .bold()
   .italic()
   .underline()
