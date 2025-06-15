@@ -183,7 +183,7 @@ impl Batch {
         if y >= rows {
             // todo: feature-toggle?
             // return Err(JsValue::from_str("Row out of bounds"));
-            return Ok(())
+            return Ok(());
         }
 
         for (i, ch) in text.graphemes(true).enumerate() {

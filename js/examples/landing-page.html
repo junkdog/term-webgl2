@@ -355,7 +355,12 @@
         </div>
     </header>
 
-    <h2>Pure Rust/WASM Example</h2>
+    <h2>Pure Rust/WASM Examples</h2>
+    <div class="info" style="margin-bottom: 2rem;">
+        <p><strong>Performance Note:</strong> These pure Rust examples demonstrate beamterm's optimal performance characteristics.
+            Rust+WASM provides predictable performance with direct memory management and no garbage collection overhead,
+            while the JS/TS examples below show the convenience of web development APIs with some additional runtime overhead.</p>
+    </div>
     <section class="examples">
         <div class="example-card">
             <div class="example-title">
@@ -380,6 +385,35 @@
                     Launch Demo →
                 </a>
                 <a href="https://github.com/orhun/ratzilla/tree/main/examples/canvas_waves" class="source-link" target="_blank" rel="noopener noreferrer">
+                    📄 View Source
+                </a>
+            </div>
+        </div>
+
+        <div class="example-card">
+            <div class="example-title">
+                TachyonFX FTL
+                <span class="perf-indicator external">External Demo</span>
+            </div>
+            <div class="example-tech">
+                <span class="tech-badge">Pure Rust</span>
+                <span class="tech-badge">WASM</span>
+                <span class="tech-badge">Live Editor</span>
+            </div>
+            <div class="example-description">
+                Interactive editor and previewer for TachyonFX effects. Create, visualize,
+                and iterate on terminal UI effects in real-time using TachyonFX's rust-looking DSL.
+            </div>
+            <ul class="example-features">
+                <li>Live effect preview using Ratzilla's WebGl2Backend (beamterm)</li>
+                <li>Shareable effects via URL</li>
+                <li>Split-pane code editor/terminal interface</li>
+            </ul>
+            <div class="example-actions">
+                <a href="https://junkdog.github.io/tachyonfx-ftl/" class="cta" target="_blank" rel="noopener noreferrer">
+                    Launch Editor →
+                </a>
+                <a href="https://github.com/junkdog/tachyonfx-ftl" class="source-link" target="_blank" rel="noopener noreferrer">
                     📄 View Source
                 </a>
             </div>
