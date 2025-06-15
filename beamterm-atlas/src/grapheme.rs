@@ -11,7 +11,9 @@ pub struct GraphemeSet<'a> {
 
 impl<'a> GraphemeSet<'a> {
     pub fn new(chars: &'a str) -> Self {
-        let mut graphemes = chars.graphemes(true).collect::<Vec<&str>>();
+        let mut graphemes = chars.graphemes(true)
+            .filter(|g| !is_ascii_control(g))
+            .collect::<Vec<&str>>();
         graphemes.sort();
         graphemes.dedup();
 
@@ -61,6 +63,10 @@ impl<'a> GraphemeSet<'a> {
 
         glyphs
     }
+}
+
+fn is_ascii_control(s: &str) -> bool {
+    s.is_ascii() && (s.chars().next().unwrap() as u32) < 0x20
 }
 
 fn assign_missing_glyph_ids(used_ids: HashSet<u16>, symbols: &[&str]) -> Vec<Glyph> {
