@@ -11,9 +11,8 @@ pub struct GraphemeSet<'a> {
 
 impl<'a> GraphemeSet<'a> {
     pub fn new(chars: &'a str) -> Self {
-        let mut graphemes = chars.graphemes(true)
-            .filter(|g| !is_ascii_control(g))
-            .collect::<Vec<&str>>();
+        let mut graphemes =
+            chars.graphemes(true).filter(|g| !is_ascii_control(g)).collect::<Vec<&str>>();
         graphemes.sort();
         graphemes.dedup();
 

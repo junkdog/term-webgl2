@@ -2,17 +2,18 @@ mod cli;
 mod coordinate;
 mod font_discovery;
 mod generator;
+mod glyph_set;
 mod grapheme;
 mod raster_config;
-mod glyph_set;
 
 use std::{fs::File, io::Write};
 
 use beamterm_data::*;
 use clap::Parser;
 
-use crate::{cli::Cli, font_discovery::FontDiscovery, generator::BitmapFontGenerator};
-use crate::glyph_set::GLYPHS;
+use crate::{
+    cli::Cli, font_discovery::FontDiscovery, generator::BitmapFontGenerator, glyph_set::GLYPHS,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // panic hook
