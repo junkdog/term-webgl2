@@ -19,13 +19,16 @@ All notable changes to this project will be documented in this file.
 - *(renderer)* Add experimental JS support
 - *(js)* Add webpack example
 - *(js)* Add vite+typescript example
-- *(renderer)* Replace bit ops in `CellDynamic` with `to_le_bytes()`
 - *(github-pages)* Deploy webpack and vite examples
 - *(api-demo)* Add JS API demo
 
 ### 📚 Documentation
 
 - *(README)* Add link to live demos
+
+### ⚡ Performance
+
+- *(renderer)* Replace bit ops in `CellDynamic` with `to_le_bytes()`
 
 ### ⚙️ Miscellaneous Tasks
 
