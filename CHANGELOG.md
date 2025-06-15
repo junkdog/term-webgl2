@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 
 - *(shader)* Propagate LineEffects from `FontAtlasData` to fragment shader
+- *(atlas)* Skip control characters during generation
 
 ### 💼 Other
 
@@ -20,6 +21,7 @@ All notable changes to this project will be documented in this file.
 - *(js)* Add vite+typescript example
 - *(renderer)* Replace bit ops in `CellDynamic` with `to_le_bytes()`
 - *(github-pages)* Deploy webpack and vite examples
+- *(api-demo)* Add JS API demo
 
 ### 📚 Documentation
 
@@ -30,6 +32,7 @@ All notable changes to this project will be documented in this file.
 - Start using git-cliff
 - Add developer-facing build.zsh and supporting scripts
 - *(renderer)* Omit local main.rs/index.html from published files
+- *(emoji)* Embed ~200 more emoji into the atlas
 
 ## [beamterm-0.1.1] - 2025-06-06
 
