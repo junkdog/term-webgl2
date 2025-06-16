@@ -1,0 +1,45 @@
+# Source files and build scripts
+/src
+/examples
+/test
+/scripts
+build.js
+
+# Build artifacts not needed in package
+/target
+*.wasm.d.ts
+package-lock.json
+
+# Development files
+.gitignore
+*.log
+.DS_Store
+node_modules/
+
+# Test files
+/e2e
+*.test.js
+*.spec.js
+test-*.html
+
+# Documentation source
+*.md
+!README.md
+!CHANGELOG.md
+
+# CI/CD
+.github/
+.travis.yml
+.gitlab-ci.yml
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+

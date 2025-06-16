@@ -48,51 +48,143 @@ console.log('\n📦 Building CDN bundle...');
 const cdnDir = path.join(JS_DIST_DIR, 'cdn');
 fs.mkdirSync(cdnDir, { recursive: true });
 
-// Create wrapper for CDN
-const cdnWrapper = `
-// Auto-generated CDN wrapper
-import init, * as BeamtermExports from '../web/beamterm_renderer.js';
+// First, copy the web build files to a temp location for bundling
+const tempDir = path.join(JS_DIST_DIR, '.temp-cdn');
+fs.mkdirSync(tempDir, { recursive: true });
 
-let initialized = false;
+// Copy web files to temp
+fs.copyFileSync(
+    path.join(JS_DIST_DIR, 'web', 'beamterm_renderer.js'),
+    path.join(tempDir, 'beamterm_renderer.js')
+);
+fs.copyFileSync(
+    path.join(JS_DIST_DIR, 'web', 'beamterm_renderer_bg.wasm'),
+    path.join(tempDir, 'beamterm_renderer_bg.wasm')
+);
+
+// Create a CDN entry point that properly bundles everything
+const cdnEntry = `
+// CDN bundle for Beamterm
+import init, * as BeamtermModule from './beamterm_renderer.js';
+
+// Create a promise for initialization
 let initPromise = null;
+let initialized = false;
 
-async function ensureInitialized() {
+// Helper to ensure initialization
+async function ensureInit(wasmUrl) {
     if (!initialized) {
         if (!initPromise) {
-            initPromise = init();
+            if (wasmUrl) {
+                initPromise = init(wasmUrl);
+            } else {
+                // Auto-detect WASM URL based on script location
+                const currentScript = (typeof document !== 'undefined' && document.currentScript) 
+                    ? document.currentScript.src 
+                    : import.meta.url;
+                const baseUrl = currentScript.substring(0, currentScript.lastIndexOf('/'));
+                const autoWasmUrl = baseUrl + '/beamterm_bg.wasm';
+                initPromise = init(autoWasmUrl);
+            }
         }
         await initPromise;
         initialized = true;
     }
+    return BeamtermModule;
 }
 
-// Wrap exports to ensure initialization
+// Create the public API
 const Beamterm = {
-    async createRenderer(canvasId) {
-        await ensureInitialized();
-        return new BeamtermExports.BeamtermRenderer(canvasId);
+    // Initialize with optional WASM path
+    async init(wasmUrl) {
+        await ensureInit(wasmUrl);
+        return this;
     },
-    Batch: BeamtermExports.Batch,
-    CellStyle: BeamtermExports.CellStyle,
-    Size: BeamtermExports.Size,
-    Span: BeamtermExports.Span,
-    // Re-export other classes as needed
+    
+    // Direct constructor access (requires init first)
+    get BeamtermRenderer() { 
+        return initialized ? BeamtermModule.BeamtermRenderer : undefined;
+    },
+    
+    // Helper functions need to be wrapped to ensure init
+    style() {
+        if (!initialized) {
+            throw new Error('Beamterm not initialized. Call Beamterm.init() first or use await Beamterm.createRenderer()');
+        }
+        return BeamtermModule.style();
+    },
+    
+    cell(symbol, style) {
+        if (!initialized) {
+            throw new Error('Beamterm not initialized. Call Beamterm.init() first or use await Beamterm.createRenderer()');
+        }
+        return BeamtermModule.cell(symbol, style);
+    },
+    
+    // Expose classes (these will be undefined until init)
+    get BeamtermRenderer() { return BeamtermModule.BeamtermRenderer; },
+    get Batch() { return BeamtermModule.Batch; },
+    get CellStyle() { return BeamtermModule.CellStyle; },
+    get Size() { return BeamtermModule.Size; },
+    
+    // Version info
+    version: '0.1.1',
+    
+    // For debugging
+    get initialized() { return initialized; },
+    get module() { return initialized ? BeamtermModule : null; }
 };
 
-// For IIFE build
-if (typeof window !== 'undefined') {
+// Auto-initialize if we're in a browser with a script tag
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     window.Beamterm = Beamterm;
+    
+    // For convenience, start initialization immediately
+    // Users can still await Beamterm.init() or just await createRenderer
+    ensureInit().catch(err => {
+        console.warn('Beamterm auto-initialization failed:', err);
+        console.warn('You may need to call Beamterm.init() with the correct WASM path');
+    });
 }
 
 export default Beamterm;
 `;
 
-fs.writeFileSync(path.join(cdnDir, 'wrapper.js'), cdnWrapper);
+fs.writeFileSync(path.join(tempDir, 'cdn-entry.js'), cdnEntry);
 
 // Bundle with esbuild
-execSync(`npx esbuild ${cdnDir}/wrapper.js --bundle --format=iife --global-name=Beamterm --outfile=${cdnDir}/beamterm.min.js --minify`, {
+console.log('📦 Bundling with esbuild...');
+execSync(`npx esbuild ${tempDir}/cdn-entry.js --bundle --format=iife --global-name=Beamterm --outfile=${cdnDir}/beamterm.min.js --minify --sourcemap --loader:.wasm=file`, {
     stdio: 'inherit'
 });
 
+// Copy WASM file to CDN directory with consistent name
+fs.copyFileSync(
+    path.join(tempDir, 'beamterm_renderer_bg.wasm'),
+    path.join(cdnDir, 'beamterm_bg.wasm')
+);
+
+// Also copy with original name for compatibility
+fs.copyFileSync(
+    path.join(tempDir, 'beamterm_renderer_bg.wasm'),
+    path.join(cdnDir, 'beamterm_renderer_bg.wasm')
+);
+
+// Clean up temp directory
+fs.rmSync(tempDir, { recursive: true, force: true });
+
 console.log('✅ CDN bundle built');
 console.log('\n🎉 All packages built successfully!');
+console.log('\nCDN files:');
+console.log(`  ${cdnDir}/beamterm.min.js (${(fs.statSync(path.join(cdnDir, 'beamterm.min.js')).size / 1024).toFixed(1)} KB)`);
+console.log(`  ${cdnDir}/beamterm_bg.wasm (${(fs.statSync(path.join(cdnDir, 'beamterm_bg.wasm')).size / 1024).toFixed(1)} KB)`);
+console.log('\nCDN usage:');
+console.log('  <script src="https://unpkg.com/@beamterm/renderer/dist/cdn/beamterm.min.js"></script>');
+console.log('  <script>');
+console.log('    // Option 1: Auto-initialization');
+console.log('    const renderer = await Beamterm.createRenderer("#terminal");');
+console.log('    ');
+console.log('    // Option 2: Manual initialization with custom WASM path');
+console.log('    await Beamterm.init("/custom/path/to/beamterm_bg.wasm");');
+console.log('    const renderer = await Beamterm.createRenderer("#terminal");');
+console.log('  </script>');

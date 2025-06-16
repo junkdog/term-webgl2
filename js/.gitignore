@@ -1,1 +1,5 @@
 package-lock.json
+LICENSE
+node_modules
+examples-dist
+/CHANGELOG.md

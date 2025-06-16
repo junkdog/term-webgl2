@@ -1,7 +1,9 @@
 {
   "name": "@beamterm/renderer",
-  "version": "0.1.1",
-  "description": "High-performance WebGL2 terminal renderer",
+  "version": "0.2.",
+  "description": "High-performance WebGL2 terminal renderer with sub-millisecond render times",
+  "author": "Adrian Papari",
+  "license": "MIT",
   "main": "./dist/bundler/beamterm_renderer.js",
   "types": "./dist/bundler/beamterm_renderer.d.ts",
   "exports": {
@@ -21,10 +23,20 @@
   },
   "files": [
     "dist/",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "../CHANGELOG.md"
   ],
-  "keywords": ["terminal", "webgl", "wasm", "renderer"],
-  "license": "MIT",
+  "keywords": [
+    "terminal",
+    "webgl",
+    "webgl2",
+    "wasm",
+    "renderer",
+    "gpu",
+    "performance",
+    "typescript"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/junkdog/beamterm.git",
@@ -41,11 +53,16 @@
     "build": "node build.js",
     "build:examples": "node scripts/build-examples.js",
     "test": "node test/test-node.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "prepack": "echo 'Preparing package for distribution...'"
   },
   "devDependencies": {
     "esbuild": "^0.19.0",
     "@playwright/test": "^1.40.0",
     "jsdom": "^23.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }
