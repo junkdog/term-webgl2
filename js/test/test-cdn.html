@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CDN API Parity Test</title>
+    <style>
+        body { font-family: monospace; background: #1a1b26; color: #c0caf5; padding: 20px; }
+        .test { margin: 10px 0; }
+        .pass { color: #9ece6a; }
+        .fail { color: #f7768e; }
+    </style>
+</head>
+<body>
+<h1>CDN API Parity Test</h1>
+<div id="results"></div>
+<canvas id="terminal" width="400" height="300"></canvas>
+
+<script src="../dist/cdn/beamterm.min.js"></script>
+<script>
+    const results = document.getElementById('results');
+
+    function test(name, fn) {
+        try {
+            fn();
+            results.innerHTML += `<div class="test pass">✓ ${name}</div>`;
+            return true;
+        } catch (error) {
+            results.innerHTML += `<div class="test fail">✗ ${name}: ${error.message}</div>`;
+            return false;
+        }
+    }
+
+    async function runTests() {
+        let passCount = 0;
+        let totalCount = 0;
+
+        // Test 1: Initialization function exists
+        totalCount++;
+        if (test('Beamterm.init exists', () => {
+            console.log("beamterm:", Beamterm.init);
+            if (Beamterm.init === undefined) {
+                throw new Error('init function not found');
+            }
+        })) passCount++;
+
+        // Test 2: Helper functions exist before init
+        totalCount++;
+        if (test('Helper functions exist before init', () => {
+            if (typeof Beamterm.style !== 'function') {
+                throw new Error('style is not a function');
+            }
+            if (typeof Beamterm.cell !== 'function') {
+                throw new Error('cell is not a function');
+            }
+        })) passCount++;
+
+        // Test 3: Constructor exists before init
+        totalCount++;
+        if (test('BeamtermRenderer constructor exists before init', () => {
+            if (typeof Beamterm.BeamtermRenderer !== 'function') {
+                throw new Error('BeamtermRenderer is not a function');
+            }
+        })) passCount++;
+
+        // Test 4: Using constructor before init throws
+        totalCount++;
+        if (test('Constructor throws before init', () => {
+            try {
+                new Beamterm.BeamtermRenderer('#terminal');
+                throw new Error('Constructor should have thrown');
+            } catch (e) {
+                if (!e.message.includes('not initialized')) {
+                    throw new Error(`Wrong error message: ${e.message}`);
+                }
+            }
+        })) passCount++;
+
+        // Test 5: Using style() before init throws
+        totalCount++;
+        if (test('style() throws before init', () => {
+            try {
+                Beamterm.style();
+                throw new Error('style() should have thrown');
+            } catch (e) {
+                if (!e.message.includes('not initialized')) {
+                    throw new Error(`Wrong error message: ${e.message}`);
+                }
+            }
+        })) passCount++;
+
+        // Test 6: Initialize successfully
+        totalCount++;
+        if (test('Initialization succeeds', async () => {
+            await Beamterm.init();
+            if (!Beamterm.initialized) {
+                throw new Error('initialized flag not set');
+            }
+        })) passCount++;
+
+        // Wait for init to complete
+        await Beamterm.init();
+
+        // Test 7: Constructor works after init
+        totalCount++;
+        if (test('Constructor works after init', () => {
+            const renderer = new Beamterm.BeamtermRenderer('#terminal');
+            if (!renderer) {
+                throw new Error('Constructor returned falsy value');
+            }
+            if (typeof renderer.batch !== 'function') {
+                throw new Error('Renderer missing batch method');
+            }
+        })) passCount++;
+
+        // Test 8: Helper functions work after init
+        totalCount++;
+        if (test('Helper functions work after init', () => {
+            const styleResult = Beamterm.style();
+            if (!styleResult || typeof styleResult.bold !== 'function') {
+                throw new Error('style() returned invalid object');
+            }
+
+            const cellResult = Beamterm.cell('A', styleResult);
+            if (!cellResult || typeof cellResult.symbol !== 'string') {
+                throw new Error('cell() returned invalid object');
+            }
+        })) passCount++;
+
+        // Test 9: API methods match expected signatures
+        totalCount++;
+        if (test('API method signatures match', () => {
+            const renderer = new Beamterm.BeamtermRenderer('#terminal');
+            const batch = renderer.batch();
+
+            // Check batch methods exist
+            const batchMethods = ['clear', 'text', 'cell', 'cells', 'fill', 'flush'];
+            for (const method of batchMethods) {
+                if (typeof batch[method] !== 'function') {
+                    throw new Error(`batch.${method} is not a function`);
+                }
+            }
+
+            // Check renderer methods exist
+            const rendererMethods = ['render', 'resize', 'terminalSize', 'cellSize'];
+            for (const method of rendererMethods) {
+                if (typeof renderer[method] !== 'function') {
+                    throw new Error(`renderer.${method} is not a function`);
+                }
+            }
+        })) passCount++;
+
+        // Test 10: Convenience method works
+        totalCount++;
+        if (test('createRenderer convenience method works', async () => {
+            const renderer = await Beamterm.createRenderer('#terminal');
+            if (!renderer || typeof renderer.render !== 'function') {
+                throw new Error('createRenderer returned invalid object');
+            }
+        })) passCount++;
+
+        // Test 11: Functional test - actual rendering
+        totalCount++;
+        if (test('Functional rendering test', async () => {
+            const renderer = await Beamterm.createRenderer('#terminal');
+            const batch = renderer.batch();
+            const style = Beamterm.style().bold().fg(0x7aa2f7);
+
+            batch.clear(0x1a1b26);
+            batch.text(0, 0, "CDN Test", style);
+            batch.flush();
+            renderer.render();
+
+            // If we get here without errors, the test passes
+        })) passCount++;
+
+        // Summary
+        results.innerHTML += `<div class="test" style="margin-top: 20px; font-weight: bold;">
+                Summary: ${passCount}/${totalCount} tests passed
+            </div>`;
+
+        if (passCount === totalCount) {
+            results.innerHTML += `<div class="test pass" style="font-size: 1.2em;">🎉 All tests passed! CDN API has parity with ES module API.</div>`;
+        } else {
+            results.innerHTML += `<div class="test fail" style="font-size: 1.2em;">❌ Some tests failed. CDN API does not match ES module API.</div>`;
+        }
+    }
+
+    runTests().catch(error => {
+        results.innerHTML += `<div class="test fail">💥 Test runner failed: ${error.message}</div>`;
+    });
+</script>
+</body>
+</html>
