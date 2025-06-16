@@ -14,7 +14,7 @@ categories.workspace = true
 
 [dependencies]
 compact_str = { workspace = true }
-miniz_oxide = "0.8.8"
+miniz_oxide = "0.8.9"
 
 [lints]
 workspace = true
