@@ -62,6 +62,15 @@ fs.copyFileSync(
     path.join(tempDir, 'beamterm_renderer_bg.wasm')
 );
 
+// Replace import.meta.url with a fallback
+const webModulePath = path.join(tempDir, 'beamterm_renderer.js');
+let moduleContent = fs.readFileSync(webModulePath, 'utf8');
+moduleContent = moduleContent.replace(
+    /new URL\(['"]beamterm_renderer_bg\.wasm['"],\s*import\.meta\.url\)/g,
+    `/* import.meta.url replaced for IIFE */ 'beamterm_renderer_bg.wasm'`
+);
+fs.writeFileSync(webModulePath, moduleContent);
+
 // Create a CDN entry point
 const cdnEntry = `
 import init, * as BeamtermModule from './beamterm_renderer.js';
