@@ -39,9 +39,9 @@ main() {
 
     # Ensure CHANGELOG exists
     if [[ ! -f "$JS_DIR/CHANGELOG.md" ]]; then
-        log error "CHANGELOG.md is missing!"
-        log info "Please create it or use the template"
-        exit 1
+        log info "Copying CHANGELOG.md from root..."
+        cp "$ROOT_DIR/CHANGELOG.md" "$JS_DIR/CHANGELOG.md"
+        log ok "CHANGELOG.md copied"
     else
         log ok "CHANGELOG.md exists"
     fi
