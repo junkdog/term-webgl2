@@ -43,3 +43,8 @@ test-*.html
 *.temp
 .cache/
 
+# WASM TypeScript definitions
+dist/**/*.wasm.d.ts
+
+# duplicate WASM in CDN
+dist/cdn/beamterm_renderer_bg.wasm
