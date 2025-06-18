@@ -1,7 +1,7 @@
 ## beamterm - A WebGL2 Terminal Renderer
 
-[![Crate Badge]][Crate] [![API Badge]][API] [![Deps.rs
-Badge]][Deps.rs]
+[![Crate Badge]][Crate] [![NPM Badge]][NPM] [![API Badge]][API] [![Deps.rs
+Badge]][Deps.rs] 
 
 A high-performance terminal rendering system for web browsers, targeting sub-millisecond render 
 times. **beamterm** is a terminal renderer, not a full terminal emulator - it handles the display
@@ -339,3 +339,5 @@ improving texture cache hit rates
 [Deps.rs Badge]: https://deps.rs/repo/github/junkdog/beamterm-renderer/status.svg
 [Deps.rs]: https://deps.rs/repo/github/junkdog/beamterm-renderer
 [demos]: https://junkdog.github.io/beamterm/
+[npm]: https://www.npmjs.com/package/@beamterm/renderer
+[NPM Badge]: https://img.shields.io/npm/v/@beamterm/renderer.svg
