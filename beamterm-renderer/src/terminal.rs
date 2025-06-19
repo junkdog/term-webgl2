@@ -174,7 +174,7 @@ pub struct TerminalBuilder {
     canvas: CanvasSource,
     atlas: Option<FontAtlasData>,
     fallback_glyph: Option<CompactString>,
-    canvas_padding_color: u32
+    canvas_padding_color: u32,
 }
 
 impl TerminalBuilder {
@@ -222,6 +222,7 @@ impl TerminalBuilder {
             CanvasSource::Id(id) => Renderer::create(&id)?,
             CanvasSource::Element(element) => Renderer::create_with_canvas(element)?,
         };
+        let renderer = renderer.canvas_padding_color(self.canvas_padding_color);
 
         let gl = renderer.gl();
         let atlas = match self.atlas {
