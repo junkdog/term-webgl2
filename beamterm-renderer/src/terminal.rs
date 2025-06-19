@@ -218,7 +218,10 @@ impl TerminalBuilder {
         };
 
         let canvas_size = renderer.canvas_size();
-        let grid = TerminalGrid::new(gl, atlas, canvas_size)?;
+        let mut grid = TerminalGrid::new(gl, atlas, canvas_size)?;
+        if let Some(fallback) = self.fallback_glyph {
+            grid.set_fallback_glyph(&fallback)
+        };
 
         Ok(Terminal { renderer, grid })
     }

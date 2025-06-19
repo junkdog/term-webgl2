@@ -38,6 +38,8 @@ pub struct TerminalGrid {
     atlas: FontAtlas,
     /// Uniform location for the texture sampler.
     sampler_loc: web_sys::WebGlUniformLocation,
+    /// Fallback glyph for missing symbols.
+    fallback_glyph: u16,
 }
 
 #[derive(Debug)]
@@ -113,6 +115,7 @@ impl TerminalGrid {
             ubo_fragment,
             atlas,
             sampler_loc,
+            fallback_glyph: ' ' as u16,
         };
 
         grid.upload_ubo_data(gl);
@@ -120,6 +123,12 @@ impl TerminalGrid {
         Ok(grid)
     }
 
+    /// Sets the fallback glyph for missing characters.
+    pub fn set_fallback_glyph(&mut self, fallback: &str) {
+        self.fallback_glyph = self.atlas.get_base_glyph_id(fallback).unwrap_or(' ' as u16);
+    }
+
+    /// Returns the [`FontAtlas`] used by this terminal grid.
     pub fn atlas(&self) -> &FontAtlas {
         &self.atlas
     }
@@ -176,7 +185,7 @@ impl TerminalGrid {
         // update instance buffer with new cell data
         let atlas = &self.atlas;
 
-        let fallback_glyph = atlas.get_base_glyph_id(" ").unwrap_or(0);
+        let fallback_glyph = self.fallback_glyph;
         self.cells.iter_mut().zip(cells).for_each(|(cell, data)| {
             let glyph_id = atlas.get_base_glyph_id(data.symbol).unwrap_or(fallback_glyph);
 
@@ -197,7 +206,7 @@ impl TerminalGrid {
         let atlas = &self.atlas;
 
         let cell_count = self.cells.len();
-        let fallback_glyph = atlas.get_base_glyph_id(" ").unwrap_or(0);
+        let fallback_glyph = self.fallback_glyph;
         let w = self.terminal_size.0 as usize;
         cells
             .map(|(x, y, cell)| (w * y as usize + x as usize, cell))
@@ -224,7 +233,7 @@ impl TerminalGrid {
         }
 
         let atlas = &self.atlas;
-        let fallback_glyph = atlas.get_base_glyph_id(" ").unwrap_or(0);
+        let fallback_glyph = self.fallback_glyph;
         let glyph_id = atlas.get_base_glyph_id(cell_data.symbol).unwrap_or(fallback_glyph);
 
         self.cells[idx] =
