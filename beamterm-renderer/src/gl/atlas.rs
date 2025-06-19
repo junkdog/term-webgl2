@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use beamterm_data::{FontAtlasData, FontStyle, Glyph};
-use compact_str::{CompactString, ToCompactString};
+use compact_str::CompactString;
 use web_sys::console;
 
 use crate::{error::Error, gl::GL};
@@ -102,14 +102,14 @@ impl FontAtlas {
         self.strikethrough
     }
 
-    /// Returns the symbol for the given glyph ID, if it exists.
-    pub(super) fn get_symbol(&self, glyph_id: u16) -> Option<&CompactString> {
+    /// Returns the symbol for the given glyph ID, if it exists
+    pub fn get_symbol(&self, glyph_id: u16) -> Option<&CompactString> {
         let base_glyph_id = glyph_id & (Glyph::GLYPH_ID_MASK | Glyph::EMOJI_FLAG);
         self.symbol_lookup.get(&base_glyph_id)
     }
 
     /// Returns the base glyph identifier for the given key
-    pub(super) fn get_base_glyph_id(&self, key: &str) -> Option<u16> {
+    pub fn get_base_glyph_id(&self, key: &str) -> Option<u16> {
         if key.len() == 1 {
             let ch = key.chars().next().unwrap();
             if ch.is_ascii() {
