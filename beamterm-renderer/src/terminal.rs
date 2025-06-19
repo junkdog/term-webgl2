@@ -98,12 +98,17 @@ impl Terminal {
         self.grid.terminal_size()
     }
 
+    /// Returns the size of the canvas in pixels.
+    pub fn canvas_size(&self) -> (i32, i32) {
+        self.renderer.canvas_size()
+    }
+
     /// Returns the size of each cell in pixels.
     pub fn cell_size(&self) -> (i32, i32) {
         self.grid.cell_size()
     }
 
-    /// Returns a mutable reference to the WebGL2 rendering context.
+    /// Returns a reference to the HTML canvas element used for rendering.
     pub fn canvas(&self) -> &HtmlCanvasElement {
         self.renderer.canvas()
     }
@@ -113,19 +118,9 @@ impl Terminal {
         &self.renderer
     }
 
-    /// Returns a mutable reference to the underlying renderer.
-    pub fn renderer_mut(&mut self) -> &mut Renderer {
-        &mut self.renderer
-    }
-
     /// Returns a reference to the terminal grid.
     pub fn grid(&self) -> &TerminalGrid {
         &self.grid
-    }
-
-    /// Returns a mutable reference to the terminal grid.
-    pub fn grid_mut(&mut self) -> &mut TerminalGrid {
-        &mut self.grid
     }
 
     /// Renders the current terminal state to the canvas.
