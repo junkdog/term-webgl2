@@ -174,6 +174,7 @@ pub struct TerminalBuilder {
     canvas: CanvasSource,
     atlas: Option<FontAtlasData>,
     fallback_glyph: Option<CompactString>,
+    canvas_padding_color: u32
 }
 
 impl TerminalBuilder {
@@ -183,6 +184,7 @@ impl TerminalBuilder {
             canvas,
             atlas: None,
             fallback_glyph: None,
+            canvas_padding_color: 0x000000,
         }
     }
 
@@ -201,6 +203,16 @@ impl TerminalBuilder {
     /// displayed instead. Defaults to a space character if not specified.
     pub fn fallback_glyph(mut self, glyph: &str) -> Self {
         self.fallback_glyph = Some(glyph.into());
+        self
+    }
+
+    /// Sets the background color for the canvas area outside the terminal grid.
+    ///
+    /// When the canvas dimensions don't align perfectly with the terminal cell grid,
+    /// there may be unused pixels around the edges. This color fills those padding
+    /// areas to maintain a consistent appearance.
+    pub fn canvas_padding_color(mut self, color: u32) -> Self {
+        self.canvas_padding_color = color;
         self
     }
 
