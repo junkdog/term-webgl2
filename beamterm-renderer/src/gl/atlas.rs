@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use beamterm_data::{FontAtlasData, FontStyle};
+use beamterm_data::{FontAtlasData, FontStyle, Glyph};
 use compact_str::{CompactString, ToCompactString};
 use web_sys::console;
 
@@ -24,6 +24,8 @@ pub struct FontAtlas {
     texture: crate::gl::texture::Texture,
     /// Symbol to 3d texture index
     glyph_coords: HashMap<CompactString, u16>,
+    /// Base glyph identifier to symbol mapping
+    symbol_lookup: HashMap<u16, CompactString>,
     /// The size of each character cell in pixels
     cell_size: (i32, i32),
     /// The number of slices in the atlas texture
@@ -57,6 +59,7 @@ impl FontAtlas {
 
         let (cell_width, cell_height) = config.cell_size;
         let mut layers = HashMap::new();
+        let mut symbol_lookup = HashMap::new();
 
         // we only store the normal-styled glyphs (incl emoji) in the atlas lookup,
         // as the correct layer id can be derived from the base glyph id plus font style
@@ -64,12 +67,14 @@ impl FontAtlas {
             .filter(|g| g.style == FontStyle::Normal) // only normal style glyphs
             .filter(|g| !g.is_ascii())                // only non-ascii glyphs
             .for_each(|g| {
-                layers.insert(g.symbol.to_compact_string(), g.id);
+                symbol_lookup.insert(g.id, g.symbol.clone());
+                layers.insert(g.symbol.clone(), g.id);
             });
 
         Ok(Self {
             texture,
             glyph_coords: layers,
+            symbol_lookup,
             cell_size: (cell_width, cell_height),
             num_slices: num_slices as u32,
             underline: config.underline,
@@ -95,6 +100,12 @@ impl FontAtlas {
     /// Returns the strikethrough configuration
     pub fn strikethrough(&self) -> beamterm_data::LineDecoration {
         self.strikethrough
+    }
+
+    /// Returns the symbol for the given glyph ID, if it exists.
+    pub(super) fn get_symbol(&self, glyph_id: u16) -> Option<&CompactString> {
+        let base_glyph_id = glyph_id & (Glyph::GLYPH_ID_MASK | Glyph::EMOJI_FLAG);
+        self.symbol_lookup.get(&base_glyph_id)
     }
 
     /// Returns the base glyph identifier for the given key
