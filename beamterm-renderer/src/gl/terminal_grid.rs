@@ -123,7 +123,7 @@ impl TerminalGrid {
     pub fn atlas(&self) -> &FontAtlas {
         &self.atlas
     }
-    
+
     /// Returns the unpadded cell dimensions in pixels.
     pub fn cell_size(&self) -> (i32, i32) {
         self.atlas.cell_size()

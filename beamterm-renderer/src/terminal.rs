@@ -1,42 +1,7 @@
 use compact_str::CompactString;
 use web_sys::HtmlCanvasElement;
+
 use crate::{CellData, Error, FontAtlas, Renderer, TerminalGrid};
-
-/// Canvas source for terminal initialization.
-///
-/// Supports both CSS selector strings and direct `HtmlCanvasElement` references
-/// for flexible terminal creation.
-enum CanvasSource {
-    /// CSS selector string for canvas lookup (e.g., "#terminal", "canvas").
-    Id(&'static str),
-    /// Direct reference to an existing canvas element.
-    Element(web_sys::HtmlCanvasElement),
-}
-
-/// Builder for configuring and creating a [`Terminal`].
-///
-/// Provides a fluent API for terminal configuration with sensible defaults.
-/// The terminal will use the default embedded font atlas unless explicitly configured.
-///
-/// # Examples
-///
-/// ```rust
-/// // Simple terminal with default configuration
-/// use beamterm_renderer::{FontAtlas, Terminal};
-/// let terminal = Terminal::builder("#canvas").build()?;
-///
-/// // Terminal with custom font atlas
-/// let atlas = |gl| FontAtlas::load(gl, unimplemented!(".atlas data"))?;
-/// let terminal = Terminal::builder("#canvas")
-///     .font_atlas(atlas)
-///     .fallback_glyph("X".into())
-///     .build()?;
-/// ```
-pub struct TerminalBuilder {
-    canvas: CanvasSource,
-    atlas: Option<Box<dyn FnOnce(&web_sys::WebGl2RenderingContext) -> FontAtlas>>,
-    fallback_glyph: Option<CompactString>,
-}
 
 /// High-performance WebGL2 terminal renderer.
 ///
@@ -67,7 +32,6 @@ pub struct Terminal {
     grid: TerminalGrid,
 }
 
-
 impl Terminal {
     /// Creates a new terminal builder with the specified canvas source.
     ///
@@ -80,7 +44,7 @@ impl Terminal {
     /// // Using CSS selector
     /// use web_sys::HtmlCanvasElement;
     /// use beamterm_renderer::Terminal;
-    /// let terminal = Terminal::builder("#my-terminal").build()?;
+    /// let terminal = Terminal::builder("my-terminal").build()?;
     ///
     /// // Using canvas element
     /// let canvas: &HtmlCanvasElement = unimplemented!("document.get_element_by_id(...)");
@@ -97,11 +61,13 @@ impl Terminal {
     /// rather than making multiple calls for individual cells.
     ///
     /// Delegates to [`TerminalGrid::update_cells`].
-    pub fn update_cells<'a>(&mut self, cells: impl Iterator<Item = CellData<'a>>) -> Result<(), Error> {
+    pub fn update_cells<'a>(
+        &mut self,
+        cells: impl Iterator<Item = CellData<'a>>,
+    ) -> Result<(), Error> {
         self.grid.update_cells(self.renderer.gl(), cells)?;
         Ok(())
     }
-
 
     /// Returns the WebGL2 rendering context.
     pub fn gl(&self) -> &web_sys::WebGl2RenderingContext {
@@ -121,16 +87,24 @@ impl Terminal {
     }
 
     /// Returns the font atlas used by the terminal.
-    pub fn atlas(&self) -> &FontAtlas { self.grid.atlas() }
+    pub fn atlas(&self) -> &FontAtlas {
+        self.grid.atlas()
+    }
 
     /// Returns the terminal dimensions in cells.
-    pub fn terminal_size(&self) -> (u16, u16) { self.grid.terminal_size() }
+    pub fn terminal_size(&self) -> (u16, u16) {
+        self.grid.terminal_size()
+    }
 
     /// Returns the size of each cell in pixels.
-    pub fn cell_size(&self) -> (i32, i32) { self.grid.cell_size() }
+    pub fn cell_size(&self) -> (i32, i32) {
+        self.grid.cell_size()
+    }
 
     /// Returns a mutable reference to the WebGL2 rendering context.
-    pub fn canvas(&self) -> &HtmlCanvasElement { self.renderer.canvas() }
+    pub fn canvas(&self) -> &HtmlCanvasElement {
+        self.renderer.canvas()
+    }
 
     /// Returns a reference to the underlying renderer.
     pub fn renderer(&self) -> &Renderer {
@@ -168,7 +142,41 @@ impl Terminal {
     }
 }
 
+/// Canvas source for terminal initialization.
+///
+/// Supports both CSS selector strings and direct `HtmlCanvasElement` references
+/// for flexible terminal creation.
+enum CanvasSource {
+    /// CSS selector string for canvas lookup (e.g., "#terminal", "canvas").
+    Id(&'static str),
+    /// Direct reference to an existing canvas element.
+    Element(web_sys::HtmlCanvasElement),
+}
 
+/// Builder for configuring and creating a [`Terminal`].
+///
+/// Provides a fluent API for terminal configuration with sensible defaults.
+/// The terminal will use the default embedded font atlas unless explicitly configured.
+///
+/// # Examples
+///
+/// ```rust
+/// // Simple terminal with default configuration
+/// use beamterm_renderer::{FontAtlas, Terminal};
+/// let terminal = Terminal::builder("#canvas").build()?;
+///
+/// // Terminal with custom font atlas
+/// let atlas = |gl| FontAtlas::load(gl, unimplemented!(".atlas data"))?;
+/// let terminal = Terminal::builder("#canvas")
+///     .font_atlas(atlas)
+///     .fallback_glyph("X".into())
+///     .build()?;
+/// ```
+pub struct TerminalBuilder {
+    canvas: CanvasSource,
+    atlas: Option<Box<dyn FnOnce(&web_sys::WebGl2RenderingContext) -> FontAtlas>>,
+    fallback_glyph: Option<CompactString>,
+}
 
 impl TerminalBuilder {
     /// Creates a new terminal builder with the specified canvas source.
@@ -185,11 +193,12 @@ impl TerminalBuilder {
     /// By default, the terminal uses an embedded font atlas. Use this method
     /// to provide a custom atlas with different fonts, sizes, or character sets.
     pub fn font_atlas<F>(mut self, atlas: F) -> Self
-        where F: FnOnce(&web_sys::WebGl2RenderingContext) -> FontAtlas + 'static {
+    where
+        F: FnOnce(&web_sys::WebGl2RenderingContext) -> FontAtlas + 'static,
+    {
         self.atlas = Some(Box::new(atlas));
         self
     }
-
 
     /// Sets the fallback glyph for missing characters.
     ///
@@ -204,7 +213,7 @@ impl TerminalBuilder {
     pub fn build(self) -> Result<Terminal, Error> {
         let renderer = match self.canvas {
             CanvasSource::Id(id) => Renderer::create(id)?,
-            CanvasSource::Element(element) => Renderer::create_with_canvas(element)?
+            CanvasSource::Element(element) => Renderer::create_with_canvas(element)?,
         };
 
         let gl = renderer.gl();
@@ -216,10 +225,7 @@ impl TerminalBuilder {
         let canvas_size = renderer.canvas_size();
         let grid = TerminalGrid::new(gl, atlas, canvas_size)?;
 
-        Ok(Terminal {
-            renderer,
-            grid,
-        })
+        Ok(Terminal { renderer, grid })
     }
 }
 
