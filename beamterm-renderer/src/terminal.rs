@@ -1,3 +1,4 @@
+use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 use web_sys::HtmlCanvasElement;
 
@@ -50,6 +51,7 @@ impl Terminal {
     /// let canvas: &HtmlCanvasElement = unimplemented!("document.get_element_by_id(...)");
     /// let terminal = Terminal::builder(canvas).build()?;
     /// ```
+    #[allow(private_bounds)]
     pub fn builder(canvas: impl Into<CanvasSource>) -> TerminalBuilder {
         TerminalBuilder::new(canvas.into())
     }
@@ -148,7 +150,7 @@ impl Terminal {
 /// for flexible terminal creation.
 enum CanvasSource {
     /// CSS selector string for canvas lookup (e.g., "#terminal", "canvas").
-    Id(&'static str),
+    Id(CompactString),
     /// Direct reference to an existing canvas element.
     Element(web_sys::HtmlCanvasElement),
 }
@@ -162,11 +164,12 @@ enum CanvasSource {
 ///
 /// ```rust
 /// // Simple terminal with default configuration
+/// use beamterm_data::FontAtlasData;
 /// use beamterm_renderer::{FontAtlas, Terminal};
 /// let terminal = Terminal::builder("#canvas").build()?;
 ///
 /// // Terminal with custom font atlas
-/// let atlas = |gl| FontAtlas::load(gl, unimplemented!(".atlas data"))?;
+/// let atlas = FontAtlasData::from_binary(unimplemented!(".atlas data"))?;
 /// let terminal = Terminal::builder("#canvas")
 ///     .font_atlas(atlas)
 ///     .fallback_glyph("X".into())
@@ -174,7 +177,7 @@ enum CanvasSource {
 /// ```
 pub struct TerminalBuilder {
     canvas: CanvasSource,
-    atlas: Option<Box<dyn FnOnce(&web_sys::WebGl2RenderingContext) -> FontAtlas>>,
+    atlas: Option<FontAtlasData>,
     fallback_glyph: Option<CompactString>,
 }
 
@@ -192,11 +195,8 @@ impl TerminalBuilder {
     ///
     /// By default, the terminal uses an embedded font atlas. Use this method
     /// to provide a custom atlas with different fonts, sizes, or character sets.
-    pub fn font_atlas<F>(mut self, atlas: F) -> Self
-    where
-        F: FnOnce(&web_sys::WebGl2RenderingContext) -> FontAtlas + 'static,
-    {
-        self.atlas = Some(Box::new(atlas));
+    pub fn font_atlas(mut self, atlas: FontAtlasData) -> Self {
+        self.atlas = Some(atlas);
         self
     }
 
@@ -212,13 +212,13 @@ impl TerminalBuilder {
     /// Builds the terminal with the configured options.
     pub fn build(self) -> Result<Terminal, Error> {
         let renderer = match self.canvas {
-            CanvasSource::Id(id) => Renderer::create(id)?,
+            CanvasSource::Id(id) => Renderer::create(&id)?,
             CanvasSource::Element(element) => Renderer::create_with_canvas(element)?,
         };
 
         let gl = renderer.gl();
         let atlas = match self.atlas {
-            Some(atlas) => atlas(gl),
+            Some(atlas_data) => FontAtlas::load(gl, atlas_data)?,
             None => FontAtlas::load_default(gl)?,
         };
 
@@ -231,7 +231,7 @@ impl TerminalBuilder {
 
 impl From<&'static str> for CanvasSource {
     fn from(id: &'static str) -> Self {
-        CanvasSource::Id(id)
+        CanvasSource::Id(id.into())
     }
 }
 
