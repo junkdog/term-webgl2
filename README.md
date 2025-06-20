@@ -1,7 +1,7 @@
 ## beamterm - A WebGL2 Terminal Renderer
 
-[![Crate Badge]][Crate] [![API Badge]][API] [![Deps.rs
-Badge]][Deps.rs]
+[![Crate Badge]][Crate] [![NPM Badge]][NPM] [![API Badge]][API] [![Deps.rs
+Badge]][Deps.rs] 
 
 A high-performance terminal rendering system for web browsers, targeting sub-millisecond render 
 times. **beamterm** is a terminal renderer, not a full terminal emulator - it handles the display
@@ -89,24 +89,25 @@ For a 200×80 terminal with 2560 glyphs:
 | **Total**      | **~2.9 MB** | GPU memory                  |
 
 
-## Terminal Grid Renderer API
+## Terminal Renderer API
 
-The WebGL2 terminal renderer provides efficient text rendering through a simple API centered
-around two main components: `TerminalGrid` for managing the display and `FontAtlas` for glyph 
-storage.
+The renderer provides a high-level `Terminal` struct that encapsulates the complete rendering system:
 
 ### Quick Start
 
-The terminal renderer provides a high-performance WebGL2-based text rendering system:
-
 ```rust
-// Create terminal renderer
-let atlas = FontAtlas::load_default(gl)?;
-let terminal_grid = TerminalGrid::new(gl, atlas, (800, 600))?;
+use beamterm_renderer::{Terminal, CellData, FontStyle, GlyphEffect};
+
+// Create terminal with default font atlas
+let mut terminal = Terminal::builder("#canvas").build()?;
 
 // Update cells and render
-terminal_grid.update_cells(gl, cell_data.iter())?;
-renderer.render(&terminal_grid);
+let cells: Vec<CellData> = ...;
+terminal.update_cells(cells.into_iter())?;
+terminal.render_frame()?;
+
+// Handle resize
+terminal.resize(new_width, new_height)?;
 ```
 
 ### TerminalGrid
@@ -339,3 +340,5 @@ improving texture cache hit rates
 [Deps.rs Badge]: https://deps.rs/repo/github/junkdog/beamterm-renderer/status.svg
 [Deps.rs]: https://deps.rs/repo/github/junkdog/beamterm-renderer
 [demos]: https://junkdog.github.io/beamterm/
+[npm]: https://www.npmjs.com/package/@beamterm/renderer
+[NPM Badge]: https://img.shields.io/npm/v/@beamterm/renderer.svg
