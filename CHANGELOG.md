@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ## [unreleased]
+
+### 🚀 Features
+
+- *(renderer)* Add Terminal API with builder pattern (#11)
+
 ## [beamterm-0.2.0] - 2025-06-15
 
 ### 🚀 Features
@@ -37,6 +42,7 @@ All notable changes to this project will be documented in this file.
 - Add developer-facing build.zsh and supporting scripts
 - *(renderer)* Omit local main.rs/index.html from published files
 - *(emoji)* Embed ~200 more emoji into the atlas
+- Release beamterm 0.2.0
 
 ## [beamterm-0.1.1] - 2025-06-06
 
