@@ -22,6 +22,7 @@ pub struct Renderer {
     gl: web_sys::WebGl2RenderingContext,
     canvas: web_sys::HtmlCanvasElement,
     state: GlState,
+    canvas_padding_color: (f32, f32, f32),
 }
 
 impl Renderer {
@@ -46,6 +47,19 @@ impl Renderer {
         Self::create_with_canvas(canvas)
     }
 
+    /// Sets the background color for the canvas area outside the terminal grid.
+    ///
+    /// When the canvas dimensions don't align perfectly with the terminal cell grid,
+    /// there may be unused pixels around the edges. This color fills those padding
+    /// areas to maintain a consistent appearance.
+    pub fn canvas_padding_color(mut self, color: u32) -> Self {
+        let r = ((color >> 16) & 0xFF) as f32 / 255.0;
+        let g = ((color >> 8) & 0xFF) as f32 / 255.0;
+        let b = (color & 0xFF) as f32 / 255.0;
+        self.canvas_padding_color = (r, g, b);
+        self
+    }
+
     /// Creates a new renderer from an existing HTML canvas element.
     ///
     /// This method takes ownership of an existing canvas element and initializes
@@ -65,7 +79,12 @@ impl Renderer {
         let gl = js::get_webgl2_context(&canvas)?;
         let state = GlState::new(&gl);
 
-        let mut renderer = Self { gl, canvas, state };
+        let mut renderer = Self {
+            gl,
+            canvas,
+            state,
+            canvas_padding_color: (0.0, 0.0, 0.0),
+        };
         renderer.resize(width as _, height as _);
         Ok(renderer)
     }
@@ -101,7 +120,8 @@ impl Renderer {
 
     /// Begins a new rendering frame.
     pub fn begin_frame(&mut self) {
-        self.clear(0.0, 0.0, 0.0);
+        let (r, g, b) = self.canvas_padding_color;
+        self.clear(r, g, b);
     }
 
     /// Renders a drawable object.

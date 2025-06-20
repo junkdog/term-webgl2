@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod atlas;
 mod buffer;
 mod context;

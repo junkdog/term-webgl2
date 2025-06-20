@@ -1,6 +1,7 @@
 mod error;
 mod gl;
 mod mat4;
+mod terminal;
 
 pub(crate) mod js;
 
@@ -9,6 +10,7 @@ pub mod wasm;
 
 pub use ::beamterm_data::{FontAtlasData, GlyphEffect};
 pub use beamterm_data::FontStyle;
+pub use terminal::*;
 
 pub use crate::{
     error::Error,
