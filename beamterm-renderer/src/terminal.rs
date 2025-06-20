@@ -2,7 +2,6 @@ use std::{cell::RefCell, rc::Rc};
 
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
-use web_sys::HtmlCanvasElement;
 
 use crate::{CellData, Error, FontAtlas, Renderer, TerminalGrid};
 
@@ -107,7 +106,7 @@ impl Terminal {
     }
 
     /// Returns a reference to the HTML canvas element used for rendering.
-    pub fn canvas(&self) -> &HtmlCanvasElement {
+    pub fn canvas(&self) -> &web_sys::HtmlCanvasElement {
         self.renderer.canvas()
     }
 
@@ -128,7 +127,6 @@ impl Terminal {
     /// the changes.
     ///
     /// Combines [`Renderer::begin_frame`], [`Renderer::render`], and [`Renderer::end_frame`].
-    ///
     pub fn render_frame(&mut self) -> Result<(), Error> {
         self.renderer.begin_frame();
         self.renderer.render(&*self.grid.borrow());
@@ -170,7 +168,7 @@ enum CanvasSource {
 /// ```
 pub struct TerminalBuilder {
     canvas: CanvasSource,
-    atlas: Option<FontAtlasData>,
+    atlas_data: Option<FontAtlasData>,
     fallback_glyph: Option<CompactString>,
     canvas_padding_color: u32,
 }
@@ -180,7 +178,7 @@ impl TerminalBuilder {
     fn new(canvas: CanvasSource) -> Self {
         TerminalBuilder {
             canvas,
-            atlas: None,
+            atlas_data: None,
             fallback_glyph: None,
             canvas_padding_color: 0x000000,
         }
@@ -191,7 +189,7 @@ impl TerminalBuilder {
     /// By default, the terminal uses an embedded font atlas. Use this method
     /// to provide a custom atlas with different fonts, sizes, or character sets.
     pub fn font_atlas(mut self, atlas: FontAtlasData) -> Self {
-        self.atlas = Some(atlas);
+        self.atlas_data = Some(atlas);
         self
     }
 
@@ -223,10 +221,7 @@ impl TerminalBuilder {
         let renderer = renderer.canvas_padding_color(self.canvas_padding_color);
 
         let gl = renderer.gl();
-        let atlas = match self.atlas {
-            Some(atlas_data) => FontAtlas::load(gl, atlas_data)?,
-            None => FontAtlas::load_default(gl)?,
-        };
+        let atlas = FontAtlas::load(gl, self.atlas_data.unwrap_or_default())?;
 
         let canvas_size = renderer.canvas_size();
         let mut grid = TerminalGrid::new(gl, atlas, canvas_size)?;
@@ -254,7 +249,7 @@ impl From<web_sys::HtmlCanvasElement> for CanvasSource {
 }
 
 impl<'a> From<&'a web_sys::HtmlCanvasElement> for CanvasSource {
-    fn from(value: &'a HtmlCanvasElement) -> Self {
+    fn from(value: &'a web_sys::HtmlCanvasElement) -> Self {
         value.clone().into()
     }
 }
