@@ -69,8 +69,7 @@ impl Terminal {
         &mut self,
         cells: impl Iterator<Item = CellData<'a>>,
     ) -> Result<(), Error> {
-        self.grid.borrow_mut().update_cells(self.renderer.gl(), cells)?;
-        Ok(())
+        self.grid.borrow_mut().update_cells(self.renderer.gl(), cells)
     }
 
     /// Returns the WebGL2 rendering context.
