@@ -1,3 +1,7 @@
+use compact_str::{CompactString, CompactStringExt};
+
+use crate::TerminalGrid;
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CellQuery {
     mode: SelectionMode,
@@ -20,11 +24,13 @@ pub fn select(mode: SelectionMode) -> CellQuery {
 impl CellQuery {
     pub fn start(mut self, start: (u16, u16)) -> Self {
         self.start = Some(start);
+        self.end = Some(start);
         self
     }
 
     pub fn end(mut self, end: (u16, u16)) -> Self {
         self.end = Some(end);
+        self.order_start_end();
         self
     }
 
@@ -36,12 +42,36 @@ impl CellQuery {
         self.mode
     }
 
+    pub fn range(&self) -> Option<((u16, u16), (u16, u16))> {
+        if let (Some(start), Some(end)) = (self.start, self.end) {
+            Some((start, end))
+        } else {
+            None
+        }
+    }
+
     fn order_start_end(&mut self) {
         if let (Some(start), Some(end)) = (self.start, self.end) {
             if start > end {
                 self.start = Some(end);
                 self.end = Some(start);
             }
+        }
+    }
+}
+
+impl TerminalGrid {
+    pub fn get_text(&self, selection: CellQuery) -> CompactString {
+        match selection.range() {
+            Some(range) => {
+                let text = self.get_symbols(range);
+                if selection.trim_trailing_whitespace {
+                    text.lines().map(str::trim_end).join_compact("\n")
+                } else {
+                    text
+                }
+            },
+            None => CompactString::const_new(""),
         }
     }
 }

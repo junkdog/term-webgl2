@@ -1,6 +1,7 @@
 use std::{cmp::min, fmt::Debug};
 
 use beamterm_data::{FontAtlasData, FontStyle, GlyphEffect};
+use compact_str::CompactString;
 use web_sys::{console, WebGl2RenderingContext};
 
 use crate::{
@@ -141,6 +142,30 @@ impl TerminalGrid {
     /// Returns the size of the terminal grid in cells.
     pub fn terminal_size(&self) -> (u16, u16) {
         self.terminal_size
+    }
+
+    pub(crate) fn get_symbols(&self, range: ((u16, u16), (u16, u16))) -> CompactString {
+        let (cols, rows) = self.terminal_size;
+        let mut text = CompactString::new("");
+
+        let (start, end) = range;
+        for y in start.1..=end.1 {
+            for x in start.0..=end.0 {
+                if x >= cols || y >= rows {
+                    continue;
+                }
+                let idx = (y as usize * cols as usize + x as usize);
+                let glyph_id = self.cells[idx].glyph_id();
+                if let Some(symbol) = self.atlas.get_symbol(glyph_id) {
+                    text.push_str(symbol);
+                };
+            }
+            if y < end.1 {
+                text.push('\n'); // add newline except for the last row
+            }
+        }
+
+        text
     }
 
     /// Uploads uniform buffer data for screen and cell dimensions.
@@ -703,6 +728,10 @@ impl CellDynamic {
         data[7] = bg[0]; // B
 
         Self { data }
+    }
+
+    fn glyph_id(&self) -> u16 {
+        u16::from_le_bytes([self.data[0], self.data[1]])
     }
 }
 

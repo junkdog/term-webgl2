@@ -1,7 +1,10 @@
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
-use crate::{input, input::TerminalMouseEvent, CellData, Error, FontAtlas, Renderer, TerminalGrid};
+use crate::{
+    cell::CellQuery, input, input::TerminalMouseEvent, CellData, Error, FontAtlas, Renderer,
+    TerminalGrid,
+};
 
 /// High-performance WebGL2 terminal renderer.
 ///
@@ -124,6 +127,11 @@ impl Terminal {
     /// Returns a reference to the terminal grid.
     pub fn grid(&self) -> &TerminalGrid {
         &self.grid
+    }
+
+    /// Returns the textual content of the specified cell selection.
+    pub fn get_text(&self, selection: CellQuery) -> CompactString {
+        self.grid.get_text(selection)
     }
 
     /// Renders the current terminal state to the canvas.
