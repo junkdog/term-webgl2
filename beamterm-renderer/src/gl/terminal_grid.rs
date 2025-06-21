@@ -138,7 +138,7 @@ impl TerminalGrid {
         self.atlas.cell_size()
     }
 
-    /// Returns the size of the terminal grid in pixels.
+    /// Returns the size of the terminal grid in cells.
     pub fn terminal_size(&self) -> (u16, u16) {
         self.terminal_size
     }
@@ -686,7 +686,6 @@ impl CellStatic {
 impl CellDynamic {
     fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
         let mut data = [0; 8];
-        debug_assert!(glyph_id < 0x0100, "Glyph ID {glyph_id} exceeds 8-bit limit");
 
         // pack glyph ID into the first two bytes
         let glyph_id = glyph_id.to_le_bytes();
