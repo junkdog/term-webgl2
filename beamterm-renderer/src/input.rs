@@ -1,5 +1,5 @@
-use std::{cell::RefCell, rc::Rc};
-use std::fmt::Debug;
+use std::{cell::RefCell, fmt::Debug, rc::Rc};
+
 use wasm_bindgen::{closure::Closure, JsCast};
 
 use crate::{Error, TerminalGrid};

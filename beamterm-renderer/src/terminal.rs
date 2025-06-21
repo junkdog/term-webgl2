@@ -1,8 +1,7 @@
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
-use crate::{input, CellData, Error, FontAtlas, Renderer, TerminalGrid};
-use crate::input::TerminalMouseEvent;
+use crate::{input, input::TerminalMouseEvent, CellData, Error, FontAtlas, Renderer, TerminalGrid};
 
 /// High-performance WebGL2 terminal renderer.
 ///
@@ -220,7 +219,7 @@ impl TerminalBuilder {
         self.canvas_padding_color = color;
         self
     }
-    
+
     /// Sets a callback for handling terminal mouse input events.
     pub fn enabled_input_handler<F>(mut self, callback: F) -> Self
     where
@@ -246,14 +245,14 @@ impl TerminalBuilder {
         if let Some(fallback) = self.fallback_glyph {
             grid.set_fallback_glyph(&fallback)
         };
-        
+
         if let Some(callback) = self.input_handler {
-            let mouse_input = input::TerminalInputHandler::new(
-                renderer.canvas(),
-                &grid,
-                callback,
-            )?;
-            return Ok(Terminal { renderer, grid, mouse_input: Some(mouse_input) });
+            let mouse_input = input::TerminalInputHandler::new(renderer.canvas(), &grid, callback)?;
+            return Ok(Terminal {
+                renderer,
+                grid,
+                mouse_input: Some(mouse_input),
+            });
         }
 
         Ok(Terminal { renderer, grid, mouse_input: None })
