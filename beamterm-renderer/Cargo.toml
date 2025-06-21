@@ -30,14 +30,12 @@ compact_str = { workspace = true }
 console_error_panic_hook = { workspace = true }
 thiserror = { workspace = true }
 js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
 
 [dependencies.unicode-segmentation]
 workspace = true
 optional = true
 
-[dependencies.wasm-bindgen]
-workspace = true
-optional = true
 
 [dependencies.serde]
 optional = true
@@ -63,6 +61,7 @@ features = [
     'ImageData',
     'KeyboardEvent',
     'Location',
+    'MouseEvent',
     'Navigator',
     'Node',
     'Performance',
@@ -86,7 +85,6 @@ js-api = [
     "dep:serde_json",
     "dep:serde-wasm-bindgen",
     "dep:unicode-segmentation",
-    "dep:wasm-bindgen",
 ]
 
 [[bin]]

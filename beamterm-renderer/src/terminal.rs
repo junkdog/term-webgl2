@@ -1,7 +1,8 @@
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
-use crate::{CellData, Error, FontAtlas, Renderer, TerminalGrid};
+use crate::{input, CellData, Error, FontAtlas, Renderer, TerminalGrid};
+use crate::input::TerminalMouseEvent;
 
 /// High-performance WebGL2 terminal renderer.
 ///
@@ -27,9 +28,11 @@ use crate::{CellData, Error, FontAtlas, Renderer, TerminalGrid};
 /// let (new_width, new_height) = (800, 600);
 /// terminal.resize(new_width, new_height)?;
 /// ```
+#[derive(Debug)]
 pub struct Terminal {
     renderer: Renderer,
     grid: TerminalGrid,
+    mouse_input: Option<input::TerminalInputHandler>,
 }
 
 impl Terminal {
@@ -84,7 +87,14 @@ impl Terminal {
     /// Combines [`Renderer::resize`] and [`TerminalGrid::resize`] operations.
     pub fn resize(&mut self, width: i32, height: i32) -> Result<(), Error> {
         self.renderer.resize(width, height);
-        self.grid.resize(self.renderer.gl(), (width, height))
+        self.grid.resize(self.renderer.gl(), (width, height))?;
+
+        if let Some(mouse_input) = &mut self.mouse_input {
+            let (cols, rows) = self.grid.terminal_size();
+            mouse_input.set_terminal_size(cols, rows);
+        }
+
+        Ok(())
     }
 
     /// Returns the terminal dimensions in cells.
@@ -167,6 +177,7 @@ pub struct TerminalBuilder {
     canvas: CanvasSource,
     atlas_data: Option<FontAtlasData>,
     fallback_glyph: Option<CompactString>,
+    input_handler: Option<Box<dyn FnMut(TerminalMouseEvent)>>,
     canvas_padding_color: u32,
 }
 
@@ -177,6 +188,7 @@ impl TerminalBuilder {
             canvas,
             atlas_data: None,
             fallback_glyph: None,
+            input_handler: None,
             canvas_padding_color: 0x000000,
         }
     }
@@ -208,6 +220,15 @@ impl TerminalBuilder {
         self.canvas_padding_color = color;
         self
     }
+    
+    /// Sets a callback for handling terminal mouse input events.
+    pub fn enabled_input_handler<F>(mut self, callback: F) -> Self
+    where
+        F: FnMut(TerminalMouseEvent) + 'static,
+    {
+        self.input_handler = Some(Box::new(callback));
+        self
+    }
 
     /// Builds the terminal with the configured options.
     pub fn build(self) -> Result<Terminal, Error> {
@@ -225,8 +246,17 @@ impl TerminalBuilder {
         if let Some(fallback) = self.fallback_glyph {
             grid.set_fallback_glyph(&fallback)
         };
+        
+        if let Some(callback) = self.input_handler {
+            let mouse_input = input::TerminalInputHandler::new(
+                renderer.canvas(),
+                &grid,
+                callback,
+            )?;
+            return Ok(Terminal { renderer, grid, mouse_input: Some(mouse_input) });
+        }
 
-        Ok(Terminal { renderer, grid })
+        Ok(Terminal { renderer, grid, mouse_input: None })
     }
 }
 

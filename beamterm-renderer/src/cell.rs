@@ -7,10 +7,10 @@ pub struct CellQuery {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub enum  SelectionMode {
+pub enum SelectionMode {
     #[default]
     Block,
-    Linear
+    Linear,
 }
 
 pub fn select(mode: SelectionMode) -> CellQuery {
@@ -35,7 +35,7 @@ impl CellQuery {
     pub fn mode(&self) -> SelectionMode {
         self.mode
     }
-    
+
     fn order_start_end(&mut self) {
         if let (Some(start), Some(end)) = (self.start, self.end) {
             if start > end {

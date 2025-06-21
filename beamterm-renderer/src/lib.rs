@@ -5,9 +5,10 @@ mod terminal;
 
 pub(crate) mod js;
 
+pub mod cell;
+pub mod input;
 #[cfg(feature = "js-api")]
 pub mod wasm;
-pub mod cell;
 
 pub use ::beamterm_data::{FontAtlasData, GlyphEffect};
 pub use beamterm_data::FontStyle;
