@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
@@ -31,7 +29,7 @@ use crate::{CellData, Error, FontAtlas, Renderer, TerminalGrid};
 /// ```
 pub struct Terminal {
     renderer: Renderer,
-    grid: Rc<RefCell<TerminalGrid>>,
+    grid: TerminalGrid,
 }
 
 impl Terminal {
@@ -69,7 +67,7 @@ impl Terminal {
         &mut self,
         cells: impl Iterator<Item = CellData<'a>>,
     ) -> Result<(), Error> {
-        self.grid.borrow_mut().update_cells(self.renderer.gl(), cells)
+        self.grid.update_cells(self.renderer.gl(), cells)
     }
 
     /// Returns the WebGL2 rendering context.
@@ -86,12 +84,12 @@ impl Terminal {
     /// Combines [`Renderer::resize`] and [`TerminalGrid::resize`] operations.
     pub fn resize(&mut self, width: i32, height: i32) -> Result<(), Error> {
         self.renderer.resize(width, height);
-        self.grid.borrow_mut().resize(self.renderer.gl(), (width, height))
+        self.grid.resize(self.renderer.gl(), (width, height))
     }
 
     /// Returns the terminal dimensions in cells.
     pub fn terminal_size(&self) -> (u16, u16) {
-        self.grid.borrow().terminal_size()
+        self.grid.terminal_size()
     }
 
     /// Returns the size of the canvas in pixels.
@@ -101,7 +99,7 @@ impl Terminal {
 
     /// Returns the size of each cell in pixels.
     pub fn cell_size(&self) -> (i32, i32) {
-        self.grid.borrow().cell_size()
+        self.grid.cell_size()
     }
 
     /// Returns a reference to the HTML canvas element used for rendering.
@@ -115,8 +113,8 @@ impl Terminal {
     }
 
     /// Returns a reference to the terminal grid.
-    pub fn grid(&self) -> Rc<RefCell<TerminalGrid>> {
-        self.grid.clone()
+    pub fn grid(&self) -> &TerminalGrid {
+        &self.grid
     }
 
     /// Renders the current terminal state to the canvas.
@@ -128,7 +126,7 @@ impl Terminal {
     /// Combines [`Renderer::begin_frame`], [`Renderer::render`], and [`Renderer::end_frame`].
     pub fn render_frame(&mut self) -> Result<(), Error> {
         self.renderer.begin_frame();
-        self.renderer.render(&*self.grid.borrow());
+        self.renderer.render(&self.grid);
         self.renderer.end_frame();
         Ok(())
     }
@@ -228,10 +226,7 @@ impl TerminalBuilder {
             grid.set_fallback_glyph(&fallback)
         };
 
-        Ok(Terminal {
-            renderer,
-            grid: Rc::new(RefCell::new(grid)),
-        })
+        Ok(Terminal { renderer, grid })
     }
 }
 
