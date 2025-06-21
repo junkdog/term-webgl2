@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - *(renderer)* Add Terminal API with builder pattern (#11)
 
+### 🐛 Bug Fixes
+
+- *(renderer)* Remove faulty debug_assert from CellDynamic::new
+
 ## [beamterm-0.2.0] - 2025-06-15
 
 ### 🚀 Features
