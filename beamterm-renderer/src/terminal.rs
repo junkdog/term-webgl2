@@ -38,7 +38,7 @@ use crate::{
 pub struct Terminal {
     renderer: Renderer,
     grid: Rc<RefCell<TerminalGrid>>,
-    mouse_input: Option<input::TerminalMouseHandler>,
+    mouse_input: Option<input::TerminalMouseHandler>, // 🐀
 }
 
 impl Terminal {
