@@ -41,7 +41,7 @@ impl TerminalInputHandler {
     pub(crate) fn new<F>(
         canvas: &web_sys::HtmlCanvasElement,
         grid: Rc<RefCell<TerminalGrid>>,
-        mut callback: F,
+        callback: F,
     ) -> Result<Self, Error>
     where
         F: FnMut(TerminalMouseEvent, &TerminalGrid) + 'static,
@@ -72,10 +72,10 @@ impl TerminalInputHandler {
 
         use TerminalEventType::*;
         let mouse_down =
-            make_callback(MouseDown, grid.clone(), callback.clone(), coord_converter.clone());
+            canvas_callback(MouseDown, grid.clone(), callback.clone(), coord_converter.clone());
         let mouse_up =
-            make_callback(MouseUp, grid.clone(), callback.clone(), coord_converter.clone());
-        let mouse_move = make_callback(MouseMove, grid.clone(), callback.clone(), coord_converter);
+            canvas_callback(MouseUp, grid.clone(), callback.clone(), coord_converter.clone());
+        let mouse_move = canvas_callback(MouseMove, grid.clone(), callback.clone(), coord_converter);
 
         // Attach listeners
         canvas
@@ -119,7 +119,7 @@ pub enum TerminalEventType {
     MouseMove,
 }
 
-fn make_callback<F>(
+fn canvas_callback<F>(
     event_type: TerminalEventType,
     grid: Rc<RefCell<TerminalGrid>>,
     callback: Rc<RefCell<F>>,
