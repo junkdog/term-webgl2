@@ -249,8 +249,13 @@ impl TerminalBuilder {
     /// Sets a default selection handler for mouse input events. Left
     /// button selects text, `Ctrl/Cmd + C` copies the selected text to
     /// the clipboard.
-    pub fn default_mouse_input_handler(mut self) -> Self {
-        self.input_handler = Some(InputHandler::Internal);
+    pub fn default_mouse_input_handler(
+        mut self,
+        selection_mode: SelectionMode,
+        trim_trailing_whitespace: bool,
+    ) -> Self {
+        self.input_handler =
+            Some(InputHandler::Internal { selection_mode, trim_trailing_whitespace });
         self
     }
 
@@ -275,9 +280,15 @@ impl TerminalBuilder {
 
         match self.input_handler {
             None => Ok(Terminal { renderer, grid, mouse_input: None }),
-            Some(InputHandler::Internal) => {
-                let handler =
-                    DefaultSelectionHandler::new(grid.clone(), SelectionMode::Block, true);
+            Some(InputHandler::Internal {
+                selection_mode: query_mode,
+                trim_trailing_whitespace,
+            }) => {
+                let handler = DefaultSelectionHandler::new(
+                    grid.clone(),
+                    query_mode,
+                    trim_trailing_whitespace,
+                );
 
                 let callback = handler.create_event_handler();
                 let mut mouse_input =
@@ -304,7 +315,10 @@ impl TerminalBuilder {
 
 enum InputHandler {
     Mouse(Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid)>),
-    Internal,
+    Internal {
+        selection_mode: SelectionMode,
+        trim_trailing_whitespace: bool,
+    },
 }
 
 impl<'a> From<&'a str> for CanvasSource {
