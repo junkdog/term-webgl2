@@ -38,7 +38,7 @@ use crate::{
 pub struct Terminal {
     renderer: Renderer,
     grid: Rc<RefCell<TerminalGrid>>,
-    mouse_input: Option<input::TerminalInputHandler>,
+    mouse_input: Option<input::TerminalMouseHandler>,
     default_input_handler: Option<DefaultSelectionHandler>,
 }
 
@@ -98,7 +98,7 @@ impl Terminal {
 
         if let Some(mouse_input) = &mut self.mouse_input {
             let (cols, rows) = self.grid.borrow_mut().terminal_size();
-            mouse_input.set_terminal_size(cols, rows);
+            mouse_input.update_dimensions(cols, rows);
         }
 
         Ok(())
@@ -285,8 +285,8 @@ impl TerminalBuilder {
                 let handler =
                     DefaultSelectionHandler::new(grid.clone(), SelectionMode::Block, true);
 
-                let callback = handler.callback();
-                let tih = input::TerminalInputHandler::new_managed_callback(
+                let callback = handler.create_event_handler();
+                let tih = input::TerminalMouseHandler::new(
                     renderer.canvas(),
                     grid.clone(),
                     callback,
@@ -300,7 +300,7 @@ impl TerminalBuilder {
             },
             Some(InputHandler::Mouse(callback)) => {
                 let tih =
-                    input::TerminalInputHandler::new(renderer.canvas(), grid.clone(), callback)?;
+                    input::TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
                 Ok(Terminal {
                     renderer,
                     grid,

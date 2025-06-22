@@ -10,287 +10,313 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::console;
 
 use crate::{
-    cell::{select, SelectionMode},
+    cell::{select, SelectionMode as QueryMode},
     Error, TerminalGrid,
 };
 
-pub struct TerminalInputHandler {
-    mouse_down: Closure<dyn FnMut(web_sys::MouseEvent)>,
-    mouse_up: Closure<dyn FnMut(web_sys::MouseEvent)>,
-    mouse_move: Closure<dyn FnMut(web_sys::MouseEvent)>,
-    terminal_size: DynamicSize,
+/// Handles mouse input events for a terminal grid.
+pub struct TerminalMouseHandler {
+    on_mouse_down: Closure<dyn FnMut(web_sys::MouseEvent)>,
+    on_mouse_up: Closure<dyn FnMut(web_sys::MouseEvent)>,
+    on_mouse_move: Closure<dyn FnMut(web_sys::MouseEvent)>,
+    terminal_dimensions: TerminalDimensions,
 }
 
+/// Mouse event data with terminal cell coordinates.
 #[derive(Debug, Clone, Copy)]
 pub struct TerminalMouseEvent {
+    /// Type of mouse event (down, up, or move).
     pub event_type: MouseEventType,
+    /// Column in the terminal grid (0-based).
     pub col: u16,
+    /// Row in the terminal grid (0-based).
     pub row: u16,
+    /// Mouse button pressed (0 = left, 1 = middle, 2 = right).
     pub button: i16,
+    /// Whether Ctrl key was pressed during the event.
     pub ctrl_key: bool,
+    /// Whether Shift key was pressed during the event.
     pub shift_key: bool,
+    /// Whether Alt key was pressed during the event.
     pub alt_key: bool,
 }
 
+/// Types of mouse events that can occur.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MouseEventType {
+    /// Mouse button was pressed.
     MouseDown,
+    /// Mouse button was released.
     MouseUp,
+    /// Mouse moved while over the terminal.
     MouseMove,
 }
 
-#[derive(Debug)]
-struct MouseHandler {
-    left_button_state: MouseEventType,
-    start: Option<(u16, u16)>,
-    end: Option<(u16, u16)>,
+#[derive(Debug, Clone)]
+enum SelectionState {
+    Idle,
+    Selecting {
+        start: (u16, u16),
+        current: Option<(u16, u16)>
+    },
+    Complete {
+        start: (u16, u16),
+        end: (u16, u16)
+    },
 }
 
-struct DynamicSize {
-    dimensions: Rc<RefCell<(u16, u16)>>,
-}
+impl SelectionState {
+    fn new() -> Self {
+        SelectionState::Idle
+    }
 
-impl DynamicSize {
-    pub fn new(cols: u16, rows: u16) -> Self {
-        Self {
-            dimensions: Rc::new(RefCell::new((cols, rows))),
+    fn begin_selection(&mut self, col: u16, row: u16) {
+        *self = SelectionState::Selecting {
+            start: (col, row),
+            current: None,
+        };
+    }
+
+    fn update_selection(&mut self, col: u16, row: u16) {
+        if let SelectionState::Selecting { start: _, current } = self {
+            *current = Some((col, row));
         }
     }
 
-    pub fn set_size(&self, cols: u16, rows: u16) {
-        *self.dimensions.borrow_mut() = (cols, rows);
+    fn complete_selection(&mut self, col: u16, row: u16) -> Option<((u16, u16), (u16, u16))> {
+        match self {
+            SelectionState::Selecting { start, .. } => {
+                let result = Some((*start, (col, row)));
+                *self = SelectionState::Complete {
+                    start: *start,
+                    end: (col, row),
+                };
+                result
+            }
+            _ => None,
+        }
     }
 
-    pub fn get_size(&self) -> (u16, u16) {
-        *self.dimensions.borrow()
+    fn clear(&mut self) {
+        *self = SelectionState::Idle;
+    }
+
+    fn is_complete(&self) -> bool {
+        matches!(self, SelectionState::Complete { .. })
     }
 }
 
-impl TerminalInputHandler {
+struct TerminalDimensions {
+    size: Rc<RefCell<(u16, u16)>>,
+}
+
+impl TerminalDimensions {
+    pub fn new(cols: u16, rows: u16) -> Self {
+        Self {
+            size: Rc::new(RefCell::new((cols, rows))),
+        }
+    }
+
+    pub fn set(&self, cols: u16, rows: u16) {
+        *self.size.borrow_mut() = (cols, rows);
+    }
+
+    pub fn get(&self) -> (u16, u16) {
+        *self.size.borrow()
+    }
+
+    pub fn clone_ref(&self) -> Rc<RefCell<(u16, u16)>> {
+        self.size.clone()
+    }
+}
+
+impl TerminalMouseHandler {
+    /// Creates a new mouse handler for the given canvas and terminal grid.
+    ///
+    /// # Arguments
+    /// * `canvas` - The HTML canvas element to attach mouse listeners to
+    /// * `grid` - The terminal grid for coordinate calculations
+    /// * `event_handler` - Callback invoked for each mouse event
     pub(crate) fn new<F>(
         canvas: &web_sys::HtmlCanvasElement,
         grid: Rc<RefCell<TerminalGrid>>,
-        callback: F,
+        event_handler: F,
     ) -> Result<Self, Error>
     where
         F: FnMut(TerminalMouseEvent, &TerminalGrid) + 'static,
     {
-        Self::new_managed_callback(canvas, grid, Box::new(callback))
+        Self::new_internal(canvas, grid, Box::new(event_handler))
     }
 
-    pub(crate) fn new_managed_callback(
+    fn new_internal(
         canvas: &web_sys::HtmlCanvasElement,
         grid: Rc<RefCell<TerminalGrid>>,
-        callback: Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static>,
+        event_handler: Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static>,
     ) -> Result<Self, Error> {
-        // Wrap the boxed callback in Rc<RefCell> for sharing
-        let callback = Rc::new(RefCell::new(callback));
+        // Wrap the handler in Rc<RefCell> for sharing between closures
+        let shared_handler = Rc::new(RefCell::new(event_handler));
 
-        // Get grid metrics once
+        // Get grid metrics for coordinate conversion
         let (cell_width, cell_height) = grid.borrow().cell_size();
         let (cols, rows) = grid.borrow().terminal_size();
-        let terminal_size = DynamicSize::new(cols, rows);
+        let terminal_dimensions = TerminalDimensions::new(cols, rows);
 
-        // Create coordinate conversion closure
-        let dimensions = terminal_size.dimensions.clone();
-        let coord_converter = move |event: &web_sys::MouseEvent| -> Option<(u16, u16)> {
+        // Create pixel-to-cell coordinate converter
+        let dimensions_ref = terminal_dimensions.clone_ref();
+        let pixel_to_cell = move |event: &web_sys::MouseEvent| -> Option<(u16, u16)> {
             let x = event.offset_x() as f32;
             let y = event.offset_y() as f32;
 
             let col = (x / cell_width as f32).floor() as u16;
             let row = (y / cell_height as f32).floor() as u16;
-            let (cols, rows) = *dimensions.borrow();
-            if col < cols && row < rows {
+
+            let (max_cols, max_rows) = *dimensions_ref.borrow();
+            if col < max_cols && row < max_rows {
                 Some((col, row))
             } else {
                 None
             }
         };
 
+        // Create event handlers
         use MouseEventType::*;
-        let mouse_down =
-            canvas_callback(MouseDown, grid.clone(), callback.clone(), coord_converter.clone());
-        let mouse_up =
-            canvas_callback(MouseUp, grid.clone(), callback.clone(), coord_converter.clone());
-        let mouse_move =
-            canvas_callback(MouseMove, grid.clone(), callback.clone(), coord_converter);
+        let on_mouse_down = create_mouse_event_closure(
+            MouseDown,
+            grid.clone(),
+            shared_handler.clone(),
+            pixel_to_cell.clone()
+        );
+        let on_mouse_up = create_mouse_event_closure(
+            MouseUp,
+            grid.clone(),
+            shared_handler.clone(),
+            pixel_to_cell.clone()
+        );
+        let on_mouse_move = create_mouse_event_closure(
+            MouseMove,
+            grid.clone(),
+            shared_handler,
+            pixel_to_cell
+        );
 
-        // Attach listeners
+        // Attach event listeners
         canvas
-            .add_event_listener_with_callback("mousedown", mouse_down.as_ref().unchecked_ref())
-            .map_err(|_| Error::Callback("mousedown".into()))?;
+            .add_event_listener_with_callback("mousedown", on_mouse_down.as_ref().unchecked_ref())
+            .map_err(|_| Error::Callback("Failed to add mousedown listener".into()))?;
         canvas
-            .add_event_listener_with_callback("mouseup", mouse_up.as_ref().unchecked_ref())
-            .map_err(|_| Error::Callback("mouseup".into()))?;
+            .add_event_listener_with_callback("mouseup", on_mouse_up.as_ref().unchecked_ref())
+            .map_err(|_| Error::Callback("Failed to add mouseup listener".into()))?;
         canvas
-            .add_event_listener_with_callback("mousemove", mouse_move.as_ref().unchecked_ref())
-            .map_err(|_| Error::Callback("mousemove".into()))?;
+            .add_event_listener_with_callback("mousemove", on_mouse_move.as_ref().unchecked_ref())
+            .map_err(|_| Error::Callback("Failed to add mousemove listener".into()))?;
 
         Ok(Self {
-            mouse_down,
-            mouse_up,
-            mouse_move,
-            terminal_size,
+            on_mouse_down,
+            on_mouse_up,
+            on_mouse_move,
+            terminal_dimensions,
         })
     }
 
-    pub(crate) fn set_terminal_size(&self, cols: u16, rows: u16) {
-        self.terminal_size.set_size(cols, rows);
+    /// Updates the terminal dimensions after a resize.
+    pub(crate) fn update_dimensions(&self, cols: u16, rows: u16) {
+        self.terminal_dimensions.set(cols, rows);
     }
 }
 
+/// Default handler for mouse-based text selection and clipboard operations.
 pub(super) struct DefaultSelectionHandler {
-    mouse_handler: Rc<RefCell<MouseHandler>>,
+    selection_state: Rc<RefCell<SelectionState>>,
     grid: Rc<RefCell<TerminalGrid>>,
-    selection_mode: SelectionMode,
+    query_mode: QueryMode,
     trim_trailing_whitespace: bool,
 }
 
 impl DefaultSelectionHandler {
-    pub fn new(
+    /// Creates a new selection handler.
+    ///
+    /// # Arguments
+    /// * `grid` - The terminal grid to select from
+    /// * `query_mode` - Selection mode (block or linear)
+    /// * `trim_trailing_whitespace` - Whether to trim whitespace from selected lines
+    pub(super) fn new(
         grid: Rc<RefCell<TerminalGrid>>,
-        selection_mode: SelectionMode,
+        query_mode: QueryMode,
         trim_trailing_whitespace: bool,
     ) -> Self {
-        let mouse_handler = MouseHandler::new();
-        let mouse_handler = Rc::new(RefCell::new(mouse_handler));
         Self {
-            mouse_handler,
-            selection_mode,
+            selection_state: Rc::new(RefCell::new(SelectionState::new())),
             grid,
+            query_mode,
             trim_trailing_whitespace,
         }
     }
 
-    pub(crate) fn callback(&self) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
-        let mouse_handler = self.mouse_handler.clone();
+    /// Creates an event handler function for mouse events.
+    ///
+    /// Returns a boxed closure that handles mouse events, tracks selection state,
+    /// and copies selected text to the clipboard on completion.
+    pub(crate) fn create_event_handler(&self) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
+        let selection_state = self.selection_state.clone();
+        let query_mode = self.query_mode;
+        let trim_trailing_whitespace = self.trim_trailing_whitespace;
 
         Box::new(move |event: TerminalMouseEvent, grid: &TerminalGrid| {
-            let mut handler = mouse_handler.borrow_mut();
+            let mut state = selection_state.borrow_mut();
+
             match event.event_type {
                 MouseEventType::MouseDown => {
-                    if handler.end.is_none() {
-                        handler.left_button_state = MouseEventType::MouseDown;
-                        handler.set_start(event.col, event.row);
-
-                        console::log_1(
-                            &format!(
-                                "Mouse event: {:?} at ({}, {})",
-                                handler, event.col, event.row
-                            )
-                            .into(),
-                        );
-                    } else {
-                        handler.reset();
+                    if event.button == 0 { // Left button
+                        if state.is_complete() {
+                            state.clear();
+                        } else {
+                            state.begin_selection(event.col, event.row);
+                            console::log_1(
+                                &format!("Selection started at ({}, {})", event.col, event.row).into()
+                            );
+                        }
                     }
                 },
                 MouseEventType::MouseUp => {
-                    handler.left_button_state = MouseEventType::MouseUp;
-                    if handler.start.is_some() {
-                        handler.set_end(event.col, event.row);
+                    if event.button == 0 { // Left button
+                        if let Some((start, end)) = state.complete_selection(event.col, event.row) {
+                            console::log_1(
+                                &format!(
+                                    "Selection completed from ({}, {}) to ({}, {})",
+                                    start.0, start.1, end.0, end.1
+                                ).into()
+                            );
 
-                        console::log_1(
-                            &format!(
-                                "Mouse event: {:?} at ({}, {})",
-                                handler, event.col, event.row
-                            )
-                            .into(),
-                        );
-
-                        if let (Some(start), Some(end)) = (handler.start, handler.end) {
-                            // copy selection to clipboard
-                            let query = select(SelectionMode::Block)
+                            // Build and execute selection query
+                            let mut query = select(query_mode)
                                 .start(start)
-                                .end(end)
-                                .trim_trailing_whitespace();
+                                .end(end);
 
-                            copy_to_clipboard(grid.get_text(query));
+                            if trim_trailing_whitespace {
+                                query = query.trim_trailing_whitespace();
+                            }
+
+                            let selected_text = grid.get_text(query);
+                            copy_to_clipboard(selected_text);
                         }
                     }
                 },
                 MouseEventType::MouseMove => {
-                    if handler.start.is_some()
-                        && handler.left_button_state == MouseEventType::MouseDown
-                    {
-                        handler.set_end(event.col, event.row);
-                    }
+                    state.update_selection(event.col, event.row);
                 },
             }
         })
     }
 }
 
-fn copy_to_clipboard(text: CompactString) {
-    web_sys::console::log_1(&"Copying to clipboard".to_string().into());
-    spawn_local(async move {
-        if let Some(window) = web_sys::window() {
-            let clipboard = window.navigator().clipboard();
-            match wasm_bindgen_futures::JsFuture::from(clipboard.write_text(&text)).await {
-                Ok(_) => {
-                    web_sys::console::log_1(
-                        &format!("Copied to clipboard: {} symbols", text.chars().count()).into(),
-                    );
-                },
-                Err(err) => {
-                    web_sys::console::error_1(
-                        &format!("Failed to copy to clipboard: {:?}", err).into(),
-                    );
-                },
-            }
-        }
-    });
-}
-
-impl MouseHandler {
-    pub fn new() -> Self {
-        Self {
-            left_button_state: MouseEventType::MouseUp,
-            start: None,
-            end: None,
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.left_button_state = MouseEventType::MouseUp;
-        self.start = None;
-        self.end = None;
-    }
-
-    pub fn set_start(&mut self, col: u16, row: u16) {
-        self.start = Some((col, row));
-    }
-
-    pub fn set_end(&mut self, col: u16, row: u16) {
-        self.end = Some((col, row));
-    }
-}
-
-impl Debug for TerminalInputHandler {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (cols, rows) = self.terminal_size.get_size();
-        write!(f, "TerminalInputHandler {{ {cols}x{rows} }}")
-    }
-}
-
-impl Debug for DefaultSelectionHandler {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let (cols, rows) = self.grid.borrow().terminal_size();
-        write!(
-            f,
-            "DefaultSelectionHandler {{ mode: {:?}, trim_trailing_whitespace: {}, grid: {}x{} }}",
-            self.selection_mode, self.trim_trailing_whitespace, cols, rows
-        )
-    }
-}
-
-fn canvas_callback(
+fn create_mouse_event_closure(
     event_type: MouseEventType,
     grid: Rc<RefCell<TerminalGrid>>,
-    callback: Rc<RefCell<Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static>>>,
-    coord_converter: impl Fn(&web_sys::MouseEvent) -> Option<(u16, u16)> + 'static,
+    event_handler: Rc<RefCell<Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static>>>,
+    pixel_to_cell: impl Fn(&web_sys::MouseEvent) -> Option<(u16, u16)> + 'static,
 ) -> Closure<dyn FnMut(web_sys::MouseEvent)> {
     Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-        if let Some((col, row)) = coord_converter(&event) {
+        if let Some((col, row)) = pixel_to_cell(&event) {
             let terminal_event = TerminalMouseEvent {
                 event_type,
                 col,
@@ -300,7 +326,48 @@ fn canvas_callback(
                 shift_key: event.shift_key(),
                 alt_key: event.alt_key(),
             };
-            callback.borrow_mut()(terminal_event, &*grid.borrow());
+            let grid_ref = grid.borrow();
+            event_handler.borrow_mut()(terminal_event, &*grid_ref);
         }
     }) as Box<dyn FnMut(_)>)
+}
+
+fn copy_to_clipboard(text: CompactString) {
+    console::log_1(&format!("Copying {} characters to clipboard", text.len()).into());
+
+    spawn_local(async move {
+        if let Some(window) = web_sys::window() {
+            let clipboard = window.navigator().clipboard();
+            match wasm_bindgen_futures::JsFuture::from(clipboard.write_text(&text)).await {
+                Ok(_) => {
+                    console::log_1(
+                        &format!("Successfully copied {} characters", text.chars().count()).into()
+                    );
+                },
+                Err(err) => {
+                    console::error_1(
+                        &format!("Failed to copy to clipboard: {:?}", err).into()
+                    );
+                },
+            }
+        }
+    });
+}
+
+impl Debug for TerminalMouseHandler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (cols, rows) = self.terminal_dimensions.get();
+        write!(f, "TerminalMouseHandler {{ dimensions: {}x{} }}", cols, rows)
+    }
+}
+
+impl Debug for DefaultSelectionHandler {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let (cols, rows) = self.grid.borrow().terminal_size();
+        write!(
+            f,
+            "DefaultSelectionHandler {{ mode: {:?}, trim_whitespace: {}, grid: {}x{} }}",
+            self.query_mode, self.trim_trailing_whitespace, cols, rows
+        )
+    }
 }
