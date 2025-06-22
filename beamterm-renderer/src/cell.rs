@@ -35,7 +35,7 @@ impl CellQuery {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.start.is_none() || self.end.is_none()
+        self.start.is_none() && self.end.is_none()
     }
 
     pub fn mode(&self) -> SelectionMode {
@@ -62,16 +62,19 @@ impl CellQuery {
 
 impl TerminalGrid {
     pub fn get_text(&self, selection: CellQuery) -> CompactString {
-        match selection.range() {
-            Some(range) => {
-                let text = self.get_symbols(range);
-                if selection.trim_trailing_whitespace {
-                    text.lines().map(str::trim_end).join_compact("\n")
-                } else {
-                    text
-                }
-            },
-            None => CompactString::const_new(""),
+        if let Some((start, end)) = selection.range() {
+            let text = match selection.mode {
+                SelectionMode::Block => self.get_symbols(start, end),
+                SelectionMode::Linear => self.get_symbols_linear(start, end),
+            };
+
+            if selection.trim_trailing_whitespace {
+                text.lines().map(str::trim_end).join_compact("\n")
+            } else {
+                text
+            }
+        } else {
+            CompactString::const_new("")
         }
     }
 }

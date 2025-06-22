@@ -229,7 +229,7 @@ impl TerminalBuilder {
     }
 
     /// Sets a callback for handling terminal mouse input events.
-    pub fn enabled_input_handler<F>(mut self, callback: F) -> Self
+    pub fn mouse_input_handler<F>(mut self, callback: F) -> Self
     where
         F: FnMut(TerminalMouseEvent) + 'static,
     {
@@ -267,8 +267,8 @@ impl TerminalBuilder {
     }
 }
 
-impl From<&'static str> for CanvasSource {
-    fn from(id: &'static str) -> Self {
+impl<'a> From<&'a str> for CanvasSource {
+    fn from(id: &'a str) -> Self {
         CanvasSource::Id(id.into())
     }
 }

@@ -144,11 +144,14 @@ impl TerminalGrid {
         self.terminal_size
     }
 
-    pub(crate) fn get_symbols(&self, range: ((u16, u16), (u16, u16))) -> CompactString {
+    /// Returns the symbols in the specified block range as a `CompactString`.
+    pub(crate) fn get_symbols(&self, start: (u16, u16), end: (u16, u16)) -> CompactString {
         let (cols, rows) = self.terminal_size;
         let mut text = CompactString::new("");
 
-        let (start, end) = range;
+        let empty_glyph = CompactString::const_new(" ");
+        let fallback_glyph = self.atlas.get_symbol(self.fallback_glyph).unwrap_or(&empty_glyph);
+
         for y in start.1..=end.1 {
             for x in start.0..=end.0 {
                 if x >= cols || y >= rows {
@@ -156,13 +159,39 @@ impl TerminalGrid {
                 }
                 let idx = (y as usize * cols as usize + x as usize);
                 let glyph_id = self.cells[idx].glyph_id();
-                if let Some(symbol) = self.atlas.get_symbol(glyph_id) {
-                    text.push_str(symbol);
-                };
+                let symbol = self.atlas.get_symbol(glyph_id).unwrap_or(fallback_glyph);
+                text.push_str(symbol);
             }
             if y < end.1 {
                 text.push('\n'); // add newline except for the last row
             }
+        }
+
+        text
+    }
+
+    /// Returns the symbols in the specified linear range as a `CompactString`.
+    pub(crate) fn get_symbols_linear(&self, start: (u16, u16), end: (u16, u16)) -> CompactString {
+        let cols = self.terminal_size.0 as usize;
+        let mut text = CompactString::new("");
+
+        let start_idx = (start.1 as usize * cols + start.0 as usize);
+        let last_idx = (end.1 as usize * cols + end.0 as usize);
+        let last_idx = last_idx.min(self.cells.len() - 1);
+        let start_idx = start_idx.min(last_idx);
+
+        let empty_glyph = CompactString::const_new(" ");
+        let fallback_glyph = self.atlas.get_symbol(self.fallback_glyph).unwrap_or(&empty_glyph);
+
+        for idx in start_idx..=last_idx {
+            if idx % cols == 0 && idx != start_idx {
+                text.push('\n'); // newline at the start of each row
+            }
+
+            let symbol =
+                self.atlas.get_symbol(self.cells[idx].glyph_id()).unwrap_or(fallback_glyph);
+
+            text.push_str(symbol);
         }
 
         text
