@@ -1,14 +1,14 @@
-use std::{borrow::Cow, cmp::min, fmt::Debug};
+use std::{borrow::Cow, cmp::min, fmt::Debug, ops::Index};
 
 use beamterm_data::{FontAtlasData, FontStyle, GlyphEffect};
-use compact_str::CompactString;
+use compact_str::{CompactString, CompactStringExt};
 use web_sys::{console, WebGl2RenderingContext};
 
 use crate::{
     error::Error,
     gl::{
-        buffer_upload_array, ubo::UniformBufferObject, Drawable, FontAtlas, RenderContext,
-        ShaderProgram, GL,
+        buffer_upload_array, selection::SelectionTracker, ubo::UniformBufferObject, CellIterator,
+        Drawable, FontAtlas, RenderContext, ShaderProgram, GL,
     },
     mat4::Mat4,
 };
@@ -41,6 +41,8 @@ pub struct TerminalGrid {
     sampler_loc: web_sys::WebGlUniformLocation,
     /// Fallback glyph for missing symbols.
     fallback_glyph: u16,
+    /// Selection tracker for managing cell selections.
+    selection: SelectionTracker,
 }
 
 #[derive(Debug)]
@@ -117,6 +119,7 @@ impl TerminalGrid {
             atlas,
             sampler_loc,
             fallback_glyph: ' ' as u16,
+            selection: SelectionTracker::new(),
         };
 
         grid.upload_ubo_data(gl);
@@ -144,58 +147,33 @@ impl TerminalGrid {
         self.terminal_size
     }
 
+    /// Returns the active selection state of the terminal grid.
+    pub(crate) fn selection_tracker(&self) -> SelectionTracker {
+        self.selection.clone()
+    }
+
     /// Returns the symbols in the specified block range as a `CompactString`.
-    pub(crate) fn get_symbols(&self, start: (u16, u16), end: (u16, u16)) -> CompactString {
+    pub(super) fn get_symbols(&self, selection: CellIterator) -> CompactString {
         let (cols, rows) = self.terminal_size;
         let mut text = CompactString::new("");
 
-        let fallback = self.fallback_symbol();
-        for y in start.1..=end.1 {
-            for x in start.0..=end.0 {
-                if x >= cols || y >= rows {
-                    continue;
-                }
-                let idx = (y as usize * cols as usize + x as usize);
-                let glyph_id = self.cells[idx].glyph_id();
-
-                let symbol = self.atlas.get_symbol(glyph_id).unwrap_or_else(|| fallback.clone());
-                text.push_str(&symbol);
-            }
-            if y < end.1 {
-                text.push('\n'); // add newline except for the last row
+        for (idx, require_newline_after) in selection {
+            text.push_str(&self.get_cell_symbol(idx));
+            if require_newline_after {
+                text.push('\n'); // add newline after each row
             }
         }
 
         text
     }
 
-    /// Returns the symbols in the specified linear range as a `CompactString`.
-    pub(crate) fn get_symbols_linear(&self, start: (u16, u16), end: (u16, u16)) -> CompactString {
-        let cols = self.terminal_size.0 as usize;
-        let mut text = CompactString::new("");
-
-        let start_idx = (start.1 as usize * cols + start.0 as usize);
-        let last_idx = (end.1 as usize * cols + end.0 as usize);
-        let last_idx = last_idx.min(self.cells.len() - 1);
-        let start_idx = start_idx.min(last_idx);
-
-        let fallback_glyph = self.fallback_symbol();
-
-        for idx in start_idx..=last_idx {
-            if idx % cols == 0 && idx != start_idx {
-                text.push('\n'); // newline at the start of each row
-            }
-
-            let fallback = fallback_glyph.clone();
-            let symbol = self
-                .atlas
-                .get_symbol(self.cells[idx].glyph_id())
-                .unwrap_or_else(|| fallback.clone());
-
-            text.push_str(&symbol);
+    fn get_cell_symbol(&self, idx: usize) -> Cow<str> {
+        if idx < self.cells.len() {
+            let glyph_id = self.cells[idx].glyph_id();
+            self.atlas.get_symbol(glyph_id).unwrap_or_else(|| self.fallback_symbol())
+        } else {
+            self.fallback_symbol()
         }
-
-        text
     }
 
     /// Uploads uniform buffer data for screen and cell dimensions.
@@ -297,8 +275,37 @@ impl TerminalGrid {
 
     /// Flushes pending cell updates to the GPU.
     pub(crate) fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
+        // if there's an active selection; flip the colors of the selected cells
+        if let Some(iter) = self.selected_cells_iter() {
+            iter.for_each(|(idx, _)| self.cells[idx].flip_colors());
+        }
+
         self.buffers.upload_instance_data(gl, &self.cells);
+
+        // restore selection colors
+        if let Some(iter) = self.selected_cells_iter() {
+            iter.for_each(|(idx, _)| self.cells[idx].flip_colors());
+        }
+
         Ok(())
+    }
+
+    fn selected_cells_iter(&self) -> Option<CellIterator> {
+        if let Some(query) = self.selection.get_query() {
+            if let Some((start, end)) = query.range() {
+                return Some(self.cell_iter(start, end, self.selection.mode()));
+            }
+        }
+
+        None
+    }
+
+    fn flip_cell_colors(&mut self, x: u16, y: u16) {
+        let (cols, _) = self.terminal_size;
+        let idx = y as usize * cols as usize + x as usize;
+        if idx < self.cells.len() {
+            self.cells[idx].flip_colors();
+        }
     }
 
     /// Resizes the terminal grid to fit the new canvas dimensions.
@@ -762,6 +769,17 @@ impl CellDynamic {
         data[7] = bg[0]; // B
 
         Self { data }
+    }
+
+    fn flip_colors(&mut self) {
+        // swap foreground and background colors
+        let fg = [self.data[2], self.data[3], self.data[4]];
+        self.data[2] = self.data[5]; // R
+        self.data[3] = self.data[6]; // G
+        self.data[4] = self.data[7]; // B
+        self.data[5] = fg[0]; // R
+        self.data[6] = fg[1]; // G
+        self.data[7] = fg[2]; // B
     }
 
     fn glyph_id(&self) -> u16 {

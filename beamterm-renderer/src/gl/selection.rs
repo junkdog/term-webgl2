@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell,
+    cell::{RefCell, RefMut},
     fmt::{Debug, Formatter},
     rc::Rc,
 };
@@ -10,8 +10,11 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::console;
 
 use crate::{
-    cell::{select, CellQuery, SelectionMode as QueryMode},
-    Error, TerminalGrid,
+    gl::{
+        cell_query::{select, CellQuery, SelectionMode},
+        TerminalGrid,
+    },
+    Error,
 };
 
 /// Handles mouse input events for a terminal grid.
@@ -20,7 +23,7 @@ pub struct TerminalMouseHandler {
     on_mouse_up: Closure<dyn FnMut(web_sys::MouseEvent)>,
     on_mouse_move: Closure<dyn FnMut(web_sys::MouseEvent)>,
     terminal_dimensions: TerminalDimensions,
-    pub(super) default_input_handler: Option<DefaultSelectionHandler>,
+    pub(crate) default_input_handler: Option<DefaultSelectionHandler>,
 }
 
 /// Mouse event data with terminal cell coordinates.
@@ -54,11 +57,11 @@ pub enum MouseEventType {
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct ActiveSelection {
+pub(crate) struct SelectionTracker {
     query: Rc<RefCell<Option<CellQuery>>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum SelectionState {
     Idle,
     Selecting {
@@ -84,6 +87,10 @@ impl SelectionState {
         if let SelectionState::Selecting { start: _, current } = self {
             *current = Some((col, row));
         }
+    }
+
+    fn is_selecting(&self) -> bool {
+        matches!(self, SelectionState::Selecting { .. })
     }
 
     fn complete_selection(&mut self, col: u16, row: u16) -> Option<((u16, u16), (u16, u16))> {
@@ -222,12 +229,12 @@ impl TerminalMouseHandler {
 }
 
 /// Active selection state that tracks the current selection query.
-impl ActiveSelection {
+impl SelectionTracker {
     /// Creates a new active selection instance.
     ///
     /// # Arguments
     /// * `query` - The selection query to track
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { query: Rc::new(RefCell::new(None)) }
     }
 
@@ -238,10 +245,16 @@ impl ActiveSelection {
 
     /// Returns the current selection query.
     fn query(&self) -> CellQuery {
-        self.query
-            .borrow()
-            .clone()
-            .expect("query to be a value due to internal-only usage")
+        self.get_query().expect("query to be a value due to internal-only usage")
+    }
+
+    pub fn mode(&self) -> SelectionMode {
+        self.query.borrow().as_ref().map_or(SelectionMode::default(), |q| q.mode)
+    }
+
+    /// Returns the current selection query or `None` if no selection is active.
+    pub fn get_query(&self) -> Option<CellQuery> {
+        self.query.borrow().clone()
     }
 
     /// Sets a new selection query.
@@ -257,10 +270,10 @@ impl ActiveSelection {
 }
 
 /// Default handler for mouse-based text selection and clipboard operations.
-pub(super) struct DefaultSelectionHandler {
+pub(crate) struct DefaultSelectionHandler {
     selection_state: Rc<RefCell<SelectionState>>,
     grid: Rc<RefCell<TerminalGrid>>,
-    query_mode: QueryMode,
+    query_mode: SelectionMode,
     trim_trailing_whitespace: bool,
 }
 
@@ -271,9 +284,9 @@ impl DefaultSelectionHandler {
     /// * `grid` - The terminal grid to select from
     /// * `query_mode` - Selection mode (block or linear)
     /// * `trim_trailing_whitespace` - Whether to trim whitespace from selected lines
-    pub(super) fn new(
+    pub(crate) fn new(
         grid: Rc<RefCell<TerminalGrid>>,
-        query_mode: QueryMode,
+        query_mode: SelectionMode,
         trim_trailing_whitespace: bool,
     ) -> Self {
         Self {
@@ -290,7 +303,7 @@ impl DefaultSelectionHandler {
     /// and copies selected text to the clipboard on completion.
     pub(crate) fn create_event_handler(
         &self,
-        active_selection: ActiveSelection,
+        active_selection: SelectionTracker,
     ) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
         let selection_state = self.selection_state.clone();
         let query_mode = self.query_mode;
@@ -317,8 +330,10 @@ impl DefaultSelectionHandler {
                     }
                 },
                 MouseEventType::MouseMove => {
-                    state.update_selection(event.col, event.row);
-                    active_selection.update_selection_end((event.col, event.row));
+                    if state.is_selecting() {
+                        state.update_selection(event.col, event.row);
+                        active_selection.update_selection_end((event.col, event.row));
+                    }
                 },
                 MouseEventType::MouseUp => {
                     if event.button == 0 {

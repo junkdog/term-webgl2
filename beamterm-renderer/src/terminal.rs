@@ -4,9 +4,10 @@ use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
 use crate::{
-    cell::{CellQuery, SelectionMode},
-    input,
-    input::{ActiveSelection, DefaultSelectionHandler, TerminalMouseEvent},
+    gl::{
+        CellQuery, DefaultSelectionHandler, SelectionMode, SelectionTracker, TerminalMouseEvent,
+        TerminalMouseHandler,
+    },
     CellData, Error, FontAtlas, Renderer, TerminalGrid,
 };
 
@@ -38,8 +39,8 @@ use crate::{
 pub struct Terminal {
     renderer: Renderer,
     grid: Rc<RefCell<TerminalGrid>>,
-    selection: ActiveSelection,
-    mouse_handler: Option<input::TerminalMouseHandler>, // 🐀
+    selection: SelectionTracker,
+    mouse_handler: Option<TerminalMouseHandler>, // 🐀
 }
 
 impl Terminal {
@@ -133,11 +134,6 @@ impl Terminal {
     pub fn renderer(&self) -> &Renderer {
         &self.renderer
     }
-
-    // /// Returns a reference to the terminal grid.
-    // pub fn grid(&self) -> &TerminalGrid {
-    //     &self.grid
-    // }
 
     /// Returns the textual content of the specified cell selection.
     pub fn get_text(&self, selection: CellQuery) -> CompactString {
@@ -262,24 +258,27 @@ impl TerminalBuilder {
 
     /// Builds the terminal with the configured options.
     pub fn build(self) -> Result<Terminal, Error> {
+        // setup renderer
         let renderer = match self.canvas {
             CanvasSource::Id(id) => Renderer::create(&id)?,
             CanvasSource::Element(element) => Renderer::create_with_canvas(element)?,
         };
         let renderer = renderer.canvas_padding_color(self.canvas_padding_color);
 
+        // load font atlas
         let gl = renderer.gl();
         let atlas = FontAtlas::load(gl, self.atlas_data.unwrap_or_default())?;
 
+        // create terminal grid
         let canvas_size = renderer.canvas_size();
         let mut grid = TerminalGrid::new(gl, atlas, canvas_size)?;
         if let Some(fallback) = self.fallback_glyph {
             grid.set_fallback_glyph(&fallback)
         };
-
         let grid = Rc::new(RefCell::new(grid));
 
-        let selection = ActiveSelection::new();
+        // initialize mouse handler if needed
+        let selection = grid.borrow().selection_tracker().clone();
         match self.input_handler {
             None => Ok(Terminal {
                 renderer,
@@ -299,7 +298,7 @@ impl TerminalBuilder {
 
                 let callback = handler.create_event_handler(selection.clone());
                 let mut mouse_input =
-                    input::TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
+                    TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
                 mouse_input.default_input_handler = Some(handler);
                 Ok(Terminal {
                     renderer,
@@ -310,7 +309,7 @@ impl TerminalBuilder {
             },
             Some(InputHandler::Mouse(callback)) => {
                 let mouse_input =
-                    input::TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
+                    TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
                 Ok(Terminal {
                     renderer,
                     grid,
