@@ -39,7 +39,6 @@ pub struct Terminal {
     renderer: Renderer,
     grid: Rc<RefCell<TerminalGrid>>,
     mouse_input: Option<input::TerminalMouseHandler>,
-    default_input_handler: Option<DefaultSelectionHandler>,
 }
 
 impl Terminal {
@@ -275,34 +274,28 @@ impl TerminalBuilder {
         let grid = Rc::new(RefCell::new(grid));
 
         match self.input_handler {
-            None => Ok(Terminal {
-                renderer,
-                grid,
-                mouse_input: None,
-                default_input_handler: None,
-            }),
+            None => Ok(Terminal { renderer, grid, mouse_input: None }),
             Some(InputHandler::Internal) => {
                 let handler =
                     DefaultSelectionHandler::new(grid.clone(), SelectionMode::Block, true);
 
                 let callback = handler.create_event_handler();
-                let tih =
+                let mut mouse_input =
                     input::TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
+                mouse_input.default_input_handler = Some(handler);
                 Ok(Terminal {
                     renderer,
                     grid,
-                    mouse_input: Some(tih),
-                    default_input_handler: Some(handler),
+                    mouse_input: Some(mouse_input),
                 })
             },
             Some(InputHandler::Mouse(callback)) => {
-                let tih =
+                let mouse_input =
                     input::TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
                 Ok(Terminal {
                     renderer,
                     grid,
-                    mouse_input: Some(tih),
-                    default_input_handler: None,
+                    mouse_input: Some(mouse_input),
                 })
             },
         }

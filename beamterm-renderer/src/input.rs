@@ -20,6 +20,7 @@ pub struct TerminalMouseHandler {
     on_mouse_up: Closure<dyn FnMut(web_sys::MouseEvent)>,
     on_mouse_move: Closure<dyn FnMut(web_sys::MouseEvent)>,
     terminal_dimensions: TerminalDimensions,
+    pub(super) default_input_handler: Option<DefaultSelectionHandler>,
 }
 
 /// Mouse event data with terminal cell coordinates.
@@ -205,6 +206,7 @@ impl TerminalMouseHandler {
             on_mouse_up,
             on_mouse_move,
             terminal_dimensions,
+            default_input_handler: None,
         })
     }
 
