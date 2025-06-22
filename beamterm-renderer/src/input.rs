@@ -40,15 +40,15 @@ impl DynamicSize {
 impl TerminalInputHandler {
     pub(crate) fn new<F>(
         canvas: &web_sys::HtmlCanvasElement,
-        grid: &TerminalGrid,
+        grid: Rc<RefCell<TerminalGrid>>,
         mut callback: F,
     ) -> Result<Self, Error>
     where
-        F: FnMut(TerminalMouseEvent) + 'static,
+        F: FnMut(TerminalMouseEvent, &TerminalGrid) + 'static,
     {
         // Get grid metrics once
-        let (cell_width, cell_height) = grid.cell_size();
-        let (cols, rows) = grid.terminal_size();
+        let (cell_width, cell_height) = grid.borrow().cell_size();
+        let (cols, rows) = grid.borrow().terminal_size();
         let terminal_size = DynamicSize::new(cols, rows);
 
         // Wrap callback for sharing
@@ -71,9 +71,11 @@ impl TerminalInputHandler {
         };
 
         use TerminalEventType::*;
-        let mouse_down = make_callback(MouseDown, callback.clone(), coord_converter.clone());
-        let mouse_up = make_callback(MouseUp, callback.clone(), coord_converter.clone());
-        let mouse_move = make_callback(MouseMove, callback.clone(), coord_converter);
+        let mouse_down =
+            make_callback(MouseDown, grid.clone(), callback.clone(), coord_converter.clone());
+        let mouse_up =
+            make_callback(MouseUp, grid.clone(), callback.clone(), coord_converter.clone());
+        let mouse_move = make_callback(MouseMove, grid.clone(), callback.clone(), coord_converter);
 
         // Attach listeners
         canvas
@@ -119,11 +121,12 @@ pub enum TerminalEventType {
 
 fn make_callback<F>(
     event_type: TerminalEventType,
+    grid: Rc<RefCell<TerminalGrid>>,
     callback: Rc<RefCell<F>>,
     coord_converter: impl Fn(&web_sys::MouseEvent) -> Option<(u16, u16)> + 'static,
 ) -> Closure<dyn FnMut(web_sys::MouseEvent)>
 where
-    F: FnMut(TerminalMouseEvent) + 'static,
+    F: FnMut(TerminalMouseEvent, &TerminalGrid) + 'static,
 {
     Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
         if let Some((col, row)) = coord_converter(&event) {
@@ -136,7 +139,7 @@ where
                 shift_key: event.shift_key(),
                 alt_key: event.alt_key(),
             };
-            callback.borrow_mut()(terminal_event);
+            callback.borrow_mut()(terminal_event, &*grid.borrow());
         }
     }) as Box<dyn FnMut(_)>)
 }

@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
@@ -33,7 +35,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Terminal {
     renderer: Renderer,
-    grid: TerminalGrid,
+    grid: Rc<RefCell<TerminalGrid>>,
     mouse_input: Option<input::TerminalInputHandler>,
 }
 
@@ -72,7 +74,7 @@ impl Terminal {
         &mut self,
         cells: impl Iterator<Item = CellData<'a>>,
     ) -> Result<(), Error> {
-        self.grid.update_cells(self.renderer.gl(), cells)
+        self.grid.borrow_mut().update_cells(self.renderer.gl(), cells)
     }
 
     /// Returns the WebGL2 rendering context.
@@ -89,10 +91,10 @@ impl Terminal {
     /// Combines [`Renderer::resize`] and [`TerminalGrid::resize`] operations.
     pub fn resize(&mut self, width: i32, height: i32) -> Result<(), Error> {
         self.renderer.resize(width, height);
-        self.grid.resize(self.renderer.gl(), (width, height))?;
+        self.grid.borrow_mut().resize(self.renderer.gl(), (width, height))?;
 
         if let Some(mouse_input) = &mut self.mouse_input {
-            let (cols, rows) = self.grid.terminal_size();
+            let (cols, rows) = self.grid.borrow_mut().terminal_size();
             mouse_input.set_terminal_size(cols, rows);
         }
 
@@ -101,7 +103,12 @@ impl Terminal {
 
     /// Returns the terminal dimensions in cells.
     pub fn terminal_size(&self) -> (u16, u16) {
-        self.grid.terminal_size()
+        self.grid.borrow().terminal_size()
+    }
+
+    /// Returns the total number of cells in the terminal grid.
+    pub fn cell_count(&self) -> usize {
+        self.grid.borrow().cell_count()
     }
 
     /// Returns the size of the canvas in pixels.
@@ -111,7 +118,7 @@ impl Terminal {
 
     /// Returns the size of each cell in pixels.
     pub fn cell_size(&self) -> (i32, i32) {
-        self.grid.cell_size()
+        self.grid.borrow().cell_size()
     }
 
     /// Returns a reference to the HTML canvas element used for rendering.
@@ -124,14 +131,14 @@ impl Terminal {
         &self.renderer
     }
 
-    /// Returns a reference to the terminal grid.
-    pub fn grid(&self) -> &TerminalGrid {
-        &self.grid
-    }
+    // /// Returns a reference to the terminal grid.
+    // pub fn grid(&self) -> &TerminalGrid {
+    //     &self.grid
+    // }
 
     /// Returns the textual content of the specified cell selection.
     pub fn get_text(&self, selection: CellQuery) -> CompactString {
-        self.grid.get_text(selection)
+        self.grid.borrow().get_text(selection)
     }
 
     /// Renders the current terminal state to the canvas.
@@ -143,7 +150,7 @@ impl Terminal {
     /// Combines [`Renderer::begin_frame`], [`Renderer::render`], and [`Renderer::end_frame`].
     pub fn render_frame(&mut self) -> Result<(), Error> {
         self.renderer.begin_frame();
-        self.renderer.render(&self.grid);
+        self.renderer.render(&*self.grid.borrow());
         self.renderer.end_frame();
         Ok(())
     }
@@ -184,7 +191,7 @@ pub struct TerminalBuilder {
     canvas: CanvasSource,
     atlas_data: Option<FontAtlasData>,
     fallback_glyph: Option<CompactString>,
-    input_handler: Option<Box<dyn FnMut(TerminalMouseEvent)>>,
+    input_handler: Option<Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid)>>,
     canvas_padding_color: u32,
 }
 
@@ -231,7 +238,7 @@ impl TerminalBuilder {
     /// Sets a callback for handling terminal mouse input events.
     pub fn mouse_input_handler<F>(mut self, callback: F) -> Self
     where
-        F: FnMut(TerminalMouseEvent) + 'static,
+        F: FnMut(TerminalMouseEvent, &TerminalGrid) + 'static,
     {
         self.input_handler = Some(Box::new(callback));
         self
@@ -254,8 +261,11 @@ impl TerminalBuilder {
             grid.set_fallback_glyph(&fallback)
         };
 
+        let grid = Rc::new(RefCell::new(grid));
+
         if let Some(callback) = self.input_handler {
-            let mouse_input = input::TerminalInputHandler::new(renderer.canvas(), &grid, callback)?;
+            let mouse_input =
+                input::TerminalInputHandler::new(renderer.canvas(), grid.clone(), callback)?;
             return Ok(Terminal {
                 renderer,
                 grid,

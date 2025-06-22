@@ -1,4 +1,4 @@
-use std::{cmp::min, fmt::Debug};
+use std::{borrow::Cow, cmp::min, fmt::Debug};
 
 use beamterm_data::{FontAtlasData, FontStyle, GlyphEffect};
 use compact_str::CompactString;
@@ -149,9 +149,7 @@ impl TerminalGrid {
         let (cols, rows) = self.terminal_size;
         let mut text = CompactString::new("");
 
-        let empty_glyph = CompactString::const_new(" ");
-        let fallback_glyph = self.atlas.get_symbol(self.fallback_glyph).unwrap_or(&empty_glyph);
-
+        let fallback = self.fallback_symbol();
         for y in start.1..=end.1 {
             for x in start.0..=end.0 {
                 if x >= cols || y >= rows {
@@ -159,8 +157,9 @@ impl TerminalGrid {
                 }
                 let idx = (y as usize * cols as usize + x as usize);
                 let glyph_id = self.cells[idx].glyph_id();
-                let symbol = self.atlas.get_symbol(glyph_id).unwrap_or(fallback_glyph);
-                text.push_str(symbol);
+
+                let symbol = self.atlas.get_symbol(glyph_id).unwrap_or_else(|| fallback.clone());
+                text.push_str(&symbol);
             }
             if y < end.1 {
                 text.push('\n'); // add newline except for the last row
@@ -180,18 +179,20 @@ impl TerminalGrid {
         let last_idx = last_idx.min(self.cells.len() - 1);
         let start_idx = start_idx.min(last_idx);
 
-        let empty_glyph = CompactString::const_new(" ");
-        let fallback_glyph = self.atlas.get_symbol(self.fallback_glyph).unwrap_or(&empty_glyph);
+        let fallback_glyph = self.fallback_symbol();
 
         for idx in start_idx..=last_idx {
             if idx % cols == 0 && idx != start_idx {
                 text.push('\n'); // newline at the start of each row
             }
 
-            let symbol =
-                self.atlas.get_symbol(self.cells[idx].glyph_id()).unwrap_or(fallback_glyph);
+            let fallback = fallback_glyph.clone();
+            let symbol = self
+                .atlas
+                .get_symbol(self.cells[idx].glyph_id())
+                .unwrap_or_else(|| fallback.clone());
 
-            text.push_str(symbol);
+            text.push_str(&symbol);
         }
 
         text
@@ -361,6 +362,10 @@ impl TerminalGrid {
     /// Returns the base glyph identifier for a given symbol.
     pub fn base_glyph_id(&self, symbol: &str) -> Option<u16> {
         self.atlas.get_base_glyph_id(symbol)
+    }
+
+    fn fallback_symbol(&self) -> Cow<str> {
+        self.atlas.get_symbol(self.fallback_glyph).unwrap_or_else(|| Cow::Borrowed(" "))
     }
 
     fn fill_glyphs(atlas: &FontAtlas) -> Vec<u16> {
