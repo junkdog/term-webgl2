@@ -10,7 +10,7 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::console;
 
 use crate::{
-    cell::{select, SelectionMode as QueryMode},
+    cell::{select, CellQuery, SelectionMode as QueryMode},
     Error, TerminalGrid,
 };
 
@@ -51,6 +51,11 @@ pub enum MouseEventType {
     MouseUp,
     /// Mouse moved while over the terminal.
     MouseMove,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct ActiveSelection {
+    query: Rc<RefCell<Option<CellQuery>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -216,6 +221,41 @@ impl TerminalMouseHandler {
     }
 }
 
+/// Active selection state that tracks the current selection query.
+impl ActiveSelection {
+    /// Creates a new active selection instance.
+    ///
+    /// # Arguments
+    /// * `query` - The selection query to track
+    pub(super) fn new() -> Self {
+        Self { query: Rc::new(RefCell::new(None)) }
+    }
+
+    /// Clears the current selection.
+    fn clear(&self) {
+        *self.query.borrow_mut() = None;
+    }
+
+    /// Returns the current selection query.
+    fn query(&self) -> CellQuery {
+        self.query
+            .borrow()
+            .clone()
+            .expect("query to be a value due to internal-only usage")
+    }
+
+    /// Sets a new selection query.
+    fn set_query(&self, query: CellQuery) {
+        *self.query.borrow_mut() = Some(query);
+    }
+
+    fn update_selection_end(&self, end: (u16, u16)) {
+        if let Some(query) = self.query.borrow_mut().as_mut() {
+            *query = query.end(end);
+        }
+    }
+}
+
 /// Default handler for mouse-based text selection and clipboard operations.
 pub(super) struct DefaultSelectionHandler {
     selection_state: Rc<RefCell<SelectionState>>,
@@ -250,6 +290,7 @@ impl DefaultSelectionHandler {
     /// and copies selected text to the clipboard on completion.
     pub(crate) fn create_event_handler(
         &self,
+        active_selection: ActiveSelection,
     ) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
         let selection_state = self.selection_state.clone();
         let query_mode = self.query_mode;
@@ -261,44 +302,33 @@ impl DefaultSelectionHandler {
             match event.event_type {
                 MouseEventType::MouseDown => {
                     if event.button == 0 {
-                        // Left button
                         if state.is_complete() {
                             state.clear();
+                            active_selection.clear();
                         } else {
                             state.begin_selection(event.col, event.row);
-                            console::log_1(
-                                &format!("Selection started at ({}, {})", event.col, event.row)
-                                    .into(),
-                            );
-                        }
-                    }
-                },
-                MouseEventType::MouseUp => {
-                    if event.button == 0 {
-                        // Left button
-                        if let Some((start, end)) = state.complete_selection(event.col, event.row) {
-                            console::log_1(
-                                &format!(
-                                    "Selection completed from ({}, {}) to ({}, {})",
-                                    start.0, start.1, end.0, end.1
-                                )
-                                .into(),
-                            );
-
-                            // Build and execute selection query
-                            let mut query = select(query_mode).start(start).end(end);
-
+                            let mut query = select(query_mode).start((event.col, event.row));
                             if trim_trailing_whitespace {
                                 query = query.trim_trailing_whitespace();
                             }
 
-                            let selected_text = grid.get_text(query);
-                            copy_to_clipboard(selected_text);
+                            active_selection.set_query(query);
                         }
                     }
                 },
                 MouseEventType::MouseMove => {
                     state.update_selection(event.col, event.row);
+                    active_selection.update_selection_end((event.col, event.row));
+                },
+                MouseEventType::MouseUp => {
+                    if event.button == 0 {
+                        if let Some((_, end)) = state.complete_selection(event.col, event.row) {
+                            active_selection.update_selection_end(end);
+
+                            let selected_text = grid.get_text(active_selection.query());
+                            copy_to_clipboard(selected_text);
+                        }
+                    }
                 },
             }
         })

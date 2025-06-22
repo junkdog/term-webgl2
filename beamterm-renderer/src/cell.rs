@@ -30,7 +30,6 @@ impl CellQuery {
 
     pub fn end(mut self, end: (u16, u16)) -> Self {
         self.end = Some(end);
-        self.order_start_end();
         self
     }
 
@@ -38,13 +37,13 @@ impl CellQuery {
         self.start.is_none() && self.end.is_none()
     }
 
-    pub fn mode(&self) -> SelectionMode {
-        self.mode
-    }
-
     pub fn range(&self) -> Option<((u16, u16), (u16, u16))> {
         if let (Some(start), Some(end)) = (self.start, self.end) {
-            Some((start, end))
+            if start > end {
+                Some((end, start))
+            } else {
+                Some((start, end))
+            }
         } else {
             None
         }
@@ -53,15 +52,6 @@ impl CellQuery {
     pub fn trim_trailing_whitespace(mut self) -> Self {
         self.trim_trailing_whitespace = true;
         self
-    }
-
-    fn order_start_end(&mut self) {
-        if let (Some(start), Some(end)) = (self.start, self.end) {
-            if start > end {
-                self.start = Some(end);
-                self.end = Some(start);
-            }
-        }
     }
 }
 

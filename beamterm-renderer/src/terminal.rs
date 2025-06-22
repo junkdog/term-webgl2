@@ -6,7 +6,7 @@ use compact_str::CompactString;
 use crate::{
     cell::{CellQuery, SelectionMode},
     input,
-    input::{DefaultSelectionHandler, TerminalMouseEvent},
+    input::{ActiveSelection, DefaultSelectionHandler, TerminalMouseEvent},
     CellData, Error, FontAtlas, Renderer, TerminalGrid,
 };
 
@@ -38,7 +38,8 @@ use crate::{
 pub struct Terminal {
     renderer: Renderer,
     grid: Rc<RefCell<TerminalGrid>>,
-    mouse_input: Option<input::TerminalMouseHandler>, // 🐀
+    selection: ActiveSelection,
+    mouse_handler: Option<input::TerminalMouseHandler>, // 🐀
 }
 
 impl Terminal {
@@ -95,7 +96,7 @@ impl Terminal {
         self.renderer.resize(width, height);
         self.grid.borrow_mut().resize(self.renderer.gl(), (width, height))?;
 
-        if let Some(mouse_input) = &mut self.mouse_input {
+        if let Some(mouse_input) = &mut self.mouse_handler {
             let (cols, rows) = self.grid.borrow_mut().terminal_size();
             mouse_input.update_dimensions(cols, rows);
         }
@@ -278,8 +279,14 @@ impl TerminalBuilder {
 
         let grid = Rc::new(RefCell::new(grid));
 
+        let selection = ActiveSelection::new();
         match self.input_handler {
-            None => Ok(Terminal { renderer, grid, mouse_input: None }),
+            None => Ok(Terminal {
+                renderer,
+                grid,
+                mouse_handler: None,
+                selection,
+            }),
             Some(InputHandler::Internal {
                 selection_mode: query_mode,
                 trim_trailing_whitespace,
@@ -290,14 +297,15 @@ impl TerminalBuilder {
                     trim_trailing_whitespace,
                 );
 
-                let callback = handler.create_event_handler();
+                let callback = handler.create_event_handler(selection.clone());
                 let mut mouse_input =
                     input::TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
                 mouse_input.default_input_handler = Some(handler);
                 Ok(Terminal {
                     renderer,
                     grid,
-                    mouse_input: Some(mouse_input),
+                    selection,
+                    mouse_handler: Some(mouse_input),
                 })
             },
             Some(InputHandler::Mouse(callback)) => {
@@ -306,7 +314,8 @@ impl TerminalBuilder {
                 Ok(Terminal {
                     renderer,
                     grid,
-                    mouse_input: Some(mouse_input),
+                    selection,
+                    mouse_handler: Some(mouse_input),
                 })
             },
         }
