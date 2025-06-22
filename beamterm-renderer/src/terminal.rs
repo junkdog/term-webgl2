@@ -286,11 +286,8 @@ impl TerminalBuilder {
                     DefaultSelectionHandler::new(grid.clone(), SelectionMode::Block, true);
 
                 let callback = handler.create_event_handler();
-                let tih = input::TerminalMouseHandler::new(
-                    renderer.canvas(),
-                    grid.clone(),
-                    callback,
-                )?;
+                let tih =
+                    input::TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
                 Ok(Terminal {
                     renderer,
                     grid,

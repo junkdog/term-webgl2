@@ -57,11 +57,11 @@ enum SelectionState {
     Idle,
     Selecting {
         start: (u16, u16),
-        current: Option<(u16, u16)>
+        current: Option<(u16, u16)>,
     },
     Complete {
         start: (u16, u16),
-        end: (u16, u16)
+        end: (u16, u16),
     },
 }
 
@@ -71,10 +71,7 @@ impl SelectionState {
     }
 
     fn begin_selection(&mut self, col: u16, row: u16) {
-        *self = SelectionState::Selecting {
-            start: (col, row),
-            current: None,
-        };
+        *self = SelectionState::Selecting { start: (col, row), current: None };
     }
 
     fn update_selection(&mut self, col: u16, row: u16) {
@@ -87,12 +84,9 @@ impl SelectionState {
         match self {
             SelectionState::Selecting { start, .. } => {
                 let result = Some((*start, (col, row)));
-                *self = SelectionState::Complete {
-                    start: *start,
-                    end: (col, row),
-                };
+                *self = SelectionState::Complete { start: *start, end: (col, row) };
                 result
-            }
+            },
             _ => None,
         }
     }
@@ -184,20 +178,16 @@ impl TerminalMouseHandler {
             MouseDown,
             grid.clone(),
             shared_handler.clone(),
-            pixel_to_cell.clone()
+            pixel_to_cell.clone(),
         );
         let on_mouse_up = create_mouse_event_closure(
             MouseUp,
             grid.clone(),
             shared_handler.clone(),
-            pixel_to_cell.clone()
+            pixel_to_cell.clone(),
         );
-        let on_mouse_move = create_mouse_event_closure(
-            MouseMove,
-            grid.clone(),
-            shared_handler,
-            pixel_to_cell
-        );
+        let on_mouse_move =
+            create_mouse_event_closure(MouseMove, grid.clone(), shared_handler, pixel_to_cell);
 
         // Attach event listeners
         canvas
@@ -256,7 +246,9 @@ impl DefaultSelectionHandler {
     ///
     /// Returns a boxed closure that handles mouse events, tracks selection state,
     /// and copies selected text to the clipboard on completion.
-    pub(crate) fn create_event_handler(&self) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
+    pub(crate) fn create_event_handler(
+        &self,
+    ) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
         let selection_state = self.selection_state.clone();
         let query_mode = self.query_mode;
         let trim_trailing_whitespace = self.trim_trailing_whitespace;
@@ -266,31 +258,33 @@ impl DefaultSelectionHandler {
 
             match event.event_type {
                 MouseEventType::MouseDown => {
-                    if event.button == 0 { // Left button
+                    if event.button == 0 {
+                        // Left button
                         if state.is_complete() {
                             state.clear();
                         } else {
                             state.begin_selection(event.col, event.row);
                             console::log_1(
-                                &format!("Selection started at ({}, {})", event.col, event.row).into()
+                                &format!("Selection started at ({}, {})", event.col, event.row)
+                                    .into(),
                             );
                         }
                     }
                 },
                 MouseEventType::MouseUp => {
-                    if event.button == 0 { // Left button
+                    if event.button == 0 {
+                        // Left button
                         if let Some((start, end)) = state.complete_selection(event.col, event.row) {
                             console::log_1(
                                 &format!(
                                     "Selection completed from ({}, {}) to ({}, {})",
                                     start.0, start.1, end.0, end.1
-                                ).into()
+                                )
+                                .into(),
                             );
 
                             // Build and execute selection query
-                            let mut query = select(query_mode)
-                                .start(start)
-                                .end(end);
+                            let mut query = select(query_mode).start(start).end(end);
 
                             if trim_trailing_whitespace {
                                 query = query.trim_trailing_whitespace();
@@ -341,13 +335,11 @@ fn copy_to_clipboard(text: CompactString) {
             match wasm_bindgen_futures::JsFuture::from(clipboard.write_text(&text)).await {
                 Ok(_) => {
                     console::log_1(
-                        &format!("Successfully copied {} characters", text.chars().count()).into()
+                        &format!("Successfully copied {} characters", text.chars().count()).into(),
                     );
                 },
                 Err(err) => {
-                    console::error_1(
-                        &format!("Failed to copy to clipboard: {:?}", err).into()
-                    );
+                    console::error_1(&format!("Failed to copy to clipboard: {:?}", err).into());
                 },
             }
         }
