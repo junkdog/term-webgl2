@@ -4,8 +4,10 @@ use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
 use crate::{
-    cell::CellQuery, input, input::TerminalMouseEvent, CellData, Error, FontAtlas, Renderer,
-    TerminalGrid,
+    cell::{CellQuery, SelectionMode},
+    input,
+    input::{DefaultSelectionHandler, TerminalMouseEvent},
+    CellData, Error, FontAtlas, Renderer, TerminalGrid,
 };
 
 /// High-performance WebGL2 terminal renderer.
@@ -37,6 +39,7 @@ pub struct Terminal {
     renderer: Renderer,
     grid: Rc<RefCell<TerminalGrid>>,
     mouse_input: Option<input::TerminalInputHandler>,
+    default_input_handler: Option<DefaultSelectionHandler>,
 }
 
 impl Terminal {
@@ -191,7 +194,7 @@ pub struct TerminalBuilder {
     canvas: CanvasSource,
     atlas_data: Option<FontAtlasData>,
     fallback_glyph: Option<CompactString>,
-    input_handler: Option<Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid)>>,
+    input_handler: Option<InputHandler>,
     canvas_padding_color: u32,
 }
 
@@ -240,7 +243,15 @@ impl TerminalBuilder {
     where
         F: FnMut(TerminalMouseEvent, &TerminalGrid) + 'static,
     {
-        self.input_handler = Some(Box::new(callback));
+        self.input_handler = Some(InputHandler::Mouse(Box::new(callback)));
+        self
+    }
+
+    /// Sets a default selection handler for mouse input events. Left
+    /// button selects text, `Ctrl/Cmd + C` copies the selected text to
+    /// the clipboard.
+    pub fn default_mouse_input_handler(mut self) -> Self {
+        self.input_handler = Some(InputHandler::Internal);
         self
     }
 
@@ -263,18 +274,47 @@ impl TerminalBuilder {
 
         let grid = Rc::new(RefCell::new(grid));
 
-        if let Some(callback) = self.input_handler {
-            let mouse_input =
-                input::TerminalInputHandler::new(renderer.canvas(), grid.clone(), callback)?;
-            return Ok(Terminal {
+        match self.input_handler {
+            None => Ok(Terminal {
                 renderer,
                 grid,
-                mouse_input: Some(mouse_input),
-            });
-        }
+                mouse_input: None,
+                default_input_handler: None,
+            }),
+            Some(InputHandler::Internal) => {
+                let handler =
+                    DefaultSelectionHandler::new(grid.clone(), SelectionMode::Block, true);
 
-        Ok(Terminal { renderer, grid, mouse_input: None })
+                let callback = handler.callback();
+                let tih = input::TerminalInputHandler::new_managed_callback(
+                    renderer.canvas(),
+                    grid.clone(),
+                    callback,
+                )?;
+                Ok(Terminal {
+                    renderer,
+                    grid,
+                    mouse_input: Some(tih),
+                    default_input_handler: Some(handler),
+                })
+            },
+            Some(InputHandler::Mouse(callback)) => {
+                let tih =
+                    input::TerminalInputHandler::new(renderer.canvas(), grid.clone(), callback)?;
+                Ok(Terminal {
+                    renderer,
+                    grid,
+                    mouse_input: Some(tih),
+                    default_input_handler: None,
+                })
+            },
+        }
     }
+}
+
+enum InputHandler {
+    Mouse(Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid)>),
+    Internal,
 }
 
 impl<'a> From<&'a str> for CanvasSource {

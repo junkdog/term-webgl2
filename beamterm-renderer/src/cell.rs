@@ -50,6 +50,11 @@ impl CellQuery {
         }
     }
 
+    pub fn trim_trailing_whitespace(mut self) -> Self {
+        self.trim_trailing_whitespace = true;
+        self
+    }
+
     fn order_start_end(&mut self) {
         if let (Some(start), Some(end)) = (self.start, self.end) {
             if start > end {
