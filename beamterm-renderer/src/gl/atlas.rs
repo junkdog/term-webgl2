@@ -106,7 +106,7 @@ impl FontAtlas {
     pub fn get_symbol(&self, glyph_id: u16) -> Option<Cow<str>> {
         let base_glyph_id = glyph_id & (Glyph::GLYPH_ID_MASK | Glyph::EMOJI_FLAG);
 
-        if base_glyph_id < 0x80 && base_glyph_id > 0x1F {
+        if base_glyph_id >= 0x20 && base_glyph_id < 0x80 {
             // ASCII characters are directly mapped to their code point
             let ch = base_glyph_id as u8 as char;
             Some(Cow::from(ch.to_compact_string()))
