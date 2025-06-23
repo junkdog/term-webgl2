@@ -68,6 +68,9 @@ enum SelectionState {
         start: (u16, u16),
         current: Option<(u16, u16)>,
     },
+    MaybeSelecting {
+        start: (u16, u16),
+    },
     Complete {
         start: (u16, u16),
         end: (u16, u16),
@@ -84,13 +87,24 @@ impl SelectionState {
     }
 
     fn update_selection(&mut self, col: u16, row: u16) {
-        if let SelectionState::Selecting { start: _, current } = self {
-            *current = Some((col, row));
+        use SelectionState::*;
+
+        match self {
+            Selecting { current, .. } => {
+                *current = Some((col, row));
+            },
+            MaybeSelecting { start } => {
+                if (col, row) != *start {
+                    *self = Selecting { start: *start, current: Some((col, row)) };
+                }
+            },
+            _ => {},
         }
     }
 
     fn is_selecting(&self) -> bool {
-        matches!(self, SelectionState::Selecting { .. })
+        use SelectionState::*;
+        matches!(self, Selecting { .. } | MaybeSelecting { .. })
     }
 
     fn complete_selection(&mut self, col: u16, row: u16) -> Option<((u16, u16), (u16, u16))> {
@@ -106,6 +120,10 @@ impl SelectionState {
 
     fn clear(&mut self) {
         *self = SelectionState::Idle;
+    }
+
+    fn maybe_selecting(&mut self, col: u16, row: u16) {
+        *self = SelectionState::MaybeSelecting { start: (col, row) };
     }
 
     fn is_complete(&self) -> bool {
@@ -313,38 +331,44 @@ impl DefaultSelectionHandler {
             let mut state = selection_state.borrow_mut();
 
             match event.event_type {
-                MouseEventType::MouseDown => {
-                    if event.button == 0 {
-                        if state.is_complete() {
-                            state.clear();
-                            active_selection.clear();
-                        } else {
-                            state.begin_selection(event.col, event.row);
-                            let mut query = select(query_mode).start((event.col, event.row));
-                            if trim_trailing_whitespace {
-                                query = query.trim_trailing_whitespace();
-                            }
+                // only handle left mouse button events
+                MouseEventType::MouseDown if event.button == 0 => {
+                    // mouse down always begins a new *potential* selection
+                    if state.is_complete() {
+                        // the existing (completed) selection is replaced with
+                        // a new selection which will be canceled if the mouse 
+                        // up event is fired on the same cell.
+                        state.maybe_selecting(event.col, event.row);
+                    } else {
+                        // begins a new selection from a blank state
+                        state.begin_selection(event.col, event.row);
+                    }
 
-                            active_selection.set_query(query);
-                        }
-                    }
-                },
-                MouseEventType::MouseMove => {
-                    if state.is_selecting() {
-                        state.update_selection(event.col, event.row);
-                        active_selection.update_selection_end((event.col, event.row));
-                    }
-                },
-                MouseEventType::MouseUp => {
-                    if event.button == 0 {
-                        if let Some((_, end)) = state.complete_selection(event.col, event.row) {
-                            active_selection.update_selection_end(end);
+                    let query = select(query_mode)
+                        .start((event.col, event.row))
+                        .trim_trailing_whitespace(trim_trailing_whitespace);
 
-                            let selected_text = grid.get_text(active_selection.query());
-                            copy_to_clipboard(selected_text);
-                        }
+                    active_selection.set_query(query);
+                },
+                MouseEventType::MouseMove if state.is_selecting() => {
+                    state.update_selection(event.col, event.row);
+                    active_selection.update_selection_end((event.col, event.row));
+                },
+                MouseEventType::MouseUp if event.button == 0 => {
+                    // at this point, we're either at:
+                    // a) the user has finished making the selection
+                    // b) the selection was canceled by a click inside a single cell
+                    if let Some((_, end)) = state.complete_selection(event.col, event.row) {
+                        active_selection.update_selection_end(end);
+
+                        let selected_text = grid.get_text(active_selection.query());
+                        copy_to_clipboard(selected_text);
+                    } else {
+                        state.clear();
+                        active_selection.clear();
                     }
                 },
+                _ => {}, // ignore non-left button events
             }
         })
     }

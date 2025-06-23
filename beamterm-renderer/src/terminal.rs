@@ -286,20 +286,20 @@ impl TerminalBuilder {
                 mouse_handler: None,
                 selection,
             }),
-            Some(InputHandler::Internal {
-                selection_mode: query_mode,
-                trim_trailing_whitespace,
-            }) => {
+            Some(InputHandler::Internal { selection_mode, trim_trailing_whitespace }) => {
                 let handler = DefaultSelectionHandler::new(
                     grid.clone(),
-                    query_mode,
+                    selection_mode,
                     trim_trailing_whitespace,
                 );
 
-                let callback = handler.create_event_handler(selection.clone());
-                let mut mouse_input =
-                    TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
+                let mut mouse_input = TerminalMouseHandler::new(
+                    renderer.canvas(),
+                    grid.clone(),
+                    handler.create_event_handler(selection.clone()),
+                )?;
                 mouse_input.default_input_handler = Some(handler);
+
                 Ok(Terminal {
                     renderer,
                     grid,

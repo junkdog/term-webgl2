@@ -65,18 +65,17 @@ impl CellQuery {
 
     pub fn range(&self) -> Option<((u16, u16), (u16, u16))> {
         if let (Some(start), Some(end)) = (self.start, self.end) {
-            if start > end {
-                Some((end, start))
-            } else {
-                Some((start, end))
-            }
+            Some((
+                (start.0.min(end.0), start.1.min(end.1)),
+                (start.0.max(end.0), start.1.max(end.1)),
+            ))
         } else {
             None
         }
     }
 
-    pub fn trim_trailing_whitespace(mut self) -> Self {
-        self.trim_trailing_whitespace = true;
+    pub fn trim_trailing_whitespace(mut self, enabled: bool) -> Self {
+        self.trim_trailing_whitespace = enabled;
         self
     }
 }

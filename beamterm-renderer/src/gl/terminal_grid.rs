@@ -291,13 +291,10 @@ impl TerminalGrid {
     }
 
     fn selected_cells_iter(&self) -> Option<CellIterator> {
-        if let Some(query) = self.selection.get_query() {
-            if let Some((start, end)) = query.range() {
-                return Some(self.cell_iter(start, end, self.selection.mode()));
-            }
-        }
-
-        None
+        self.selection
+            .get_query()
+            .and_then(|query| query.range())
+            .map(|(start, end)| self.cell_iter(start, end, self.selection.mode()))
     }
 
     fn flip_cell_colors(&mut self, x: u16, y: u16) {
