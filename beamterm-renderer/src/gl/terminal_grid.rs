@@ -276,18 +276,19 @@ impl TerminalGrid {
     /// Flushes pending cell updates to the GPU.
     pub(crate) fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
         // if there's an active selection; flip the colors of the selected cells
-        if let Some(iter) = self.selected_cells_iter() {
-            iter.for_each(|(idx, _)| self.cells[idx].flip_colors());
-        }
+        self.flip_selected_cell_colors();
 
         self.buffers.upload_instance_data(gl, &self.cells);
 
         // restore colors
+        self.flip_selected_cell_colors();
+
+        Ok(())
+    }
+    fn flip_selected_cell_colors(&mut self) {
         if let Some(iter) = self.selected_cells_iter() {
             iter.for_each(|(idx, _)| self.cells[idx].flip_colors());
         }
-
-        Ok(())
     }
 
     fn selected_cells_iter(&self) -> Option<CellIterator> {
