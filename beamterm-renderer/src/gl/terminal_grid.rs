@@ -282,7 +282,7 @@ impl TerminalGrid {
 
         self.buffers.upload_instance_data(gl, &self.cells);
 
-        // restore selection colors
+        // restore colors
         if let Some(iter) = self.selected_cells_iter() {
             iter.for_each(|(idx, _)| self.cells[idx].flip_colors());
         }

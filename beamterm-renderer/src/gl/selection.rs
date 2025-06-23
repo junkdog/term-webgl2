@@ -325,7 +325,7 @@ impl DefaultSelectionHandler {
     ) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
         let selection_state = self.selection_state.clone();
         let query_mode = self.query_mode;
-        let trim_trailing_whitespace = self.trim_trailing_whitespace;
+        let trim_trailing = self.trim_trailing_whitespace;
 
         Box::new(move |event: TerminalMouseEvent, grid: &TerminalGrid| {
             let mut state = selection_state.borrow_mut();
@@ -336,7 +336,7 @@ impl DefaultSelectionHandler {
                     // mouse down always begins a new *potential* selection
                     if state.is_complete() {
                         // the existing (completed) selection is replaced with
-                        // a new selection which will be canceled if the mouse 
+                        // a new selection which will be canceled if the mouse
                         // up event is fired on the same cell.
                         state.maybe_selecting(event.col, event.row);
                     } else {
@@ -346,7 +346,7 @@ impl DefaultSelectionHandler {
 
                     let query = select(query_mode)
                         .start((event.col, event.row))
-                        .trim_trailing_whitespace(trim_trailing_whitespace);
+                        .trim_trailing_whitespace(trim_trailing);
 
                     active_selection.set_query(query);
                 },
@@ -355,12 +355,16 @@ impl DefaultSelectionHandler {
                     active_selection.update_selection_end((event.col, event.row));
                 },
                 MouseEventType::MouseUp if event.button == 0 => {
+                    console::log_2(
+                        &format!("{:?}\n", event).into(),
+                        &format!("{:?}", *state).into(),
+                    );
+
                     // at this point, we're either at:
                     // a) the user has finished making the selection
                     // b) the selection was canceled by a click inside a single cell
-                    if let Some((_, end)) = state.complete_selection(event.col, event.row) {
-                        active_selection.update_selection_end(end);
-
+                    if let Some((_start, _end)) = state.complete_selection(event.col, event.row) {
+                        active_selection.update_selection_end((event.col, event.row));
                         let selected_text = grid.get_text(active_selection.query());
                         copy_to_clipboard(selected_text);
                     } else {

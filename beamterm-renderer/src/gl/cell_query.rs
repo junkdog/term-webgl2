@@ -50,7 +50,6 @@ pub fn select(mode: SelectionMode) -> CellQuery {
 impl CellQuery {
     pub fn start(mut self, start: (u16, u16)) -> Self {
         self.start = Some(start);
-        self.end = Some(start);
         self
     }
 
@@ -136,10 +135,6 @@ impl Iterator for LinearCellIterator {
         let is_first_cell = idx == self.current_idx;
         let needs_newline_before = is_row_start && !is_first_cell;
 
-        // For linear mode, we actually want newlines BEFORE cells at row starts
-        // But the original code put newlines AFTER the previous cell
-        // Let's adjust the logic to match the original behavior
-
         self.current_idx += 1;
         if self.current_idx > self.end_idx {
             self.finished = true;
@@ -160,7 +155,7 @@ impl BlockCellIterator {
     fn new(cols: u16, start: (u16, u16), end: (u16, u16), max_cells: usize) -> Self {
         // Bounds checking and coordinate ordering
         let start = (
-            start.0.min((max_cells / cols as usize).saturating_sub(1) as u16),
+            start.0.min(cols.saturating_sub(1)),
             start.1.min((max_cells / cols as usize).saturating_sub(1) as u16),
         );
         let end = (

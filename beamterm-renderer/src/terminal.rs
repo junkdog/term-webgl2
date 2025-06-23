@@ -5,8 +5,7 @@ use compact_str::CompactString;
 
 use crate::{
     gl::{
-        CellQuery, DefaultSelectionHandler, SelectionMode, SelectionTracker, TerminalMouseEvent,
-        TerminalMouseHandler,
+        CellQuery, DefaultSelectionHandler, SelectionMode, TerminalMouseEvent, TerminalMouseHandler,
     },
     CellData, Error, FontAtlas, Renderer, TerminalGrid,
 };
@@ -39,7 +38,6 @@ use crate::{
 pub struct Terminal {
     renderer: Renderer,
     grid: Rc<RefCell<TerminalGrid>>,
-    selection: SelectionTracker,
     mouse_handler: Option<TerminalMouseHandler>, // 🐀
 }
 
@@ -278,14 +276,9 @@ impl TerminalBuilder {
         let grid = Rc::new(RefCell::new(grid));
 
         // initialize mouse handler if needed
-        let selection = grid.borrow().selection_tracker().clone();
+        let selection = grid.borrow().selection_tracker();
         match self.input_handler {
-            None => Ok(Terminal {
-                renderer,
-                grid,
-                mouse_handler: None,
-                selection,
-            }),
+            None => Ok(Terminal { renderer, grid, mouse_handler: None }),
             Some(InputHandler::Internal { selection_mode, trim_trailing_whitespace }) => {
                 let handler = DefaultSelectionHandler::new(
                     grid.clone(),
@@ -296,14 +289,13 @@ impl TerminalBuilder {
                 let mut mouse_input = TerminalMouseHandler::new(
                     renderer.canvas(),
                     grid.clone(),
-                    handler.create_event_handler(selection.clone()),
+                    handler.create_event_handler(selection),
                 )?;
                 mouse_input.default_input_handler = Some(handler);
 
                 Ok(Terminal {
                     renderer,
                     grid,
-                    selection,
                     mouse_handler: Some(mouse_input),
                 })
             },
@@ -313,7 +305,6 @@ impl TerminalBuilder {
                 Ok(Terminal {
                     renderer,
                     grid,
-                    selection,
                     mouse_handler: Some(mouse_input),
                 })
             },
