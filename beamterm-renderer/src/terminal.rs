@@ -4,9 +4,8 @@ use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
 use crate::{
-    gl::{
-        CellQuery, DefaultSelectionHandler, SelectionMode, TerminalMouseEvent, TerminalMouseHandler,
-    },
+    gl::{CellQuery, SelectionMode},
+    mouse::{DefaultSelectionHandler, TerminalMouseEvent, TerminalMouseHandler},
     CellData, Error, FontAtlas, Renderer, TerminalGrid,
 };
 

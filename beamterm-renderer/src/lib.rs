@@ -5,6 +5,7 @@ mod terminal;
 
 pub(crate) mod js;
 
+mod mouse;
 #[cfg(feature = "js-api")]
 pub mod wasm;
 
