@@ -15,6 +15,10 @@ use crate::{
 };
 
 /// Handles mouse input events for a terminal grid.
+///
+/// Converts browser mouse events into terminal grid coordinates and manages
+/// event handlers for mouse interactions. Maintains terminal dimensions for
+/// accurate coordinate mapping.
 pub struct TerminalMouseHandler {
     on_mouse_down: Closure<dyn FnMut(web_sys::MouseEvent)>,
     on_mouse_up: Closure<dyn FnMut(web_sys::MouseEvent)>,
@@ -24,6 +28,9 @@ pub struct TerminalMouseHandler {
 }
 
 /// Mouse event data with terminal cell coordinates.
+///
+/// Represents a mouse event translated from pixel coordinates to terminal
+/// grid coordinates, including modifier key states.
 #[derive(Debug, Clone, Copy)]
 pub struct TerminalMouseEvent {
     /// Type of mouse event (down, up, or move).
@@ -56,10 +63,16 @@ pub enum MouseEventType {
 impl TerminalMouseHandler {
     /// Creates a new mouse handler for the given canvas and terminal grid.
     ///
+    /// Sets up mouse event listeners on the canvas and converts pixel coordinates
+    /// to terminal cell coordinates before invoking the provided event handler.
+    ///
     /// # Arguments
     /// * `canvas` - The HTML canvas element to attach mouse listeners to
     /// * `grid` - The terminal grid for coordinate calculations
     /// * `event_handler` - Callback invoked for each mouse event
+    ///
+    /// # Errors
+    /// Returns an error if event listeners cannot be attached to the canvas.
     pub(crate) fn new<F>(
         canvas: &web_sys::HtmlCanvasElement,
         grid: Rc<RefCell<TerminalGrid>>,
@@ -139,12 +152,19 @@ impl TerminalMouseHandler {
     }
 
     /// Updates the terminal dimensions after a resize.
+    ///
+    /// Must be called when the terminal grid is resized to ensure accurate
+    /// coordinate conversion from pixels to cells.
     pub(crate) fn update_dimensions(&self, cols: u16, rows: u16) {
         self.terminal_dimensions.set(cols, rows);
     }
 }
 
 /// Default handler for mouse-based text selection and clipboard operations.
+///
+/// Implements standard terminal selection behavior: click and drag to select text,
+/// automatic clipboard copy on selection completion. Supports both block and
+/// linear selection modes.
 pub(crate) struct DefaultSelectionHandler {
     selection_state: Rc<RefCell<SelectionState>>,
     grid: Rc<RefCell<TerminalGrid>>,
@@ -235,31 +255,38 @@ impl DefaultSelectionHandler {
     }
 }
 
+/// Internal state machine for tracking mouse selection operations.
+///
+/// Manages the lifecycle of a selection from initial click through dragging
+/// to final release. Handles edge cases like single-cell clicks that should
+/// cancel rather than select.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum SelectionState {
+    /// No selection in progress.
     Idle,
+    /// Active selection with start point and current cursor position.
     Selecting {
         start: (u16, u16),
         current: Option<(u16, u16)>,
     },
-    MaybeSelecting {
-        start: (u16, u16),
-    },
-    Complete {
-        start: (u16, u16),
-        end: (u16, u16),
-    },
+    /// Potential selection that will be canceled if mouse up occurs on same cell.
+    MaybeSelecting { start: (u16, u16) },
+    /// Completed selection with final coordinates.
+    Complete { start: (u16, u16), end: (u16, u16) },
 }
 
 impl SelectionState {
+    /// Creates a new idle selection state.
     fn new() -> Self {
         SelectionState::Idle
     }
 
+    /// Begins a new selection at the specified coordinates.
     fn begin_selection(&mut self, col: u16, row: u16) {
         *self = SelectionState::Selecting { start: (col, row), current: None };
     }
 
+    /// Updates the current selection endpoint during dragging.
     fn update_selection(&mut self, col: u16, row: u16) {
         use SelectionState::*;
 
@@ -276,11 +303,15 @@ impl SelectionState {
         }
     }
 
+    /// Checks if a selection is currently in progress.
     fn is_selecting(&self) -> bool {
         use SelectionState::*;
         matches!(self, Selecting { .. } | MaybeSelecting { .. })
     }
 
+    /// Completes the selection at the specified coordinates.
+    ///
+    /// Returns the selection coordinates if valid, None if canceled.
     fn complete_selection(&mut self, col: u16, row: u16) -> Option<((u16, u16), (u16, u16))> {
         match self {
             SelectionState::Selecting { start, .. } => {
@@ -292,19 +323,25 @@ impl SelectionState {
         }
     }
 
+    /// Resets the selection state to idle.
     fn clear(&mut self) {
         *self = SelectionState::Idle;
     }
 
+    /// Enters a tentative selection state that may be canceled.
     fn maybe_selecting(&mut self, col: u16, row: u16) {
         *self = SelectionState::MaybeSelecting { start: (col, row) };
     }
 
+    /// Checks if a selection has been completed.
     fn is_complete(&self) -> bool {
         matches!(self, SelectionState::Complete { .. })
     }
 }
 
+/// Creates a closure that handles browser mouse events and converts them to terminal events.
+///
+/// Wraps the event handler with coordinate conversion and terminal event creation logic.
 fn create_mouse_event_closure(
     event_type: MouseEventType,
     grid: Rc<RefCell<TerminalGrid>>,
@@ -328,6 +365,10 @@ fn create_mouse_event_closure(
     }) as Box<dyn FnMut(_)>)
 }
 
+/// Copies text to the system clipboard using the browser's async clipboard API.
+///
+/// Spawns an async task to handle the clipboard write operation. Logs success
+/// or failure to the console.
 fn copy_to_clipboard(text: CompactString) {
     console::log_1(&format!("Copying {} characters to clipboard", text.len()).into());
 

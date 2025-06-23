@@ -2,6 +2,10 @@ use compact_str::{CompactString, CompactStringExt};
 
 use crate::gl::TerminalGrid;
 
+/// Configuration for querying and extracting text from terminal cells.
+///
+/// Defines the selection mode, coordinate range, and text processing options
+/// for extracting content from the terminal grid.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CellQuery {
     pub(super) mode: SelectionMode,
@@ -10,21 +14,37 @@ pub struct CellQuery {
     pub(super) trim_trailing_whitespace: bool,
 }
 
+/// Defines how cells are selected in the terminal grid.
 #[derive(Debug, Clone, Copy, Default)]
 pub enum SelectionMode {
+    /// Rectangular selection of cells.
+    ///
+    /// Selects all cells within the rectangle defined by start and end points.
     #[default]
     Block,
+    /// Linear selection following text flow.
+    ///
+    /// Selects cells from start to end following line wrapping, similar to
+    /// standard text selection in terminals.
     Linear,
 }
 
 /// Zero-allocation iterator over terminal cell indices.
+///
+/// Provides efficient iteration over selected cells without allocating
+/// intermediate collections.
 #[derive(Debug)]
 pub enum CellIterator {
+    /// Iterator for block (rectangular) selections.
     Block(BlockCellIterator),
+    /// Iterator for linear (text-flow) selections.
     Linear(LinearCellIterator),
 }
 
 /// Iterator for block (rectangular) cell selection.
+///
+/// Iterates over cells row by row within the rectangular region defined
+/// by start and end coordinates.
 #[derive(Debug)]
 pub struct BlockCellIterator {
     cols: u16,
@@ -35,6 +55,9 @@ pub struct BlockCellIterator {
 }
 
 /// Iterator for linear cell selection.
+///
+/// Iterates over cells following text flow from start to end position,
+/// wrapping at line boundaries like standard text selection.
 #[derive(Debug)]
 pub struct LinearCellIterator {
     cols: u16,
@@ -43,25 +66,49 @@ pub struct LinearCellIterator {
     finished: bool,
 }
 
+/// Creates a new cell query with the specified selection mode.
+///
+/// # Example
+/// ```
+/// use beamterm_renderer::{select, SelectionMode};
+///
+/// let query = select(SelectionMode::Block)
+///     .start((0, 0))
+///     .end((10, 5))
+///     .trim_trailing_whitespace(true);
+/// ```
 pub fn select(mode: SelectionMode) -> CellQuery {
     CellQuery { mode, ..CellQuery::default() }
 }
 
 impl CellQuery {
+    /// Sets the starting position for the selection.
+    ///
+    /// # Arguments
+    /// * `start` - Starting coordinates as (column, row)
     pub fn start(mut self, start: (u16, u16)) -> Self {
         self.start = Some(start);
         self
     }
 
+    /// Sets the ending position for the selection.
+    ///
+    /// # Arguments
+    /// * `end` - Ending coordinates as (column, row)
     pub fn end(mut self, end: (u16, u16)) -> Self {
         self.end = Some(end);
         self
     }
 
+    /// Checks if the query has no selection range defined.
     pub fn is_empty(&self) -> bool {
         self.start.is_none() && self.end.is_none()
     }
 
+    /// Returns the normalized selection range if both start and end are defined.
+    ///
+    /// The returned range has coordinates ordered so that the first tuple
+    /// contains the minimum coordinates and the second contains the maximum.
     pub fn range(&self) -> Option<((u16, u16), (u16, u16))> {
         if let (Some(start), Some(end)) = (self.start, self.end) {
             Some((
@@ -73,6 +120,10 @@ impl CellQuery {
         }
     }
 
+    /// Configures whether to remove trailing whitespace from each line.
+    ///
+    /// When enabled, spaces at the end of each selected line are removed
+    /// from the extracted text.
     pub fn trim_trailing_whitespace(mut self, enabled: bool) -> Self {
         self.trim_trailing_whitespace = enabled;
         self
@@ -152,6 +203,9 @@ impl Iterator for LinearCellIterator {
 }
 
 impl BlockCellIterator {
+    /// Creates a new block iterator with bounds checking.
+    ///
+    /// Ensures coordinates are within terminal bounds and properly ordered.
     fn new(cols: u16, start: (u16, u16), end: (u16, u16), max_cells: usize) -> Self {
         // Bounds checking and coordinate ordering
         let start = (
@@ -175,6 +229,9 @@ impl BlockCellIterator {
 }
 
 impl LinearCellIterator {
+    /// Creates a new linear iterator with bounds checking.
+    ///
+    /// Converts coordinates to linear indices and ensures they're within bounds.
     fn new(cols: u16, start: (u16, u16), end: (u16, u16), max_cells: usize) -> Self {
         let cols_usize = cols as usize;
 
@@ -206,6 +263,9 @@ impl LinearCellIterator {
 impl TerminalGrid {
     /// Zero-allocation iterator over cell indices for a given selection range and mode.
     ///
+    /// Creates an efficient iterator that yields cell indices and newline indicators
+    /// without allocating intermediate collections.
+    ///
     /// # Returns
     /// Iterator yielding (cell_index, needs_newline_after) tuples.
     pub fn cell_iter(
@@ -227,6 +287,16 @@ impl TerminalGrid {
         }
     }
 
+    /// Extracts text content from the terminal based on the selection query.
+    ///
+    /// Retrieves the text within the selection range, optionally trimming
+    /// trailing whitespace from each line based on the query configuration.
+    ///
+    /// # Arguments
+    /// * `selection` - Query defining the selection range and options
+    ///
+    /// # Returns
+    /// The selected text as a `CompactString`, or empty string if no selection.
     pub fn get_text(&self, selection: CellQuery) -> CompactString {
         if let Some((start, end)) = selection.range() {
             let text = self.get_symbols(self.cell_iter(start, end, selection.mode));
