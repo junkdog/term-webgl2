@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 - *(renderer)* Remove faulty debug_assert from CellDynamic::new
 
+### 💼 Other
+
+- *(renderer)* Add linear and block-based copy selection (#12)
+
 ## [beamterm-0.2.0] - 2025-06-15
 
 ### 🚀 Features
