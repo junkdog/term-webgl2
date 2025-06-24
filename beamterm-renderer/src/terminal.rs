@@ -16,6 +16,27 @@ use crate::{
 /// `Terminal` encapsulates the complete terminal rendering system, providing a
 /// simplified API over the underlying [`Renderer`] and [`TerminalGrid`] components.
 ///
+///  ## Selection and Mouse Input
+///
+/// The renderer supports mouse-driven text selection with automatic clipboard
+/// integration:
+///
+/// ```rust
+/// // Enable default selection handler
+/// use beamterm_renderer::{SelectionMode, Terminal};
+///
+/// let terminal = Terminal::builder("#canvas")
+///     .default_mouse_input_handler(SelectionMode::Linear, true)
+///     .build()?;
+///
+/// // Or implement custom mouse handling
+/// let terminal = Terminal::builder("#canvas")
+///     .mouse_input_handler(|event, grid| {
+///         // Custom handler logic
+///     })
+///     .build()?;
+///```
+///
 /// # Examples
 ///
 /// ```rust
