@@ -1,6 +1,7 @@
 mod error;
 mod gl;
 mod mat4;
+mod mouse;
 mod terminal;
 
 pub(crate) mod js;
@@ -10,12 +11,10 @@ pub mod wasm;
 
 pub use ::beamterm_data::{FontAtlasData, GlyphEffect};
 pub use beamterm_data::FontStyle;
+pub use mouse::{MouseEventType, TerminalMouseEvent, TerminalMouseHandler};
 pub use terminal::*;
 
-pub use crate::{
-    error::Error,
-    gl::{CellData, FontAtlas, Renderer, TerminalGrid},
-};
+pub use crate::{error::Error, gl::*};
 
 #[cfg(test)]
 mod tests {

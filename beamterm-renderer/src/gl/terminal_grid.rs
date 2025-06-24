@@ -1,13 +1,14 @@
-use std::{cmp::min, fmt::Debug};
+use std::{borrow::Cow, cmp::min, fmt::Debug, ops::Index};
 
 use beamterm_data::{FontAtlasData, FontStyle, GlyphEffect};
+use compact_str::{CompactString, CompactStringExt};
 use web_sys::{console, WebGl2RenderingContext};
 
 use crate::{
     error::Error,
     gl::{
-        buffer_upload_array, ubo::UniformBufferObject, Drawable, FontAtlas, RenderContext,
-        ShaderProgram, GL,
+        buffer_upload_array, selection::SelectionTracker, ubo::UniformBufferObject, CellIterator,
+        Drawable, FontAtlas, RenderContext, ShaderProgram, GL,
     },
     mat4::Mat4,
 };
@@ -40,6 +41,8 @@ pub struct TerminalGrid {
     sampler_loc: web_sys::WebGlUniformLocation,
     /// Fallback glyph for missing symbols.
     fallback_glyph: u16,
+    /// Selection tracker for managing cell selections.
+    selection: SelectionTracker,
 }
 
 #[derive(Debug)]
@@ -116,6 +119,7 @@ impl TerminalGrid {
             atlas,
             sampler_loc,
             fallback_glyph: ' ' as u16,
+            selection: SelectionTracker::new(),
         };
 
         grid.upload_ubo_data(gl);
@@ -141,6 +145,35 @@ impl TerminalGrid {
     /// Returns the size of the terminal grid in cells.
     pub fn terminal_size(&self) -> (u16, u16) {
         self.terminal_size
+    }
+
+    /// Returns the active selection state of the terminal grid.
+    pub(crate) fn selection_tracker(&self) -> SelectionTracker {
+        self.selection.clone()
+    }
+
+    /// Returns the symbols in the specified block range as a `CompactString`.
+    pub(super) fn get_symbols(&self, selection: CellIterator) -> CompactString {
+        let (cols, rows) = self.terminal_size;
+        let mut text = CompactString::new("");
+
+        for (idx, require_newline_after) in selection {
+            text.push_str(&self.get_cell_symbol(idx));
+            if require_newline_after {
+                text.push('\n'); // add newline after each row
+            }
+        }
+
+        text
+    }
+
+    fn get_cell_symbol(&self, idx: usize) -> Cow<str> {
+        if idx < self.cells.len() {
+            let glyph_id = self.cells[idx].glyph_id();
+            self.atlas.get_symbol(glyph_id).unwrap_or_else(|| self.fallback_symbol())
+        } else {
+            self.fallback_symbol()
+        }
     }
 
     /// Uploads uniform buffer data for screen and cell dimensions.
@@ -242,8 +275,39 @@ impl TerminalGrid {
 
     /// Flushes pending cell updates to the GPU.
     pub(crate) fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
+        // If there's an active selection, flip the colors of the selected cells.
+        // This ensures that the selected cells are rendered with inverted colors
+        // during the GPU upload process.
+        self.flip_selected_cell_colors();
+
         self.buffers.upload_instance_data(gl, &self.cells);
+
+        // Restore the original colors of the selected cells after the upload.
+        // This ensures that the internal state of the cells remains consistent.
+        self.flip_selected_cell_colors();
+
         Ok(())
+    }
+
+    fn flip_selected_cell_colors(&mut self) {
+        if let Some(iter) = self.selected_cells_iter() {
+            iter.for_each(|(idx, _)| self.cells[idx].flip_colors());
+        }
+    }
+
+    fn selected_cells_iter(&self) -> Option<CellIterator> {
+        self.selection
+            .get_query()
+            .and_then(|query| query.range())
+            .map(|(start, end)| self.cell_iter(start, end, self.selection.mode()))
+    }
+
+    fn flip_cell_colors(&mut self, x: u16, y: u16) {
+        let (cols, _) = self.terminal_size;
+        let idx = y as usize * cols as usize + x as usize;
+        if idx < self.cells.len() {
+            self.cells[idx].flip_colors();
+        }
     }
 
     /// Resizes the terminal grid to fit the new canvas dimensions.
@@ -307,6 +371,10 @@ impl TerminalGrid {
     /// Returns the base glyph identifier for a given symbol.
     pub fn base_glyph_id(&self, symbol: &str) -> Option<u16> {
         self.atlas.get_base_glyph_id(symbol)
+    }
+
+    fn fallback_symbol(&self) -> Cow<str> {
+        self.atlas.get_symbol(self.fallback_glyph).unwrap_or(Cow::Borrowed(" "))
     }
 
     fn fill_glyphs(atlas: &FontAtlas) -> Vec<u16> {
@@ -703,6 +771,21 @@ impl CellDynamic {
         data[7] = bg[0]; // B
 
         Self { data }
+    }
+
+    fn flip_colors(&mut self) {
+        // swap foreground and background colors
+        let fg = [self.data[2], self.data[3], self.data[4]];
+        self.data[2] = self.data[5]; // R
+        self.data[3] = self.data[6]; // G
+        self.data[4] = self.data[7]; // B
+        self.data[5] = fg[0]; // R
+        self.data[6] = fg[1]; // G
+        self.data[7] = fg[2]; // B
+    }
+
+    fn glyph_id(&self) -> u16 {
+        u16::from_le_bytes([self.data[0], self.data[1]])
     }
 }
 

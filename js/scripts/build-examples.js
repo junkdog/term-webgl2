@@ -69,7 +69,7 @@ function buildExample(exampleName) {
 }
 
 // Build all examples
-const examples = ['webpack', 'vite', 'api-demo'];
+const examples = ['webpack', 'vite', 'api-demo', 'selection-demo'];
 const results = [];
 
 for (const example of examples) {
@@ -136,6 +136,7 @@ const wasmChecks = [
     'webpack/bundle.js',
     'vite/index.html',
     'api-demo/index.html',
+    'selection-demo/index.html',
 ];
 
 let wasmValid = true;

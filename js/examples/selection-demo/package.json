@@ -1,0 +1,29 @@
+{
+  "name": "beamterm-selection-demo",
+  "version": "1.0.0",
+  "description": "Demo showcasing Beamterm's mouse selection and copy functionality",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@beamterm/renderer": "file:../../"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vite-plugin-wasm": "^3.3.0"
+  },
+  "keywords": [
+    "beamterm",
+    "terminal",
+    "webgl",
+    "wasm",
+    "selection",
+    "copy",
+    "mouse",
+    "example"
+  ]
+} 

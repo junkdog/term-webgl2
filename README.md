@@ -16,6 +16,7 @@ applications and JavaScript/TypeScript examples.
 - **Zero-Copy Updates** - Direct memory mapping for dynamic cell updates
 - **Unicode and Emoji Support** - Complete Unicode support with grapheme clustering
 - **ASCII Fast Path** - Direct bit operations for ASCII characters (no lookups)
+- **Selection Support** - Mouse-driven text selection with clipboard integration (Block/Linear modes)
 - **Optional JS/TS Bindings** - Provides a [JavaScript/TypeScript API](js/README.md) for easy integration
 
 
@@ -109,6 +110,25 @@ terminal.render_frame()?;
 // Handle resize
 terminal.resize(new_width, new_height)?;
 ```
+
+### Selection and Mouse Input
+
+The renderer supports mouse-driven text selection with automatic clipboard integration:
+
+```rust
+// Enable default selection handler
+let terminal = Terminal::builder("#canvas")
+    .default_mouse_input_handler(SelectionMode::Linear, true)
+    .build()?;
+
+// Or implement custom mouse handling
+let terminal = Terminal::builder("#canvas")
+    .mouse_input_handler(|event, grid| {
+        // Custom handler logic
+    })
+    .build()?;
+```
+
 
 ### TerminalGrid
 Main rendering component managing the terminal display. Handles shader programs, cell data, GPU

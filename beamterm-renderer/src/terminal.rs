@@ -3,12 +3,39 @@ use std::{cell::RefCell, rc::Rc};
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
-use crate::{CellData, Error, FontAtlas, Renderer, TerminalGrid};
+use crate::{
+    gl::{CellQuery, SelectionMode},
+    mouse::{
+        DefaultSelectionHandler, MouseEventCallback, TerminalMouseEvent, TerminalMouseHandler,
+    },
+    CellData, Error, FontAtlas, Renderer, TerminalGrid,
+};
 
 /// High-performance WebGL2 terminal renderer.
 ///
 /// `Terminal` encapsulates the complete terminal rendering system, providing a
 /// simplified API over the underlying [`Renderer`] and [`TerminalGrid`] components.
+///
+///  ## Selection and Mouse Input
+///
+/// The renderer supports mouse-driven text selection with automatic clipboard
+/// integration:
+///
+/// ```rust
+/// // Enable default selection handler
+/// use beamterm_renderer::{SelectionMode, Terminal};
+///
+/// let terminal = Terminal::builder("#canvas")
+///     .default_mouse_input_handler(SelectionMode::Linear, true)
+///     .build()?;
+///
+/// // Or implement custom mouse handling
+/// let terminal = Terminal::builder("#canvas")
+///     .mouse_input_handler(|event, grid| {
+///         // Custom handler logic
+///     })
+///     .build()?;
+///```
 ///
 /// # Examples
 ///
@@ -29,9 +56,11 @@ use crate::{CellData, Error, FontAtlas, Renderer, TerminalGrid};
 /// let (new_width, new_height) = (800, 600);
 /// terminal.resize(new_width, new_height)?;
 /// ```
+#[derive(Debug)]
 pub struct Terminal {
     renderer: Renderer,
     grid: Rc<RefCell<TerminalGrid>>,
+    mouse_handler: Option<TerminalMouseHandler>, // 🐀
 }
 
 impl Terminal {
@@ -69,8 +98,7 @@ impl Terminal {
         &mut self,
         cells: impl Iterator<Item = CellData<'a>>,
     ) -> Result<(), Error> {
-        self.grid.borrow_mut().update_cells(self.renderer.gl(), cells)?;
-        Ok(())
+        self.grid.borrow_mut().update_cells(self.renderer.gl(), cells)
     }
 
     /// Returns the WebGL2 rendering context.
@@ -87,12 +115,24 @@ impl Terminal {
     /// Combines [`Renderer::resize`] and [`TerminalGrid::resize`] operations.
     pub fn resize(&mut self, width: i32, height: i32) -> Result<(), Error> {
         self.renderer.resize(width, height);
-        self.grid.borrow_mut().resize(self.renderer.gl(), (width, height))
+        self.grid.borrow_mut().resize(self.renderer.gl(), (width, height))?;
+
+        if let Some(mouse_input) = &mut self.mouse_handler {
+            let (cols, rows) = self.grid.borrow_mut().terminal_size();
+            mouse_input.update_dimensions(cols, rows);
+        }
+
+        Ok(())
     }
 
     /// Returns the terminal dimensions in cells.
     pub fn terminal_size(&self) -> (u16, u16) {
         self.grid.borrow().terminal_size()
+    }
+
+    /// Returns the total number of cells in the terminal grid.
+    pub fn cell_count(&self) -> usize {
+        self.grid.borrow().cell_count()
     }
 
     /// Returns the size of the canvas in pixels.
@@ -115,9 +155,9 @@ impl Terminal {
         &self.renderer
     }
 
-    /// Returns a reference to the terminal grid.
-    pub fn grid(&self) -> Rc<RefCell<TerminalGrid>> {
-        self.grid.clone()
+    /// Returns the textual content of the specified cell selection.
+    pub fn get_text(&self, selection: CellQuery) -> CompactString {
+        self.grid.borrow().get_text(selection)
     }
 
     /// Renders the current terminal state to the canvas.
@@ -170,6 +210,7 @@ pub struct TerminalBuilder {
     canvas: CanvasSource,
     atlas_data: Option<FontAtlasData>,
     fallback_glyph: Option<CompactString>,
+    input_handler: Option<InputHandler>,
     canvas_padding_color: u32,
 }
 
@@ -180,6 +221,7 @@ impl TerminalBuilder {
             canvas,
             atlas_data: None,
             fallback_glyph: None,
+            input_handler: None,
             canvas_padding_color: 0x000000,
         }
     }
@@ -212,32 +254,96 @@ impl TerminalBuilder {
         self
     }
 
+    /// Sets a callback for handling terminal mouse input events.
+    pub fn mouse_input_handler<F>(mut self, callback: F) -> Self
+    where
+        F: FnMut(TerminalMouseEvent, &TerminalGrid) + 'static,
+    {
+        self.input_handler = Some(InputHandler::Mouse(Box::new(callback)));
+        self
+    }
+
+    /// Sets a default selection handler for mouse input events. Left
+    /// button selects text, `Ctrl/Cmd + C` copies the selected text to
+    /// the clipboard.
+    pub fn default_mouse_input_handler(
+        mut self,
+        selection_mode: SelectionMode,
+        trim_trailing_whitespace: bool,
+    ) -> Self {
+        self.input_handler =
+            Some(InputHandler::Internal { selection_mode, trim_trailing_whitespace });
+        self
+    }
+
     /// Builds the terminal with the configured options.
     pub fn build(self) -> Result<Terminal, Error> {
+        // setup renderer
         let renderer = match self.canvas {
             CanvasSource::Id(id) => Renderer::create(&id)?,
             CanvasSource::Element(element) => Renderer::create_with_canvas(element)?,
         };
         let renderer = renderer.canvas_padding_color(self.canvas_padding_color);
 
+        // load font atlas
         let gl = renderer.gl();
         let atlas = FontAtlas::load(gl, self.atlas_data.unwrap_or_default())?;
 
+        // create terminal grid
         let canvas_size = renderer.canvas_size();
         let mut grid = TerminalGrid::new(gl, atlas, canvas_size)?;
         if let Some(fallback) = self.fallback_glyph {
             grid.set_fallback_glyph(&fallback)
         };
+        let grid = Rc::new(RefCell::new(grid));
 
-        Ok(Terminal {
-            renderer,
-            grid: Rc::new(RefCell::new(grid)),
-        })
+        // initialize mouse handler if needed
+        let selection = grid.borrow().selection_tracker();
+        match self.input_handler {
+            None => Ok(Terminal { renderer, grid, mouse_handler: None }),
+            Some(InputHandler::Internal { selection_mode, trim_trailing_whitespace }) => {
+                let handler = DefaultSelectionHandler::new(
+                    grid.clone(),
+                    selection_mode,
+                    trim_trailing_whitespace,
+                );
+
+                let mut mouse_input = TerminalMouseHandler::new(
+                    renderer.canvas(),
+                    grid.clone(),
+                    handler.create_event_handler(selection),
+                )?;
+                mouse_input.default_input_handler = Some(handler);
+
+                Ok(Terminal {
+                    renderer,
+                    grid,
+                    mouse_handler: Some(mouse_input),
+                })
+            },
+            Some(InputHandler::Mouse(callback)) => {
+                let mouse_input =
+                    TerminalMouseHandler::new(renderer.canvas(), grid.clone(), callback)?;
+                Ok(Terminal {
+                    renderer,
+                    grid,
+                    mouse_handler: Some(mouse_input),
+                })
+            },
+        }
     }
 }
 
-impl From<&'static str> for CanvasSource {
-    fn from(id: &'static str) -> Self {
+enum InputHandler {
+    Mouse(MouseEventCallback),
+    Internal {
+        selection_mode: SelectionMode,
+        trim_trailing_whitespace: bool,
+    },
+}
+
+impl<'a> From<&'a str> for CanvasSource {
+    fn from(id: &'a str) -> Self {
         CanvasSource::Id(id.into())
     }
 }

@@ -16,6 +16,10 @@ pub enum Error {
     /// External data loading or parsing errors.
     #[error("Data error: {0}")]
     Data(String),
+
+    /// Event listener errors, related to mouse input handling.
+    #[error("Event listener error: {0}")]
+    Callback(String),
 }
 
 impl Error {
