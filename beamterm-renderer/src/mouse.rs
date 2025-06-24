@@ -14,6 +14,9 @@ use crate::{
     select, Error, SelectionMode, TerminalGrid,
 };
 
+pub(super) type MouseEventCallback = Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static>;
+type EventHandler = Rc<RefCell<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static>>;
+
 /// Handles mouse input events for a terminal grid.
 ///
 /// Converts browser mouse events into terminal grid coordinates and manages
@@ -88,7 +91,7 @@ impl TerminalMouseHandler {
     fn new_internal(
         canvas: &web_sys::HtmlCanvasElement,
         grid: Rc<RefCell<TerminalGrid>>,
-        event_handler: Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static>,
+        event_handler: MouseEventCallback,
     ) -> Result<Self, Error> {
         // Wrap the handler in Rc<RefCell> for sharing between closures
         let shared_handler = Rc::new(RefCell::new(event_handler));
@@ -217,10 +220,7 @@ impl DefaultSelectionHandler {
     ///
     /// Returns a boxed closure that handles mouse events, tracks selection state,
     /// and copies selected text to the clipboard on completion.
-    pub fn create_event_handler(
-        &self,
-        active_selection: SelectionTracker,
-    ) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
+    pub fn create_event_handler(&self, active_selection: SelectionTracker) -> MouseEventCallback {
         let selection_state = self.selection_state.clone();
         let query_mode = self.query_mode;
         let trim_trailing = self.trim_trailing_whitespace;
@@ -361,7 +361,7 @@ impl SelectionState {
 fn create_mouse_event_closure(
     event_type: MouseEventType,
     grid: Rc<RefCell<TerminalGrid>>,
-    event_handler: Rc<RefCell<Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static>>>,
+    event_handler: EventHandler,
     pixel_to_cell: impl Fn(&web_sys::MouseEvent) -> Option<(u16, u16)> + 'static,
 ) -> Closure<dyn FnMut(web_sys::MouseEvent)> {
     Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
@@ -376,7 +376,7 @@ fn create_mouse_event_closure(
                 alt_key: event.alt_key(),
             };
             let grid_ref = grid.borrow();
-            event_handler.borrow_mut()(terminal_event, &*grid_ref);
+            event_handler.borrow_mut()(terminal_event, &grid_ref);
         }
     }) as Box<dyn FnMut(_)>)
 }

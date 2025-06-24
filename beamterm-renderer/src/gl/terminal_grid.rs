@@ -371,7 +371,7 @@ impl TerminalGrid {
     }
 
     fn fallback_symbol(&self) -> Cow<str> {
-        self.atlas.get_symbol(self.fallback_glyph).unwrap_or_else(|| Cow::Borrowed(" "))
+        self.atlas.get_symbol(self.fallback_glyph).unwrap_or(Cow::Borrowed(" "))
     }
 
     fn fill_glyphs(atlas: &FontAtlas) -> Vec<u16> {

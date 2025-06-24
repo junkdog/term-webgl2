@@ -5,7 +5,9 @@ use compact_str::CompactString;
 
 use crate::{
     gl::{CellQuery, SelectionMode},
-    mouse::{DefaultSelectionHandler, TerminalMouseEvent, TerminalMouseHandler},
+    mouse::{
+        DefaultSelectionHandler, MouseEventCallback, TerminalMouseEvent, TerminalMouseHandler,
+    },
     CellData, Error, FontAtlas, Renderer, TerminalGrid,
 };
 
@@ -312,7 +314,7 @@ impl TerminalBuilder {
 }
 
 enum InputHandler {
-    Mouse(Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid)>),
+    Mouse(MouseEventCallback),
     Internal {
         selection_mode: SelectionMode,
         trim_trailing_whitespace: bool,

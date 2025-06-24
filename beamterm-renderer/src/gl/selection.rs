@@ -68,7 +68,7 @@ impl SelectionTracker {
     ///
     /// Safe version that doesn't panic when no selection exists.
     pub(crate) fn get_query(&self) -> Option<CellQuery> {
-        self.query.borrow().clone()
+        *self.query.borrow()
     }
 
     /// Sets a new selection query.
