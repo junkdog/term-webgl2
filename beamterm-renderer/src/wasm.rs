@@ -7,7 +7,13 @@ use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-use crate::gl::{CellData, FontAtlas, Renderer, TerminalGrid};
+use crate::{
+    gl::{
+        select, CellData, CellQuery as RustCellQuery, FontAtlas, Renderer,
+        SelectionMode as RustSelectionMode, TerminalGrid,
+    },
+    mouse::{DefaultSelectionHandler, TerminalMouseEvent, TerminalMouseHandler},
+};
 
 /// JavaScript wrapper for the terminal renderer
 #[wasm_bindgen]
@@ -15,6 +21,7 @@ use crate::gl::{CellData, FontAtlas, Renderer, TerminalGrid};
 pub struct BeamtermRenderer {
     renderer: Renderer,
     terminal_grid: Rc<RefCell<TerminalGrid>>,
+    mouse_handler: Option<TerminalMouseHandler>,
 }
 
 /// JavaScript wrapper for cell data
@@ -48,6 +55,89 @@ pub struct Batch {
     terminal_grid: Rc<RefCell<TerminalGrid>>,
     gl: web_sys::WebGl2RenderingContext,
     dirty: bool,
+}
+
+/// Selection mode for text selection in the terminal
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy)]
+pub enum SelectionMode {
+    /// Rectangular block selection
+    Block,
+    /// Linear text flow selection
+    Linear,
+}
+
+/// Type of mouse event
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy)]
+pub enum MouseEventType {
+    /// Mouse button pressed
+    MouseDown,
+    /// Mouse button released
+    MouseUp,
+    /// Mouse moved
+    MouseMove,
+}
+
+/// Mouse event data with terminal coordinates
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy)]
+pub struct MouseEvent {
+    /// Type of mouse event
+    pub event_type: MouseEventType,
+    /// Column in terminal grid (0-based)
+    pub col: u16,
+    /// Row in terminal grid (0-based)
+    pub row: u16,
+    /// Mouse button (0=left, 1=middle, 2=right)
+    pub button: i16,
+    /// Whether Ctrl key was pressed
+    pub ctrl_key: bool,
+    /// Whether Shift key was pressed
+    pub shift_key: bool,
+    /// Whether Alt key was pressed
+    pub alt_key: bool,
+}
+
+/// Query for selecting cells in the terminal
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct CellQuery {
+    inner: RustCellQuery,
+}
+
+#[wasm_bindgen]
+impl CellQuery {
+    /// Create a new cell query with the specified selection mode
+    #[wasm_bindgen(constructor)]
+    pub fn new(mode: SelectionMode) -> CellQuery {
+        CellQuery { inner: select(mode.into()) }
+    }
+
+    /// Set the starting position for the selection
+    pub fn start(mut self, col: u16, row: u16) -> CellQuery {
+        self.inner = self.inner.start((col, row));
+        self
+    }
+
+    /// Set the ending position for the selection
+    pub fn end(mut self, col: u16, row: u16) -> CellQuery {
+        self.inner = self.inner.end((col, row));
+        self
+    }
+
+    /// Configure whether to trim trailing whitespace from lines
+    #[wasm_bindgen(js_name = "trimTrailingWhitespace")]
+    pub fn trim_trailing_whitespace(mut self, enabled: bool) -> CellQuery {
+        self.inner = self.inner.trim_trailing_whitespace(enabled);
+        self
+    }
+
+    /// Check if the query is empty (no selection range)
+    #[wasm_bindgen(js_name = "isEmpty")]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
 }
 
 #[wasm_bindgen]
@@ -181,9 +271,7 @@ impl Batch {
         let (cols, rows) = terminal_grid.terminal_size();
 
         if y >= rows {
-            // todo: feature-toggle?
-            // return Err(JsValue::from_str("Row out of bounds"));
-            return Ok(());
+            return Ok(()); // oob, ignore
         }
 
         for (i, ch) in text.graphemes(true).enumerate() {
@@ -340,7 +428,112 @@ impl BeamtermRenderer {
 
         console::log_1(&"BeamtermRenderer initialized successfully".into());
         let terminal_grid = Rc::new(RefCell::new(terminal_grid));
-        Ok(BeamtermRenderer { renderer, terminal_grid })
+        Ok(BeamtermRenderer {
+            renderer,
+            terminal_grid,
+            mouse_handler: None,
+        })
+    }
+
+    /// Enable default mouse selection behavior with built-in copy to clipboard
+    #[wasm_bindgen(js_name = "enableSelection")]
+    pub fn enable_selection(
+        &mut self,
+        mode: SelectionMode,
+        trim_whitespace: bool,
+    ) -> Result<(), JsValue> {
+        // clean up existing mouse handler if present
+        if let Some(old_handler) = self.mouse_handler.take() {
+            old_handler.cleanup();
+        }
+
+        let selection_tracker = self.terminal_grid.borrow().selection_tracker();
+        let handler =
+            DefaultSelectionHandler::new(self.terminal_grid.clone(), mode.into(), trim_whitespace);
+
+        let mouse_handler = TerminalMouseHandler::new(
+            self.renderer.canvas(),
+            self.terminal_grid.clone(),
+            handler.create_event_handler(selection_tracker),
+        )
+        .map_err(|e| JsValue::from_str(&format!("Failed to create mouse handler: {}", e)))?;
+
+        self.mouse_handler = Some(mouse_handler);
+        Ok(())
+    }
+
+    /// Set a custom mouse event handler
+    #[wasm_bindgen(js_name = "setMouseHandler")]
+    pub fn set_mouse_handler(&mut self, handler: js_sys::Function) -> Result<(), JsValue> {
+        // Clean up existing mouse handler if present
+        if let Some(old_handler) = self.mouse_handler.take() {
+            old_handler.cleanup();
+        }
+
+        let handler_closure = {
+            let handler = handler.clone();
+            move |event: TerminalMouseEvent, _grid: &TerminalGrid| {
+                let js_event = MouseEvent::from(event);
+                let this = JsValue::null();
+                let args = js_sys::Array::new();
+                args.push(&JsValue::from(js_event));
+
+                if let Err(e) = handler.apply(&this, &args) {
+                    console::error_1(&format!("Mouse handler error: {:?}", e).into());
+                }
+            }
+        };
+
+        let mouse_handler = TerminalMouseHandler::new(
+            self.renderer.canvas(),
+            self.terminal_grid.clone(),
+            handler_closure,
+        )
+        .map_err(|e| JsValue::from_str(&format!("Failed to create mouse handler: {}", e)))?;
+
+        self.mouse_handler = Some(mouse_handler);
+        Ok(())
+    }
+
+    /// Get selected text based on a cell query
+    #[wasm_bindgen(js_name = "getText")]
+    pub fn get_text(&self, query: &CellQuery) -> String {
+        self.terminal_grid.borrow().get_text(query.inner).to_string()
+    }
+
+    /// Copy text to the system clipboard
+    #[wasm_bindgen(js_name = "copyToClipboard")]
+    pub fn copy_to_clipboard(&self, text: &str) {
+        use wasm_bindgen_futures::spawn_local;
+        let text = text.to_string();
+
+        spawn_local(async move {
+            if let Some(window) = web_sys::window() {
+                let clipboard = window.navigator().clipboard();
+                match wasm_bindgen_futures::JsFuture::from(clipboard.write_text(&text)).await {
+                    Ok(_) => {
+                        console::log_1(
+                            &format!("Copied {} characters to clipboard", text.len()).into(),
+                        );
+                    },
+                    Err(err) => {
+                        console::error_1(&format!("Failed to copy to clipboard: {:?}", err).into());
+                    },
+                }
+            }
+        });
+    }
+
+    /// Clear any active selection
+    #[wasm_bindgen(js_name = "clearSelection")]
+    pub fn clear_selection(&self) {
+        self.terminal_grid.borrow().selection_tracker().clear();
+    }
+
+    /// Check if there is an active selection
+    #[wasm_bindgen(js_name = "hasSelection")]
+    pub fn has_selection(&self) -> bool {
+        self.terminal_grid.borrow().selection_tracker().get_query().is_some()
     }
 
     /// Create a new render batch
@@ -389,7 +582,55 @@ impl BeamtermRenderer {
             .borrow_mut()
             .resize(gl, (width, height))
             .map_err(|e| JsValue::from_str(&format!("Failed to resize: {}", e)))?;
+
+        // Update mouse handler dimensions if present
+        if let Some(mouse_handler) = &self.mouse_handler {
+            let (cols, rows) = self.terminal_grid.borrow().terminal_size();
+            mouse_handler.update_dimensions(cols, rows);
+        }
+
         Ok(())
+    }
+}
+
+// Convert between Rust and WASM types
+impl From<SelectionMode> for RustSelectionMode {
+    fn from(mode: SelectionMode) -> Self {
+        match mode {
+            SelectionMode::Block => RustSelectionMode::Block,
+            SelectionMode::Linear => RustSelectionMode::Linear,
+        }
+    }
+}
+
+impl From<RustSelectionMode> for SelectionMode {
+    fn from(mode: RustSelectionMode) -> Self {
+        match mode {
+            RustSelectionMode::Block => SelectionMode::Block,
+            RustSelectionMode::Linear => SelectionMode::Linear,
+        }
+    }
+}
+
+impl From<TerminalMouseEvent> for MouseEvent {
+    fn from(event: TerminalMouseEvent) -> Self {
+        use crate::mouse::MouseEventType as RustMouseEventType;
+
+        let event_type = match event.event_type {
+            RustMouseEventType::MouseDown => MouseEventType::MouseDown,
+            RustMouseEventType::MouseUp => MouseEventType::MouseUp,
+            RustMouseEventType::MouseMove => MouseEventType::MouseMove,
+        };
+
+        MouseEvent {
+            event_type,
+            col: event.col,
+            row: event.row,
+            button: event.button,
+            ctrl_key: event.ctrl_key,
+            shift_key: event.shift_key,
+            alt_key: event.alt_key,
+        }
     }
 }
 

@@ -85,6 +85,7 @@ js-api = [
 
     "dep:serde",
     "dep:serde_json",
+    "dep:serde-wasm-bindgen",
     "dep:unicode-segmentation",
 ]
 

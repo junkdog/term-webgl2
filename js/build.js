@@ -147,6 +147,25 @@ const Beamterm = {
         }
         return new BeamtermModule.Cell(symbol, style);
     },
+
+    CellQuery: function(mode) {
+        if (!initialized) {
+            throw new Error('Beamterm not initialized. Call await Beamterm.init() first.');
+        }
+        return new BeamtermModule.CellQuery(mode);
+    },
+    
+    get SelectionMode() { 
+        return initialized ? BeamtermModule.SelectionMode : undefined; 
+    },
+    
+    get MouseEventType() { 
+        return initialized ? BeamtermModule.MouseEventType : undefined; 
+    },
+    
+    get MouseEvent() { 
+        return initialized ? BeamtermModule.MouseEvent : undefined; 
+    },
     
     get Batch() { 
         return initialized ? BeamtermModule.Batch : undefined; 

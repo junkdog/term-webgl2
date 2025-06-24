@@ -8,7 +8,7 @@ use crate::gl::TerminalGrid;
 /// for extracting content from the terminal grid.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CellQuery {
-    pub(super) mode: SelectionMode,
+    pub(crate) mode: SelectionMode,
     pub(super) start: Option<(u16, u16)>,
     pub(super) end: Option<(u16, u16)>,
     pub(super) trim_trailing_whitespace: bool,

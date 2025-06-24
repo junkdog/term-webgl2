@@ -20,6 +20,7 @@ use crate::{
 /// event handlers for mouse interactions. Maintains terminal dimensions for
 /// accurate coordinate mapping.
 pub struct TerminalMouseHandler {
+    canvas: web_sys::HtmlCanvasElement,
     on_mouse_down: Closure<dyn FnMut(web_sys::MouseEvent)>,
     on_mouse_up: Closure<dyn FnMut(web_sys::MouseEvent)>,
     on_mouse_move: Closure<dyn FnMut(web_sys::MouseEvent)>,
@@ -143,6 +144,7 @@ impl TerminalMouseHandler {
             .map_err(|_| Error::Callback("Failed to add mousemove listener".into()))?;
 
         Ok(Self {
+            canvas: canvas.clone(),
             on_mouse_down,
             on_mouse_up,
             on_mouse_move,
@@ -157,6 +159,25 @@ impl TerminalMouseHandler {
     /// coordinate conversion from pixels to cells.
     pub(crate) fn update_dimensions(&self, cols: u16, rows: u16) {
         self.terminal_dimensions.set(cols, rows);
+    }
+
+    /// Removes all event listeners from the canvas.
+    ///
+    /// This should be called before dropping the handler to prevent memory leaks
+    /// and conflicts with new handlers.
+    pub(crate) fn cleanup(&self) {
+        let _ = self.canvas.remove_event_listener_with_callback(
+            "mousedown",
+            self.on_mouse_down.as_ref().unchecked_ref(),
+        );
+        let _ = self.canvas.remove_event_listener_with_callback(
+            "mouseup",
+            self.on_mouse_up.as_ref().unchecked_ref(),
+        );
+        let _ = self.canvas.remove_event_listener_with_callback(
+            "mousemove",
+            self.on_mouse_move.as_ref().unchecked_ref(),
+        );
     }
 }
 
@@ -196,7 +217,7 @@ impl DefaultSelectionHandler {
     ///
     /// Returns a boxed closure that handles mouse events, tracks selection state,
     /// and copies selected text to the clipboard on completion.
-    pub(crate) fn create_event_handler(
+    pub fn create_event_handler(
         &self,
         active_selection: SelectionTracker,
     ) -> Box<dyn FnMut(TerminalMouseEvent, &TerminalGrid) + 'static> {
@@ -232,11 +253,6 @@ impl DefaultSelectionHandler {
                     active_selection.update_selection_end((event.col, event.row));
                 },
                 MouseEventType::MouseUp if event.button == 0 => {
-                    console::log_2(
-                        &format!("{:?}\n", event).into(),
-                        &format!("{:?}", *state).into(),
-                    );
-
                     // at this point, we're either at:
                     // a) the user has finished making the selection
                     // b) the selection was canceled by a click inside a single cell
@@ -387,6 +403,12 @@ fn copy_to_clipboard(text: CompactString) {
             }
         }
     });
+}
+
+impl Drop for TerminalMouseHandler {
+    fn drop(&mut self) {
+        self.cleanup();
+    }
 }
 
 impl Debug for TerminalMouseHandler {

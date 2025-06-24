@@ -67,7 +67,7 @@ impl SelectionTracker {
     /// Returns the current selection query or `None` if no selection is active.
     ///
     /// Safe version that doesn't panic when no selection exists.
-    pub(super) fn get_query(&self) -> Option<CellQuery> {
+    pub(crate) fn get_query(&self) -> Option<CellQuery> {
         self.query.borrow().clone()
     }
 
