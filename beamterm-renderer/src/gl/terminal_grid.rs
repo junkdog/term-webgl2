@@ -275,12 +275,15 @@ impl TerminalGrid {
 
     /// Flushes pending cell updates to the GPU.
     pub(crate) fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
-        // if there's an active selection; flip the colors of the selected cells
+        // If there's an active selection, flip the colors of the selected cells.
+        // This ensures that the selected cells are rendered with inverted colors
+        // during the GPU upload process.
         self.flip_selected_cell_colors();
 
         self.buffers.upload_instance_data(gl, &self.cells);
 
-        // restore colors
+        // Restore the original colors of the selected cells after the upload.
+        // This ensures that the internal state of the cells remains consistent.
         self.flip_selected_cell_colors();
 
         Ok(())
