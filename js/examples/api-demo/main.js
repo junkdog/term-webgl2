@@ -1,7 +1,7 @@
 // Comprehensive Beamterm Batch API Example
 // Two-screen demo: Press SPACE to switch between screens
 
-import { main as init, style, cell, BeamtermRenderer } from '@beamterm/renderer';
+import { main as init, style, cell, BeamtermRenderer, SelectionMode } from '@beamterm/renderer';
 
 class BatchAPIDemo {
     constructor() {
@@ -28,6 +28,7 @@ class BatchAPIDemo {
 
         // Create renderer
         this.renderer = new BeamtermRenderer('#terminal');
+        this.renderer.enableSelection(SelectionMode.Block, true);
         this.size = this.renderer.terminalSize();
         console.log(`✅ Terminal: ${this.size.width}×${this.size.height} cells`);
 

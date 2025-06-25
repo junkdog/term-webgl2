@@ -1,4 +1,4 @@
-import { main as init, style, BeamtermRenderer, Batch } from '@beamterm/renderer';
+import { main as init, style, BeamtermRenderer, SelectionMode, Batch } from '@beamterm/renderer';
 
 interface Theme {
     bg: number;
@@ -51,6 +51,7 @@ class TerminalApp {
 
     public resizeTerminal(width_px: number, height_px: number): void {
         this.renderer.resize(width_px, height_px);
+        this.renderer.enableSelection(SelectionMode.Block, true);
         const size = this.renderer.terminalSize();
 
         this.cols = size.width;

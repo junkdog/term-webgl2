@@ -1,4 +1,4 @@
-import {BeamtermRenderer, cell, main as init, style} from '@beamterm/renderer';
+import {BeamtermRenderer, SelectionMode, cell, main as init, style} from '@beamterm/renderer';
 
 // Initialize and run the terminal demo
 async function main() {
@@ -11,6 +11,7 @@ async function main() {
 
         // Create renderer instance
         const renderer = new BeamtermRenderer('#terminal');
+        renderer.enableSelection(SelectionMode.Block, true);
         const size = renderer.terminalSize();
         console.log(`✅ Terminal created: ${size.width}x${size.height}`);
 
