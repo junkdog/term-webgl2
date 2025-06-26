@@ -2,19 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [beamterm-0.3.0] - 2025-06-26
 
 ### 🚀 Features
 
 - *(renderer)* Add Terminal API with builder pattern (#11)
+- *(renderer)* Add linear and block-based copy selection (#12)
 
 ### 🐛 Bug Fixes
 
 - *(renderer)* Remove faulty debug_assert from CellDynamic::new
-
-### 💼 Other
-
-- *(renderer)* Add linear and block-based copy selection (#12)
 
 ## [beamterm-0.2.0] - 2025-06-15
 
