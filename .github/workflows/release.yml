@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - 'beamterm-*'
-      - 'v*'
 
 env:
   CARGO_TERM_COLOR: always
@@ -206,7 +205,7 @@ jobs:
 #    name: 📦 Publish to NPM
 #    needs: [build-release, build-wasm-release]
 #    runs-on: ubuntu-latest
-#    if: startsWith(github.ref, 'refs/tags/v')
+#    if: startsWith(github.ref, 'refs/tags/beamterm-')
 #    steps:
 #      - uses: actions/checkout@v4
 #

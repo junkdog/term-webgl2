@@ -164,7 +164,7 @@ class TerminalDemo {
         const features = [
             "• GPU-accelerated text rendering",
             "• Multiple text styles",
-            "• (Tiny) emoji support 🙂",
+            "• (Tiny) emoji support 😾",
             "• Zero allocations in render loop",
             "• Experimental TS/JS API",
         ];

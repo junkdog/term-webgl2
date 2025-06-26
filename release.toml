@@ -11,5 +11,5 @@ dependent-version = "upgrade"
 owners = ["junkdog"]
 
 # Safety: don't push/publish without explicit confirmation
-push = false
+push = true
 publish = false
