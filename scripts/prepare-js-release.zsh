@@ -37,14 +37,10 @@ main() {
         log ok "LICENSE already exists"
     fi
 
-    # Ensure CHANGELOG exists
-    if [[ ! -f "$JS_DIR/CHANGELOG.md" ]]; then
-        log info "Copying CHANGELOG.md from root..."
-        cp "$ROOT_DIR/CHANGELOG.md" "$JS_DIR/CHANGELOG.md"
-        log ok "CHANGELOG.md copied"
-    else
-        log ok "CHANGELOG.md exists"
-    fi
+    # always make a fresh copy of the root CHANGELOG.md
+    log info "Copying CHANGELOG.md from root..."
+    cp "$ROOT_DIR/CHANGELOG.md" "$JS_DIR/CHANGELOG.md"
+    log ok "CHANGELOG.md copied"
 
     # Check .npmignore
     if [[ ! -f "$JS_DIR/.npmignore" ]]; then
