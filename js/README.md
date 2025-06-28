@@ -77,9 +77,6 @@ batch.cell(0, 0, cell("🚀", style().fg(0xffffff)));
 const boxStyle = style().fg(0x565f89).bg(0x1a1b26);
 batch.fill(1, 0, 18, 3, cell("█", boxStyle));
 
-// Synchronize all updates to GPU
-batch.flush();
-
 // Render frame
 renderer.render();
 ```
