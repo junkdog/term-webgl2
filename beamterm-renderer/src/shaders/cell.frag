@@ -5,10 +5,10 @@ precision mediump float;
 // uniforms
 uniform mediump sampler2DArray u_sampler;
 layout(std140) uniform FragUbo {
-    vec2 u_padding_frac; // padding as fraction of cell size
-    float u_underline_pos; // underline position (0.0 = top, 1.0 = bottom)
-    float u_underline_thickness; // underline thickness as fraction of cell height
-    float u_strikethrough_pos; // strikethrough position (0.0 = top, 1.0 = bottom)
+    vec2 u_padding_frac;             // padding as fraction of cell size
+    float u_underline_pos;           // underline position (0.0 = top, 1.0 = bottom)
+    float u_underline_thickness;     // underline thickness as fraction of cell height
+    float u_strikethrough_pos;       // strikethrough position (0.0 = top, 1.0 = bottom)
     float u_strikethrough_thickness; // strikethrough thickness as fraction of cell height
 };
 
