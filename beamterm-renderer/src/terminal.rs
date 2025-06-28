@@ -3,9 +3,13 @@ use std::{cell::RefCell, rc::Rc};
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
-use crate::{gl::{CellQuery, SelectionMode}, mouse::{
-    DefaultSelectionHandler, MouseEventCallback, TerminalMouseEvent, TerminalMouseHandler,
-}, CellData, Error, FontAtlas, Renderer, TerminalGrid};
+use crate::{
+    gl::{CellQuery, SelectionMode},
+    mouse::{
+        DefaultSelectionHandler, MouseEventCallback, TerminalMouseEvent, TerminalMouseHandler,
+    },
+    CellData, Error, FontAtlas, Renderer, TerminalGrid,
+};
 
 /// High-performance WebGL2 terminal renderer.
 ///
@@ -184,7 +188,7 @@ impl Terminal {
     /// Combines [`Renderer::begin_frame`], [`Renderer::render`], and [`Renderer::end_frame`].
     pub fn render_frame(&mut self) -> Result<(), Error> {
         self.grid.borrow_mut().flush_cells(self.renderer.gl())?;
-        
+
         self.renderer.begin_frame();
         self.renderer.render(&*self.grid.borrow());
         self.renderer.end_frame();

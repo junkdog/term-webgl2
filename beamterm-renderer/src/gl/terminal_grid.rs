@@ -228,7 +228,6 @@ impl TerminalGrid {
             *cell = CellDynamic::new(glyph_id | data.style_bits, data.fg, data.bg);
         });
 
-
         self.cells_pending_flush = true;
         Ok(())
     }
@@ -281,7 +280,7 @@ impl TerminalGrid {
     }
 
     /// Flushes pending cell updates to the GPU.
-    pub fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
+    pub(crate) fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
         if !self.cells_pending_flush {
             return Ok(()); // no pending updates to flush
         }
