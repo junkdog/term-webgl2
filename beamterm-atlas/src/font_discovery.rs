@@ -91,7 +91,7 @@ impl FontDiscovery {
         // verify all fonts exist
         for id in all_fonts.into_iter() {
             if db.face(id).is_none() {
-                return Err(format!("Font ID {} not found in database", id));
+                return Err(format!("Font ID {id} not found in database"));
             }
         }
 

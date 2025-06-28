@@ -140,7 +140,7 @@ impl Cli {
     /// Prints a summary of the configuration
     pub fn print_summary(&self, font_name: &str) {
         println!("\nGenerating font atlas:");
-        println!("  Font: {}", font_name);
+        println!("  Font: {font_name}");
         println!("  Size: {}pt", self.font_size);
         println!("  Line height: {}x", self.line_height);
         println!("  Output: {}", self.output);

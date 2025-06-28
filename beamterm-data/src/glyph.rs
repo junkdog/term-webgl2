@@ -129,7 +129,7 @@ impl GlyphEffect {
             0x2000 => GlyphEffect::Strikethrough,
             0x3000 => GlyphEffect::Strikethrough,
             _ => {
-                println!("Unknown glyph effect 0x{:x}", v);
+                println!("Unknown glyph effect 0x{v:x}");
                 panic!("yolo panic");
             },
         }
@@ -154,7 +154,7 @@ impl FontStyle {
             0x0200 => FontStyle::Bold,
             0x0400 => FontStyle::Italic,
             0x0600 => FontStyle::BoldItalic,
-            _ => panic!("Invalid font style value: {}", v),
+            _ => panic!("Invalid font style value: {v}"),
         }
     }
 
@@ -164,7 +164,7 @@ impl FontStyle {
             1 => FontStyle::Bold,
             2 => FontStyle::Italic,
             3 => FontStyle::BoldItalic,
-            _ => panic!("Invalid font style ordinal: {}", ordinal),
+            _ => panic!("Invalid font style ordinal: {ordinal}"),
         }
     }
 

@@ -48,7 +48,7 @@ impl Error {
 
     // Shader errors
     pub fn shader_creation_failed(detail: &str) -> Self {
-        Self::Shader(format!("Shader creation failed: {}", detail))
+        Self::Shader(format!("Shader creation failed: {detail}"))
     }
 
     pub fn shader_program_creation_failed() -> Self {
@@ -56,12 +56,12 @@ impl Error {
     }
 
     pub fn shader_link_failed(log: String) -> Self {
-        Self::Shader(format!("Shader linking failed: {}", log))
+        Self::Shader(format!("Shader linking failed: {log}"))
     }
 
     // Resource errors
     pub fn buffer_creation_failed(buffer_type: &str) -> Self {
-        Self::Resource(format!("Failed to create {} buffer", buffer_type))
+        Self::Resource(format!("Failed to create {buffer_type} buffer"))
     }
 
     pub fn vertex_array_creation_failed() -> Self {
@@ -73,23 +73,23 @@ impl Error {
     }
 
     pub fn uniform_location_failed(name: &str) -> Self {
-        Self::Resource(format!("Failed to get uniform location: {}", name))
+        Self::Resource(format!("Failed to get uniform location: {name}"))
     }
 
     pub fn webgl_error(message: String) -> Self {
-        Self::Resource(format!("WebGL error: {}", message))
+        Self::Resource(format!("WebGL error: {message}"))
     }
 
     pub fn element_creation_failed(element_type: &str) -> Self {
-        Self::Resource(format!("Failed to create element: {}", element_type))
+        Self::Resource(format!("Failed to create element: {element_type}"))
     }
 
     // Data errors
     pub fn image_load_failed(path: &str) -> Self {
-        Self::Data(format!("Failed to load image: {}", path))
+        Self::Data(format!("Failed to load image: {path}"))
     }
 
     pub fn deserialization_failed(message: String) -> Self {
-        Self::Data(format!("Failed to deserialize: {}", message))
+        Self::Data(format!("Failed to deserialize: {message}"))
     }
 }

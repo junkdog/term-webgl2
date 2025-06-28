@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(
             "\n=== Slice {} {} ===",
             slice_left,
-            slice_right.map_or(String::new(), |s| format!("& {}", s))
+            slice_right.map_or(String::new(), |s| format!("& {s}"))
         );
 
         render_slice_pair(&atlas, slice_left, slice_right)?;
@@ -94,7 +94,7 @@ fn render_slice_pair(
         writeln!(&mut output).ok();
     }
 
-    print!("{}", output);
+    print!("{output}");
     Ok(())
 }
 
@@ -143,7 +143,7 @@ fn render_slice_row(atlas: &FontAtlasData, slice: usize, y: usize, output: &mut 
 
                 let px = "▀".truecolor(r1, g1, b1).on_truecolor(r2, g2, b2);
 
-                write!(output, "{}", px).ok();
+                write!(output, "{px}").ok();
             },
             (true, false) => {
                 // Top half-block only

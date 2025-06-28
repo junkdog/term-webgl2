@@ -398,7 +398,7 @@ fn copy_to_clipboard(text: CompactString) {
                     );
                 },
                 Err(err) => {
-                    console::error_1(&format!("Failed to copy to clipboard: {:?}", err).into());
+                    console::error_1(&format!("Failed to copy to clipboard: {err:?}").into());
                 },
             }
         }
@@ -414,7 +414,7 @@ impl Drop for TerminalMouseHandler {
 impl Debug for TerminalMouseHandler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (cols, rows) = self.terminal_dimensions.get();
-        write!(f, "TerminalMouseHandler {{ dimensions: {}x{} }}", cols, rows)
+        write!(f, "TerminalMouseHandler {{ dimensions: {cols}x{rows} }}")
     }
 }
 

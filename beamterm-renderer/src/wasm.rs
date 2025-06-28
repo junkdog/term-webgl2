@@ -398,16 +398,16 @@ impl BeamtermRenderer {
         console_error_panic_hook::set_once();
 
         let renderer = Renderer::create(canvas_id)
-            .map_err(|e| JsValue::from_str(&format!("Failed to create renderer: {}", e)))?;
+            .map_err(|e| JsValue::from_str(&format!("Failed to create renderer: {e}")))?;
 
         let gl = renderer.gl();
         let atlas_data = FontAtlasData::default();
         let atlas = FontAtlas::load(gl, atlas_data)
-            .map_err(|e| JsValue::from_str(&format!("Failed to load font atlas: {}", e)))?;
+            .map_err(|e| JsValue::from_str(&format!("Failed to load font atlas: {e}")))?;
 
         let canvas_size = renderer.canvas_size();
         let terminal_grid = TerminalGrid::new(gl, atlas, canvas_size)
-            .map_err(|e| JsValue::from_str(&format!("Failed to create terminal grid: {}", e)))?;
+            .map_err(|e| JsValue::from_str(&format!("Failed to create terminal grid: {e}")))?;
 
         console::log_1(&"BeamtermRenderer initialized successfully".into());
         let terminal_grid = Rc::new(RefCell::new(terminal_grid));
@@ -439,7 +439,7 @@ impl BeamtermRenderer {
             self.terminal_grid.clone(),
             handler.create_event_handler(selection_tracker),
         )
-        .map_err(|e| JsValue::from_str(&format!("Failed to create mouse handler: {}", e)))?;
+        .map_err(|e| JsValue::from_str(&format!("Failed to create mouse handler: {e}")))?;
 
         self.mouse_handler = Some(mouse_handler);
         Ok(())
@@ -462,7 +462,7 @@ impl BeamtermRenderer {
                 args.push(&JsValue::from(js_event));
 
                 if let Err(e) = handler.apply(&this, &args) {
-                    console::error_1(&format!("Mouse handler error: {:?}", e).into());
+                    console::error_1(&format!("Mouse handler error: {e:?}").into());
                 }
             }
         };
@@ -472,7 +472,7 @@ impl BeamtermRenderer {
             self.terminal_grid.clone(),
             handler_closure,
         )
-        .map_err(|e| JsValue::from_str(&format!("Failed to create mouse handler: {}", e)))?;
+        .map_err(|e| JsValue::from_str(&format!("Failed to create mouse handler: {e}")))?;
 
         self.mouse_handler = Some(mouse_handler);
         Ok(())
@@ -500,7 +500,7 @@ impl BeamtermRenderer {
                         );
                     },
                     Err(err) => {
-                        console::error_1(&format!("Failed to copy to clipboard: {:?}", err).into());
+                        console::error_1(&format!("Failed to copy to clipboard: {err:?}").into());
                     },
                 }
             }
@@ -560,13 +560,13 @@ impl BeamtermRenderer {
     pub fn resize(&mut self, width: i32, height: i32) -> Result<(), JsValue> {
         self.renderer.resize(width, height);
 
-        console::log_1(&format!("Resizing terminal to {}x{}", width, height).into());
+        console::log_1(&format!("Resizing terminal to {width}x{height}").into());
 
         let gl = self.renderer.gl();
         self.terminal_grid
             .borrow_mut()
             .resize(gl, (width, height))
-            .map_err(|e| JsValue::from_str(&format!("Failed to resize: {}", e)))?;
+            .map_err(|e| JsValue::from_str(&format!("Failed to resize: {e}")))?;
 
         // Update mouse handler dimensions if present
         if let Some(mouse_handler) = &self.mouse_handler {
