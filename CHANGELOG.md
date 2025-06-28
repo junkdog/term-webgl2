@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### 🚀 Features
+
+- *(renderer)* Add `TerminalGrid::cell_data_mut` and `CellDynamic` mutators
+
 ## [beamterm-0.4.0] - 2025-06-28
 
 ### 🚀 Features
@@ -15,6 +21,10 @@ All notable changes to this project will be documented in this file.
 ### ⚡ Performance
 
 - *(fragment shader)* Remove all division ops and change to multiplication
+
+### ⚙️ Miscellaneous Tasks
+
+- Release beamterm 0.4.0
 
 ## [beamterm-0.3.0] - 2025-06-26
 

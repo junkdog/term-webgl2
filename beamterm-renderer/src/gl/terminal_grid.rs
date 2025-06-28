@@ -1,6 +1,6 @@
 use std::{borrow::Cow, cmp::min, fmt::Debug, ops::Index};
 
-use beamterm_data::{FontAtlasData, FontStyle, GlyphEffect};
+use beamterm_data::{FontAtlasData, FontStyle, Glyph, GlyphEffect};
 use compact_str::{CompactString, CompactStringExt};
 use web_sys::{console, WebGl2RenderingContext};
 
@@ -148,6 +148,13 @@ impl TerminalGrid {
     /// Returns the size of the terminal grid in cells.
     pub fn terminal_size(&self) -> (u16, u16) {
         self.terminal_size
+    }
+
+    /// Returns a mutable reference to the cell data at the specified cell coordinates.
+    pub fn cell_data_mut(&mut self, x: u16, y: u16) -> Option<&mut CellDynamic> {
+        let (cols, _) = self.terminal_size;
+        let idx = y as usize * cols as usize + x as usize;
+        self.cells.get_mut(idx)
     }
 
     /// Returns the active selection state of the terminal grid.
@@ -627,7 +634,6 @@ impl Drawable for TerminalGrid {
 /// - BB: Blue component
 #[derive(Debug, Copy, Clone)]
 pub struct CellData<'a> {
-    // todo: try to pre-pack the available glyph id bits
     symbol: &'a str,
     style_bits: u16,
     fg: u32,
@@ -785,7 +791,19 @@ impl CellDynamic {
         Self { data }
     }
 
-    fn flip_colors(&mut self) {
+    /// Overwrites the current cell style bits with the provided style bits.
+    pub fn style(&mut self, style_bits: u16) {
+        let glyph_id = u16::from_le_bytes([self.data[0], self.data[1]]);
+        let glyph_id = glyph_id & (Glyph::GLYPH_ID_MASK | Glyph::EMOJI_FLAG);
+        let glyph_id = glyph_id | style_bits;
+
+        let glyph_id = glyph_id.to_le_bytes();
+        self.data[0] = glyph_id[0];
+        self.data[1] = glyph_id[1];
+    }
+
+    /// Sets the foreground color of the cell.
+    pub fn flip_colors(&mut self) {
         // swap foreground and background colors
         let fg = [self.data[2], self.data[3], self.data[4]];
         self.data[2] = self.data[5]; // R
@@ -794,6 +812,39 @@ impl CellDynamic {
         self.data[5] = fg[0]; // R
         self.data[6] = fg[1]; // G
         self.data[7] = fg[2]; // B
+    }
+
+    /// Sets the foreground color of the cell.
+    pub fn fg_color(&mut self, fg: u32) {
+        let fg = fg.to_le_bytes();
+        self.data[2] = fg[2]; // R
+        self.data[3] = fg[1]; // G
+        self.data[4] = fg[0]; // B
+    }
+
+    /// Sets the background color of the cell.
+    pub fn bg_color(&mut self, bg: u32) {
+        let bg = bg.to_le_bytes();
+        self.data[5] = bg[2]; // R
+        self.data[6] = bg[1]; // G
+        self.data[7] = bg[0]; // B
+    }
+
+    /// Returns foreground color as a packed RGB value.
+    pub fn get_fg_color(&self) -> u32 {
+        // unpack foreground color from data
+        ((self.data[2] as u32) << 16) | ((self.data[3] as u32) << 8) | (self.data[4] as u32)
+    }
+
+    /// Returns background color as a packed RGB value.
+    pub fn get_bg_color(&self) -> u32 {
+        // unpack background color from data
+        ((self.data[5] as u32) << 16) | ((self.data[6] as u32) << 8) | (self.data[7] as u32)
+    }
+
+    pub fn get_style(&self) -> u16 {
+        // unpack glyph ID from the first two bytes
+        self.glyph_id() & !(Glyph::GLYPH_ID_MASK | Glyph::EMOJI_FLAG)
     }
 
     fn glyph_id(&self) -> u16 {
