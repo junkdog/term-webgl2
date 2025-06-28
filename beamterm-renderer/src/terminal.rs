@@ -3,13 +3,9 @@ use std::{cell::RefCell, rc::Rc};
 use beamterm_data::FontAtlasData;
 use compact_str::CompactString;
 
-use crate::{
-    gl::{CellQuery, SelectionMode},
-    mouse::{
-        DefaultSelectionHandler, MouseEventCallback, TerminalMouseEvent, TerminalMouseHandler,
-    },
-    CellData, Error, FontAtlas, Renderer, TerminalGrid,
-};
+use crate::{gl::{CellQuery, SelectionMode}, mouse::{
+    DefaultSelectionHandler, MouseEventCallback, TerminalMouseEvent, TerminalMouseHandler,
+}, CellData, Error, FontAtlas, Renderer, TerminalGrid};
 
 /// High-performance WebGL2 terminal renderer.
 ///
@@ -101,6 +97,20 @@ impl Terminal {
         self.grid.borrow_mut().update_cells(self.renderer.gl(), cells)
     }
 
+    /// Updates terminal cell content efficiently.
+    ///
+    /// This method batches all cell updates and uploads them to the GPU in a single
+    /// operation. For optimal performance, collect all changes and update in one call
+    /// rather than making multiple calls for individual cells.
+    ///
+    /// Delegates to [`TerminalGrid::update_cells_by_position`].
+    pub fn update_cells_by_position<'a>(
+        &mut self,
+        cells: impl Iterator<Item = (u16, u16, CellData<'a>)>,
+    ) -> Result<(), Error> {
+        self.grid.borrow_mut().update_cells_by_position(self.renderer.gl(), cells)
+    }
+
     /// Returns the WebGL2 rendering context.
     pub fn gl(&self) -> &web_sys::WebGl2RenderingContext {
         self.renderer.gl()
@@ -155,6 +165,11 @@ impl Terminal {
         &self.renderer
     }
 
+    /// Returns a reference to the terminal grid.
+    pub fn grid(&self) -> Rc<RefCell<TerminalGrid>> {
+        self.grid.clone()
+    }
+
     /// Returns the textual content of the specified cell selection.
     pub fn get_text(&self, selection: CellQuery) -> CompactString {
         self.grid.borrow().get_text(selection)
@@ -168,6 +183,8 @@ impl Terminal {
     ///
     /// Combines [`Renderer::begin_frame`], [`Renderer::render`], and [`Renderer::end_frame`].
     pub fn render_frame(&mut self) -> Result<(), Error> {
+        self.grid.borrow_mut().flush_cells(self.renderer.gl())?;
+        
         self.renderer.begin_frame();
         self.renderer.render(&*self.grid.borrow());
         self.renderer.end_frame();

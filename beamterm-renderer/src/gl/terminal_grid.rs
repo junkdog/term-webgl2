@@ -43,6 +43,8 @@ pub struct TerminalGrid {
     fallback_glyph: u16,
     /// Selection tracker for managing cell selections.
     selection: SelectionTracker,
+    /// Indicates whether there are cells pending flush to the GPU.
+    cells_pending_flush: bool,
 }
 
 #[derive(Debug)]
@@ -120,6 +122,7 @@ impl TerminalGrid {
             sampler_loc,
             fallback_glyph: ' ' as u16,
             selection: SelectionTracker::new(),
+            cells_pending_flush: false,
         };
 
         grid.upload_ubo_data(gl);
@@ -225,8 +228,8 @@ impl TerminalGrid {
             *cell = CellDynamic::new(glyph_id | data.style_bits, data.fg, data.bg);
         });
 
-        self.flush_cells(gl)?;
 
+        self.cells_pending_flush = true;
         Ok(())
     }
 
@@ -249,7 +252,7 @@ impl TerminalGrid {
                 self.cells[idx] = CellDynamic::new(glyph_id | cell.style_bits, cell.fg, cell.bg);
             });
 
-        self.flush_cells(gl)?;
+        self.cells_pending_flush = true;
 
         Ok(())
     }
@@ -258,6 +261,8 @@ impl TerminalGrid {
         let (cols, _) = self.terminal_size;
         let idx = y as usize * cols as usize + x as usize;
         self.update_cell_by_index(idx, cell_data);
+
+        self.cells_pending_flush = true;
     }
 
     pub(crate) fn update_cell_by_index(&mut self, idx: usize, cell_data: CellData) {
@@ -271,10 +276,16 @@ impl TerminalGrid {
 
         self.cells[idx] =
             CellDynamic::new(glyph_id | cell_data.style_bits, cell_data.fg, cell_data.bg);
+
+        self.cells_pending_flush = true;
     }
 
     /// Flushes pending cell updates to the GPU.
-    pub(crate) fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
+    pub fn flush_cells(&mut self, gl: &WebGl2RenderingContext) -> Result<(), Error> {
+        if !self.cells_pending_flush {
+            return Ok(()); // no pending updates to flush
+        }
+
         // If there's an active selection, flip the colors of the selected cells.
         // This ensures that the selected cells are rendered with inverted colors
         // during the GPU upload process.
@@ -286,6 +297,7 @@ impl TerminalGrid {
         // This ensures that the internal state of the cells remains consistent.
         self.flip_selected_cell_colors();
 
+        self.cells_pending_flush = false;
         Ok(())
     }
 
@@ -724,7 +736,7 @@ struct CellStatic {
 /// Uploaded to GPU using `GL::DYNAMIC_DRAW` for efficient updates.
 #[derive(Debug, Clone, Copy)]
 #[repr(C, align(4))]
-struct CellDynamic {
+pub struct CellDynamic {
     /// Packed cell data:
     ///
     /// # Byte Layout
@@ -736,7 +748,7 @@ struct CellDynamic {
     /// - `data[5]`: Background red component (0-255)
     /// - `data[6]`: Background green component (0-255)
     /// - `data[7]`: Background blue component (0-255)
-    pub data: [u8; 8], // 2b layer, fg:rgb, bg:rgb
+    data: [u8; 8], // 2b layer, fg:rgb, bg:rgb
 }
 
 impl CellStatic {
@@ -752,7 +764,8 @@ impl CellStatic {
 }
 
 impl CellDynamic {
-    fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
+    #[inline]
+    pub fn new(glyph_id: u16, fg: u32, bg: u32) -> Self {
         let mut data = [0; 8];
 
         // pack glyph ID into the first two bytes
