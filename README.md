@@ -132,8 +132,7 @@ let terminal = Terminal::builder("#canvas")
 
 ### TerminalGrid
 Main rendering component managing the terminal display. Handles shader programs, cell data, GPU
-buffers, and rendering state. Key methods include `new()` for initialization, `update_cells()`
-for content updates, and sizing queries.
+buffers, and rendering state.
 
 ### FontAtlas
 Manages the 2D texture array containing all font glyphs. Provides character-to-glyph ID
@@ -209,7 +208,7 @@ optimizes for the common case while maintaining full Unicode capability.
 
 ## GPU Buffer Architecture
 
-The renderer uses five buffers managed through a Vertex Array Object (VAO) to achieve
+The renderer uses six buffers managed through a Vertex Array Object (VAO) to achieve
 single-draw-call rendering. Each buffer serves a specific purpose in the instanced
 rendering pipeline, with careful attention to memory alignment and update patterns.
 
