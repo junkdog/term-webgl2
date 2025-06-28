@@ -25,7 +25,7 @@ float horizontal_line(vec2 tex_coord, float center, float thickness) {
 }
 
 float normalize_lsb(uint value) {
-    return (float(value & 0xFFu)) / 255.0;
+    return (float(value & 0xFFu)) * 0.003921568627451; // = 1.0 / 255.0;
 }
 
 void main() {
@@ -45,7 +45,7 @@ void main() {
 
     vec2 inner_tex_coord = v_tex_coord * (1.0 - 2.0 * u_padding_frac) + u_padding_frac;
     vec3 tex_coord = vec3(
-        (float(pos_in_layer) + inner_tex_coord.x + 0.001) / 16.0,
+        (float(pos_in_layer) + inner_tex_coord.x + 0.001) * 0.0625, // 0.0625 = 1/16
         inner_tex_coord.y + 0.001,
         float(layer)
     );

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### 🚀 Features
+
+- *(renderer)* Add Terminal::update_cells_by_position
+
+### 🗑️ Deprecations
+
+- *(js)* Batch::flush, as it now automatic
+
+### ⚡ Performance
+
+- *(fragment shader)* Remove all division ops and change to multiplication
+
 ## [beamterm-0.3.0] - 2025-06-26
 
 ### 🚀 Features
@@ -13,16 +27,15 @@ All notable changes to this project will be documented in this file.
 
 - *(renderer)* Remove faulty debug_assert from CellDynamic::new
 
+### ⚙️ Miscellaneous Tasks
+
+- Release beamterm 0.3.0
+
 ## [beamterm-0.2.0] - 2025-06-15
 
 ### 🚀 Features
 
 - *(js-api)* Basic JS API locked behind "js-api" feature
-
-### 🐛 Bug Fixes
-
-- *(shader)* Propagate LineEffects from `FontAtlasData` to fragment shader
-- *(atlas)* Skip control characters during generation
 
 ### 💼 Other
 
@@ -32,6 +45,11 @@ All notable changes to this project will be documented in this file.
 - *(js)* Add vite+typescript example
 - *(github-pages)* Deploy webpack and vite examples
 - *(api-demo)* Add JS API demo
+
+### 🐛 Bug Fixes
+
+- *(shader)* Propagate LineEffects from `FontAtlasData` to fragment shader
+- *(atlas)* Skip control characters during generation
 
 ### 📚 Documentation
 
