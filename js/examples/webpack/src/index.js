@@ -74,9 +74,6 @@ class TerminalDemo {
         this.drawStatusBar(batch, fps);
         this.drawWaveAnimation(batch)
 
-        // Synchronize all updates to GPU in one call
-        batch.flush();
-
         // Render the frame
         this.renderer.render();
     }
@@ -93,9 +90,6 @@ class TerminalDemo {
         const spinnerChar = spinnerChars[(this.frame >> 3) % spinnerChars.length];
         let spinnerStyle = style().fg(0x7aa2f7).bg(0x24283b);
         batch.cell(this.size.width - 2, this.size.height - 2, cell(spinnerChar, spinnerStyle));
-
-        // Synchronize all updates to GPU in one call
-        batch.flush();
 
         // Render the frame
         this.renderer.render();

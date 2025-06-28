@@ -106,8 +106,6 @@ class BatchAPIDemo {
         // Navigation hint
         batch.text(1, this.size.height - 3, "Press SPACE to switch screens",
             style().bold().fg(0x7aa2f7));
-
-        batch.flush();
     }
 
     renderScreen2() {
@@ -158,11 +156,6 @@ class BatchAPIDemo {
         batch.text(4, y, "Filled rectangle example", style().fg(0x1a1b26).bg(0x414868));
         y += 2;
 
-        // Method 6: flush()
-        batch.text(1, y++, "6. batch.flush() - REQUIRED!", style().bold().fg(0xf7768e));
-        batch.text(3, y++, "Uploads all changes to GPU before render()", style().fg(0xa9b1d6));
-        y++;
-
         // Performance tips
         batch.text(1, y++, "⚡ Performance Tips:", style().bold().fg(0xe0af68));
         batch.text(3, y++, "• Use batch.text() for uniform styling (fastest)", style().fg(0xa9b1d6));
@@ -182,8 +175,6 @@ class BatchAPIDemo {
         batch.text(1, patternY + 2, "2. batch.clear/text/cell/cells/fill...", style().fg(0xa9b1d6));
         batch.text(1, patternY + 3, "3. batch.flush()  // Upload to GPU", style().fg(0xa9b1d6));
         batch.text(1, patternY + 4, "4. renderer.render()  // Draw frame", style().fg(0xa9b1d6));
-
-        batch.flush();
     }
 
     render() {

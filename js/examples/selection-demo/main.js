@@ -205,7 +205,6 @@ class SelectionDemo {
         y = this.size.height - 2;
         batch.text(2, y, "Status: Ready - Enable selection to start testing", style().bold().fg(0x565f89));
 
-        batch.flush();
         this.renderer.render();
     }
 
