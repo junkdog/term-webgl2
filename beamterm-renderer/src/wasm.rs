@@ -569,7 +569,7 @@ impl BeamtermRenderer {
             .map_err(|e| JsValue::from_str(&format!("Failed to resize: {e}")))?;
 
         // Update mouse handler dimensions if present
-        if let Some(mouse_handler) = &self.mouse_handler {
+        if let Some(mouse_handler) = &mut self.mouse_handler {
             let (cols, rows) = self.terminal_grid.borrow().terminal_size();
             mouse_handler.update_dimensions(cols, rows);
         }
@@ -611,10 +611,10 @@ impl From<TerminalMouseEvent> for MouseEvent {
             event_type,
             col: event.col,
             row: event.row,
-            button: event.button,
-            ctrl_key: event.ctrl_key,
-            shift_key: event.shift_key,
-            alt_key: event.alt_key,
+            button: event.button(),
+            ctrl_key: event.ctrl_key(),
+            shift_key: event.shift_key(),
+            alt_key: event.alt_key(),
         }
     }
 }
