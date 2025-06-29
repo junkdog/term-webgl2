@@ -1,7 +1,6 @@
 mod error;
 mod gl;
 mod mat4;
-mod mouse;
 mod terminal;
 
 pub(crate) mod js;
@@ -9,9 +8,10 @@ pub(crate) mod js;
 #[cfg(feature = "js-api")]
 pub mod wasm;
 
+pub mod mouse;
+
 pub use ::beamterm_data::{FontAtlasData, GlyphEffect};
 pub use beamterm_data::FontStyle;
-pub use mouse::{MouseEventType, TerminalMouseEvent, TerminalMouseHandler};
 pub use terminal::*;
 
 pub use crate::{error::Error, gl::*};
