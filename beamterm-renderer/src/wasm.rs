@@ -560,8 +560,6 @@ impl BeamtermRenderer {
     pub fn resize(&mut self, width: i32, height: i32) -> Result<(), JsValue> {
         self.renderer.resize(width, height);
 
-        console::log_1(&format!("Resizing terminal to {width}x{height}").into());
-
         let gl = self.renderer.gl();
         self.terminal_grid
             .borrow_mut()

@@ -532,17 +532,11 @@ fn create_mouse_event_closure(
 /// # Security
 /// Browser may require user gesture or HTTPS for clipboard access.
 fn copy_to_clipboard(text: CompactString) {
-    console::log_1(&format!("Copying {} characters to clipboard", text.len()).into());
-
     spawn_local(async move {
         if let Some(window) = web_sys::window() {
             let clipboard = window.navigator().clipboard();
             match wasm_bindgen_futures::JsFuture::from(clipboard.write_text(&text)).await {
-                Ok(_) => {
-                    console::log_1(
-                        &format!("Successfully copied {} characters", text.chars().count()).into(),
-                    );
-                },
+                Ok(_) => {},
                 Err(err) => {
                     console::error_1(&format!("Failed to copy to clipboard: {err:?}").into());
                 },
