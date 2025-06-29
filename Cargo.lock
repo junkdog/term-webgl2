@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "beamterm-atlas"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "beamterm-data",
  "clap",
@@ -97,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "beamterm-data"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "compact_str",
  "miniz_oxide",
@@ -105,7 +105,7 @@ dependencies = [
 
 [[package]]
 name = "beamterm-renderer"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "beamterm-data",
  "compact_str",
