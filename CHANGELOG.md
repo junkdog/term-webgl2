@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### 🚀 Features
 
 - *(renderer)* Add `TerminalGrid::cell_data_mut` and `CellDynamic` mutators
+- *(renderer)* Expose `TerminalMouseHandler` public API for external mouse handling
 
 ## [beamterm-0.4.0] - 2025-06-28
 

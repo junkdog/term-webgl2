@@ -77,7 +77,7 @@ impl TerminalMouseHandler {
     ///
     /// # Errors
     /// Returns an error if event listeners cannot be attached to the canvas.
-    pub(crate) fn new<F>(
+    pub fn new<F>(
         canvas: &web_sys::HtmlCanvasElement,
         grid: Rc<RefCell<TerminalGrid>>,
         event_handler: F,
@@ -160,15 +160,15 @@ impl TerminalMouseHandler {
     ///
     /// Must be called when the terminal grid is resized to ensure accurate
     /// coordinate conversion from pixels to cells.
-    pub(crate) fn update_dimensions(&self, cols: u16, rows: u16) {
+    pub fn update_dimensions(&self, cols: u16, rows: u16) {
         self.terminal_dimensions.set(cols, rows);
     }
 
-    /// Removes all event listeners from the canvas.
+    /// Removes all owned event listeners from the canvas.
     ///
     /// This should be called before dropping the handler to prevent memory leaks
     /// and conflicts with new handlers.
-    pub(crate) fn cleanup(&self) {
+    pub fn cleanup(&self) {
         let _ = self.canvas.remove_event_listener_with_callback(
             "mousedown",
             self.on_mouse_down.as_ref().unchecked_ref(),
