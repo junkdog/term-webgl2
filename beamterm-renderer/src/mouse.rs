@@ -399,19 +399,19 @@ impl DefaultSelectionHandler {
 ///    │        │ begin_selection
 ///    │        ▼
 ///    │   ┌──────────┐
-///    │   │Selecting │
-///    │   └────┬─────┘
-///    │        │ complete_selection
-///    │        ▼
-///    │   ┌──────────┐
-///    │   │ Complete │◀──────────┐
-///    │   └────┬─────┘           │
-///    │        │ maybe_selecting │
-///    │        ▼                 │
-///    │   ┌──────────────┐       │
-///    └───│MaybeSelecting│───────┘
-///   Idle └──────────────┘   (update_selection)
-///   (complete_selection w/o movement)         
+///    │   │Selecting │◀────────────┐
+///    │   └────┬─────┘             │ 
+///    │        │ complete_selection│
+///    │        ▼                   │
+///    │   ┌──────────┐             │
+///    │   │ Complete │             │
+///    │   └────┬─────┘             │
+///    │        │ maybe_selecting   │
+///    │        ▼                   │
+///    │   ┌──────────────┐         │
+///    └───│MaybeSelecting│─────────┘
+/// mouse  └──────────────┘  update_selection
+///   up       
 ///          
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
